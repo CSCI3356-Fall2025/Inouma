@@ -1,0 +1,2152 @@
+<!-- Add/Edit Location Modal -->
+<div id="editLocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">Add/Edit Location</h2>
+            <button class="close-btn" onclick="closeEditLocationModal()">×</button>
+        </div>
+        <form onsubmit="event.preventDefault(); alert('Location saved!'); closeEditLocationModal();">
+            <div class="form-group">
+                <label>Location Name</label>
+                <input type="text" placeholder="e.g., Hatch Front" required>
+            </div>
+            <div class="form-group">
+                <label>Floor</label>
+                <select>
+                    <option>2nd Floor</option>
+                    <option>3rd Floor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Number of Tables/Stations</label>
+                <input type="number" placeholder="8" required>
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" placeholder="24" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Location</button>
+        </form>
+    </div>
+</div>
+
+<!-- Auto-Schedule Modal -->
+<div id="autoScheduleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">⚡ Auto-Schedule Trainers</h2>
+            <button class="close-btn" onclick="closeAutoScheduleModal()">×</button>
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <p style="margin-bottom: 1rem;">The system will automatically assign trainers to 2-hour blocks based on:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
+                <li>Trainer availability (unavailability already recorded)</li>
+                <li>Tool category expertise</li>
+                <li>Ensuring at least one trainer per category per block</li>
+                <li>Balanced distribution of hours</li>
+            </ul>
+        </div>
+        
+        <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">Current Trainer Pool:</h4>
+            <div style="font-size: 0.9rem; line-height: 1.8;">
+                <strong>Sarah Mitchell:</strong> 3D Printing, Laser<br>
+                <strong>Alex Kim:</strong> Woodworking, Metalworking<br>
+                <strong>Jordan Park:</strong> 3D Printing, Electronics<br>
+                <strong>Emma Lopez:</strong> Laser, Vinyl<br>
+                <strong>Mike Rodriguez:</strong> All Categories
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Schedule Priority</label>
+            <select>
+                <option>Balanced hours across all trainers</option>
+                <option>Maximize coverage</option>
+                <option>Minimize individual hours</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="runAutoSchedule()">Generate Schedule</button>
+    </div>
+</div>
+
+<!-- Manage Trainers Modal -->
+<div id="manageTrainersModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">👥 Manage Trainers</h2>
+            <button class="close-btn" onclick="closeManageTrainersModal()">×</button>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: var(--maroon); margin-bottom: 1rem;">Current Trainers</h3>
+            
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Emma Lopez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> Laser Cutting, Vinyl
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays, Mondays 9am-11am
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Emma Lopez')">Edit</button>
+                </div>
+            </div>
+
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Mike Rodriguez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> All Equipment (Master Trainer)
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays after 3pm
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Mike Rodriguez')">Edit</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="addNewTrainer()">+ Add New Trainer</button>
+    </div>
+</div>
+
+<div style="background: var(--light-gold); padding: 1rem; border-radius: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Hatchery - BC Makerspace</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    :root {
+        --gold: rgb(246, 200, 81);
+        --dark: rgb(44, 44, 44);
+        --white: rgb(255, 255, 255);
+        --maroon: rgb(149, 45, 87);
+        --light-gold: rgba(246, 200, 81, 0.1);
+        --light-maroon: rgba(149, 45, 87, 0.1);
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: var(--white);
+        color: var(--dark);
+    }
+
+    header {
+        background: var(--dark);
+        color: var(--white);
+        padding: 1.5rem 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .logo-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--gold), var(--maroon));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--white);
+    }
+
+    .logo h1 {
+        font-size: 1.8rem;
+        color: var(--gold);
+    }
+
+    .logo p {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.7);
+    }
+
+    nav {
+        display: flex;
+        gap: 2rem;
+    }
+
+    nav button {
+        background: none;
+        border: none;
+        color: var(--white);
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+    nav button:hover {
+        background: rgba(246, 200, 81, 0.2);
+        color: var(--gold);
+    }
+
+    nav button.active {
+        background: var(--gold);
+        color: var(--dark);
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+    }
+
+    .view {
+        display: none;
+    }
+
+    .view.active {
+        display: block;
+    }
+
+    .card {
+        background: var(--white);
+        border: 2px solid rgba(44,44,44,0.1);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+        color: var(--maroon);
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--dark);
+        font-weight: 500;
+    }
+
+    input, select, textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid rgba(44,44,44,0.1);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--gold);
+        box-shadow: 0 0 0 3px var(--light-gold);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background: var(--gold);
+        color: var(--dark);
+    }
+
+    .btn-primary:hover {
+        background: rgb(226, 180, 61);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(246, 200, 81, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--maroon);
+        color: var(--white);
+    }
+
+    .btn-secondary:hover {
+        background: rgb(129, 25, 67);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(149, 45, 87, 0.3);
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: var(--white);
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .search-container {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 2px solid var(--gold);
+        border-radius: 12px;
+        font-size: 1.1rem;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--maroon);
+        font-size: 1.2rem;
+    }
+
+    .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-chip {
+        padding: 0.5rem 1rem;
+        background: var(--white);
+        border: 2px solid var(--gold);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: var(--dark);
+    }
+
+    .filter-chip:hover {
+        background: var(--light-gold);
+    }
+    
+    .filter-chip.active {
+        background: var(--gold);
+        color: var(--dark);
+    }
+
+    .machine-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .machine-card {
+        background: var(--light-gold);
+        border: 2px solid var(--gold);
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .machine-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(149, 45, 87, 0.2);
+        border-color: var(--maroon);
+    }
+
+    .machine-card h3 {
+        color: var(--maroon);
+        margin-bottom: 0.5rem;
+    }
+
+    .machine-category {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .machine-location {
+        font-size: 0.85rem;
+        color: var(--maroon);
+        font-weight: 600;
+    }
+
+    .training-required {
+        background: var(--light-maroon);
+        border: 1px solid var(--maroon);
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .training-required.certified {
+        background: #d4edda;
+        border: 1px solid #28a745;
+    }
+
+    .training-required h4 {
+        color: var(--maroon);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .training-required.certified h4 {
+        color: #155724;
+    }
+
+    .training-badge {
+        display: inline-block;
+        background: var(--maroon);
+        color: var(--white);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin: 0.25rem;
+    }
+
+    .training-badge.completed {
+        background: #28a745;
+    }
+
+    .location-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+        margin-top: 1.5rem;
+    }
+
+    .floor-section {
+        background: var(--light-gold);
+        border: 2px solid var(--gold);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .floor-title {
+        color: var(--maroon);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .location-card {
+        background: var(--white);
+        border: 2px solid rgba(44,44,44,0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .location-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(149, 45, 87, 0.2);
+        border-color: var(--maroon);
+    }
+
+    .location-card h4 {
+        color: var(--maroon);
+        margin-bottom: 0.5rem;
+    }
+
+    .location-info {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: 100px repeat(7, 1fr);
+        gap: 1px;
+        background: rgba(44,44,44,0.1);
+        margin-top: 1.5rem;
+    }
+
+    .schedule-grid-detailed {
+        display: grid;
+        grid-template-columns: 100px repeat(7, 1fr);
+        gap: 2px;
+        background: rgba(44,44,44,0.1);
+        margin-top: 1.5rem;
+        min-width: 1200px;
+    }
+
+    .schedule-header {
+        background: var(--maroon);
+        color: var(--white);
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .schedule-time {
+        background: var(--light-gold);
+        padding: 1rem;
+        text-align: center;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .schedule-cell {
+        background: var(--white);
+        padding: 0.5rem;
+        min-height: 60px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .schedule-cell:hover {
+        background: var(--light-maroon);
+    }
+
+    .schedule-cell.filled {
+        background: var(--light-gold);
+        border-left: 3px solid var(--gold);
+    }
+
+    .schedule-cell-detailed {
+        background: var(--white);
+        padding: 0.75rem;
+        min-height: 100px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .schedule-cell-detailed:hover {
+        background: var(--light-maroon);
+    }
+
+    .schedule-cell-detailed.filled {
+        background: var(--light-gold);
+        border-left: 4px solid var(--gold);
+    }
+
+    .shift-open {
+        font-weight: 600;
+        color: var(--dark);
+        font-size: 0.85rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(44,44,44,0.2);
+    }
+
+    .shift-training {
+        font-size: 0.8rem;
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .category-badge {
+        display: inline-block;
+        background: var(--maroon);
+        color: var(--white);
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-right: 0.25rem;
+    }
+
+    .trainer-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .trainer-item {
+        background: var(--light-maroon);
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .trainer-hours {
+        color: var(--maroon);
+        font-weight: 600;
+    }
+
+    .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--dark);
+    }
+
+    .machine-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .machine-item {
+        background: var(--light-gold);
+        padding: 1rem;
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .existing-machines {
+        margin-top: 2rem;
+    }
+
+    .existing-machine-card {
+        background: var(--white);
+        border: 2px solid rgba(44,44,44,0.1);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .reservation-card {
+        background: var(--light-gold);
+        border: 2px solid var(--gold);
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s;
+    }
+
+    .reservation-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(149, 45, 87, 0.2);
+    }
+
+    .reservation-card h3 {
+        color: var(--maroon);
+        margin-bottom: 0.5rem;
+    }
+
+    .reservation-details {
+        display: flex;
+        gap: 1.5rem;
+        margin: 0.75rem 0;
+        flex-wrap: wrap;
+    }
+
+    .reservation-detail {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .reservation-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .btn-small {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .training-history-card {
+        background: var(--light-maroon);
+        border: 2px solid var(--maroon);
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .training-history-card h3 {
+        color: var(--maroon);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .machine-instance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    .instance-card {
+        background: var(--white);
+        border: 2px solid rgba(44,44,44,0.1);
+        padding: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .instance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(149, 45, 87, 0.2);
+        border-color: var(--maroon);
+    }
+
+    .instance-card.available {
+        border-left: 4px solid #28a745;
+    }
+
+    .instance-card.in-use {
+        border-left: 4px solid #ffc107;
+        opacity: 0.8;
+    }
+
+    .instance-card.maintenance {
+        border-left: 4px solid #dc3545;
+        opacity: 0.7;
+    }
+
+    .instance-status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    .status-available-badge {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-in-use-badge {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-maintenance-badge {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    @media (max-width: 768px) {
+        .two-column, .location-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+<header>
+    <div class="header-content">
+        <div class="logo">
+            <div class="logo-icon">H</div>
+            <div>
+                <h1>The Hatchery</h1>
+                <p>Boston College Makerspace</p>
+            </div>
+        </div>
+        <nav>
+            <button class="active" data-view="student">Reserve Machine</button>
+            <button data-view="myreservations">My Reservations</button>
+            <button data-view="staff">Staff Dashboard</button>
+        </nav>
+    </div>
+</header>
+
+<div class="container">
+    <!-- STUDENT VIEW -->
+    <div id="student" class="view active">
+        <div class="card">
+            <h2>🔍 Find & Reserve a Machine</h2>
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="Search for machines..." id="searchInput">
+            </div>
+            
+            <div class="filters" id="filterBar">
+                <div class="filter-chip active" data-filter="all">All Machines</div>
+                <div class="filter-chip" data-filter="Laser">Laser</div>
+                <div class="filter-chip" data-filter="Vinyl">Vinyl</div>
+                <div class="filter-chip" data-filter="Woodworking">Woodworking</div>
+                <div class="filter-chip" data-filter="Textiles">Textiles</div>
+                <div class="filter-chip" data-filter="Metalworking">Metalworking</div>
+                <div class="filter-chip" data-filter="3D Printing">3D Printing</div>
+                <div class="filter-chip" data-filter="Electronics">Electronics</div>
+            </div>
+
+            <div class="machine-grid" id="machineGrid">
+                <!-- Machines will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MY RESERVATIONS VIEW -->
+    <div id="myreservations" class="view">
+        <div class="card">
+            <h2>📅 Upcoming Equipment Reservations</h2>
+            <div id="upcomingReservations">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📚 Upcoming Training Sessions</h2>
+            <div id="upcomingTrainings">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✅ Completed Training History</h2>
+            <div id="completedTrainings">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🕒 Past Equipment Reservations</h2>
+            <div id="pastReservations">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- STAFF VIEW -->
+    <div id="staff" class="view">
+        <!-- Add Machine -->
+        <div class="card">
+            <h2>➕ Add New Machine</h2>
+            <form onsubmit="event.preventDefault(); alert('Machine added successfully!');">
+                <div class="two-column">
+                    <div class="form-group">
+                        <label>Machine Name</label>
+                        <input type="text" placeholder="e.g., Ultimaker S5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select>
+                            <option>Laser</option>
+                            <option>Vinyl</option>
+                            <option>Woodworking</option>
+                            <option>Textiles</option>
+                            <option>Metalworking</option>
+                            <option>3D Printing</option>
+                            <option>Electronics</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <select>
+                        <option>Hatch Front (2nd Floor)</option>
+                        <option>Hatch Back (2nd Floor)</option>
+                        <option>Prototyping Studio (3rd Floor)</option>
+                        <option>Prototyping Shop (3rd Floor)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Required Training Levels</label>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-weight: normal;">
+                            <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                            Level 1 Training Required
+                        </label>
+                        <label style="font-weight: normal;">
+                            <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                            Level 2 Training Required
+                        </label>
+                        <label style="font-weight: normal;">
+                            <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                            Level 3 Training Required
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Machine</button>
+            </form>
+
+            <div class="existing-machines">
+                <h3 style="color: var(--maroon); margin-bottom: 1rem;">Existing Machines</h3>
+                <div class="existing-machine-card">
+                    <div>
+                        <h4>Epilog Laser Fusion Pro</h4>
+                        <p style="font-size: 0.9rem; color: #666;">Category: Laser | Location: Hatch Front</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="if(confirm('Remove this machine?')) alert('Machine removed')">Remove</button>
+                </div>
+                <div class="existing-machine-card">
+                    <div>
+                        <h4>Prusa i3 MK3S+</h4>
+                        <p style="font-size: 0.9rem; color: #666;">Category: 3D Printing | Location: Prototyping Studio</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="if(confirm('Remove this machine?')) alert('Machine removed')">Remove</button>
+                </div>
+                <div class="existing-machine-card">
+                    <div>
+                        <h4>Shapeoko 4 XXL CNC</h4>
+                        <p style="font-size: 0.9rem; color: #666;">Category: Woodworking | Location: Prototyping Shop</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="if(confirm('Remove this machine?')) alert('Machine removed')">Remove</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classroom Layout -->
+        <div class="card">
+            <h2>🏗️ Location & Layout Management</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <button class="btn btn-secondary" onclick="openLocationModal()">Add/Edit Location</button>
+            </div>
+            
+            <div class="location-grid">
+                <div class="floor-section">
+                    <div class="floor-title">🏢 2nd Floor</div>
+                    <div class="location-card" onclick="viewLocationDetails('Hatch Front')">
+                        <h4>Hatch Front</h4>
+                        <div class="location-info">
+                            <span>📊 8 stations</span>
+                            <span>👥 Capacity: 24</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+                    </div>
+                    <div class="location-card" onclick="viewLocationDetails('Hatch Back')">
+                        <h4>Hatch Back</h4>
+                        <div class="location-info">
+                            <span>📊 6 stations</span>
+                            <span>👥 Capacity: 18</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+                    </div>
+                </div>
+
+                <div class="floor-section">
+                    <div class="floor-title">🏢 3rd Floor</div>
+                    <div class="location-card" onclick="viewLocationDetails('Prototyping Studio')">
+                        <h4>Prototyping Studio</h4>
+                        <div class="location-info">
+                            <span>📊 10 stations</span>
+                            <span>👥 Capacity: 30</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+                    </div>
+                    <div class="location-card" onclick="viewLocationDetails('Prototyping Shop')">
+                        <h4>Prototyping Shop</h4>
+                        <div class="location-info">
+                            <span>📊 12 stations</span>
+                            <span>👥 Capacity: 36</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Semester Schedule -->
+        <div class="card">
+            <h2>📅 Define Semester Schedule</h2>
+            <div class="two-column">
+                <div class="form-group">
+                    <label>Semester</label>
+                    <select>
+                        <option>Fall 2025</option>
+                        <option>Spring 2026</option>
+                        <option>Summer 2026</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date Range</label>
+                    <input type="text" placeholder="Sept 1 - Dec 15, 2025">
+                </div>
+            </div>
+
+            <div style="margin: 1.5rem 0;">
+                <button class="btn btn-primary" onclick="openAutoScheduleModal()">⚡ Auto-Schedule Trainers</button>
+                <button class="btn btn-secondary" style="margin-left: 1rem;" onclick="manageTrainers()">👥 Manage Trainers</button>
+            </div>
+            
+            <h3 style="margin: 1.5rem 0 1rem; color: var(--maroon);">Weekly Schedule - Open Hours & Training Coverage</h3>
+            <p style="margin-bottom: 1rem; color: #666;">Each cell shows: <strong>Open Hours Staff</strong> | <strong>Training Coverage</strong> (by category)</p>
+            
+            <div style="overflow-x: auto;">
+                <div class="schedule-grid-detailed">
+                    <div class="schedule-header">Time</div>
+                    <div class="schedule-header">Sunday</div>
+                    <div class="schedule-header">Monday</div>
+                    <div class="schedule-header">Tuesday</div>
+                    <div class="schedule-header">Wednesday</div>
+                    <div class="schedule-header">Thursday</div>
+                    <div class="schedule-header">Friday</div>
+                    <div class="schedule-header">Saturday</div>
+                    
+                    <!-- 9-11 AM -->
+                    <div class="schedule-time">9-11am</div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Laser</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Mike R.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">3D</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Emma L.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.
+                        </div>
+                    </div>
+                    
+                    <!-- 11am-1pm -->
+                    <div class="schedule-time">11am-1pm</div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">Metal</span> Mike R.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Elec</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Sarah M.<br>
+                            <span class="category-badge">Wood</span> Alex K.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Sarah M.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Mike R.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Mike R.<br>
+                            <span class="category-badge">Laser</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    
+                    <!-- 1-3pm -->
+                    <div class="schedule-time">1-3pm</div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Mike R.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Metal</span> Mike R.<br>
+                            <span class="category-badge">3D</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Emma L.<br>
+                            <span class="category-badge">3D</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Sarah M.<br>
+                            <span class="category-badge">Wood</span> Alex K.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Elec</span> Jordan P.<br>
+                            <span class="category-badge">Laser</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">3D</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Sarah M.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.
+                        </div>
+                    </div>
+                    
+                    <!-- 3-5pm -->
+                    <div class="schedule-time">3-5pm</div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Laser</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Emma L.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Emma L.<br>
+                            <span class="category-badge">Wood</span> Mike R.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Sarah M.
+                        </div>
+                    </div>
+                    
+                    <!-- 5-7pm -->
+                    <div class="schedule-time">5-7pm</div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Vinyl</span> Emma L.<br>
+                            <span class="category-badge">3D</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Elec</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">Metal</span> Mike R.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">3D</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    
+                    <!-- 7-9pm -->
+                    <div class="schedule-time">7-9pm</div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Sarah M.<br>
+                            <span class="category-badge">Laser</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Mike R.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Laser</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Mike R.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Metal</span> Mike R.<br>
+                            <span class="category-badge">3D</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">Laser</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    
+                    <!-- 8-10pm -->
+                    <div class="schedule-time">8-10pm</div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Alex K.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Wood</span> Alex K.<br>
+                            <span class="category-badge">3D</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Sarah M.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Sarah M.<br>
+                            <span class="category-badge">Laser</span> Sarah M.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Emma L.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">Laser</span> Emma L.<br>
+                            <span class="category-badge">Vinyl</span> Emma L.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                    <div class="schedule-cell-detailed filled">
+                        <div class="shift-open">Open: Jordan P.</div>
+                        <div class="shift-training">
+                            <span class="category-badge">3D</span> Jordan P.<br>
+                            <span class="category-badge">Elec</span> Jordan P.
+                        </div>
+                    </div>
+                    <div class="schedule-cell-detailed"></div>
+                </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top: 1.5rem;">Save Schedule</button>
+        </div>
+
+        <!-- Review Trainers -->
+        <div class="card">
+            <h2>👥 Review Trainer Schedules</h2>
+            <div class="trainer-list">
+                <div class="trainer-item">
+                    <div>
+                        <h3 style="margin-bottom: 0.25rem;">Sarah Mitchell</h3>
+                        <p style="color: #666; font-size: 0.9rem;">3D Printing, Laser Cutting</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="trainer-hours">15 hrs/week</div>
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">View Schedule</button>
+                    </div>
+                </div>
+                
+                <div class="trainer-item">
+                    <div>
+                        <h3 style="margin-bottom: 0.25rem;">Alex Kim</h3>
+                        <p style="color: #666; font-size: 0.9rem;">CNC Milling, Woodworking</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="trainer-hours">18 hrs/week</div>
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">View Schedule</button>
+                    </div>
+                </div>
+                
+                <div class="trainer-item">
+                    <div>
+                        <h3 style="margin-bottom: 0.25rem;">Jordan Park</h3>
+                        <p style="color: #666; font-size: 0.9rem;">3D Printing, Electronics</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="trainer-hours">12 hrs/week</div>
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">View Schedule</button>
+                    </div>
+                </div>
+                
+                <div class="trainer-item">
+                    <div>
+                        <h3 style="margin-bottom: 0.25rem;">Emma Lopez</h3>
+                        <p style="color: #666; font-size: 0.9rem;">Laser Cutting, Vinyl Cutting</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="trainer-hours">16 hrs/week</div>
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">View Schedule</button>
+                    </div>
+                </div>
+                
+                <div class="trainer-item">
+                    <div>
+                        <h3 style="margin-bottom: 0.25rem;">Mike Rodriguez</h3>
+                        <p style="color: #666; font-size: 0.9rem;">All Equipment</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="trainer-hours">20 hrs/week</div>
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">View Schedule</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; padding: 1.5rem; background: var(--light-gold); border-radius: 12px; border: 2px solid var(--gold);">
+                <h3 style="color: var(--maroon); margin-bottom: 1rem;">🚀 Publish Schedule</h3>
+                <p style="margin-bottom: 1rem;">Review all trainer schedules and machine assignments before publishing to students.</p>
+                <button class="btn btn-primary">Publish to Students</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Machine Reservation Modal -->
+<div id="machineModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" style="color: var(--maroon);">Machine Details</h2>
+            <button class="close-btn" onclick="closeMachineModal()">×</button>
+        </div>
+        <div id="modalBody">
+            <div id="modalInfo"></div>
+            <div id="modalActions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Details Modal -->
+<div id="locationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="locationModalTitle" style="color: var(--maroon);">Location Details</h2>
+            <button class="close-btn" onclick="closeLocationModal()">×</button>
+        </div>
+        <div id="locationModalBody"></div>
+    </div>
+</div>
+
+<!-- Add/Edit Location Modal -->
+<div id="editLocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">Add/Edit Location</h2>
+            <button class="close-btn" onclick="closeEditLocationModal()">×</button>
+        </div>
+        <form onsubmit="event.preventDefault(); alert('Location saved!'); closeEditLocationModal();">
+            <div class="form-group">
+                <label>Location Name</label>
+                <input type="text" placeholder="e.g., Hatch Front" required>
+            </div>
+            <div class="form-group">
+                <label>Floor</label>
+                <select>
+                    <option>2nd Floor</option>
+                    <option>3rd Floor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Number of Tables/Stations</label>
+                <input type="number" placeholder="8" required>
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" placeholder="24" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Location</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // User's completed trainings - Lvl 1 3D Printing is completed
+    const userTrainings = {
+        'intro-3d-printing': true
+    };
+
+    // Storage for reservations and trainings
+    let equipmentReservations = JSON.parse(localStorage.getItem('equipmentReservations') || '[]');
+    let trainingReservations = JSON.parse(localStorage.getItem('trainingReservations') || '[]');
+    let completedTrainingHistory = JSON.parse(localStorage.getItem('completedTrainingHistory') || JSON.stringify([
+        {
+            training: 'Intro to 3D Printing',
+            date: '2024-09-15',
+            time: '2:00 PM - 3:30 PM',
+            trainer: 'Sarah Mitchell'
+        },
+        {
+            training: 'Woodworking Basics Training',
+            date: '2024-08-22',
+            time: '10:00 AM - 12:00 PM',
+            trainer: 'Alex Kim'
+        }
+    ]));
+
+    // Initialize with some sample upcoming reservations
+    if (equipmentReservations.length === 0) {
+        equipmentReservations = [
+            {
+                id: 'res-1',
+                machine: 'Prusa i3 MK3S+',
+                category: '3D Printing',
+                location: 'Prototyping Studio',
+                date: '2025-10-22',
+                time: '12:00 PM - 3:00 PM',
+                duration: 3,
+                project: 'Prototype housing for Arduino project'
+            }
+        ];
+        saveData();
+    }
+
+    if (trainingReservations.length === 0) {
+        trainingReservations = [
+            {
+                id: 'train-1',
+                training: 'Laser Cutting Basics',
+                machine: 'Epilog Laser Fusion Pro',
+                date: '2025-10-25',
+                time: '9:00 AM - 12:00 PM',
+                trainer: 'Emma Lopez'
+            }
+        ];
+        saveData();
+    }
+
+    function saveData() {
+        localStorage.setItem('equipmentReservations', JSON.stringify(equipmentReservations));
+        localStorage.setItem('trainingReservations', JSON.stringify(trainingReservations));
+        localStorage.setItem('completedTrainingHistory', JSON.stringify(completedTrainingHistory));
+    }
+
+    // Machine data
+    const machines = [
+        {
+            name: 'Epilog Laser Fusion Pro',
+            category: 'Laser',
+            location: 'Hatch Front',
+            trainings: ['Laser Cutting Basics'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'laser-1', nickname: 'Apollo', status: 'available'},
+                {id: 'laser-2', nickname: 'Zeus', status: 'in-use'}
+            ]
+        },
+        {
+            name: 'Epilog Laser - Rotary',
+            category: 'Laser',
+            location: 'Hatch Front',
+            trainings: ['Laser Cutting Basics', 'Laser Cutter Rotary Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'laser-rot-1', nickname: 'Cyclone', status: 'available'}
+            ]
+        },
+        {
+            name: 'Multi-Surface UV Printer',
+            category: 'Laser',
+            location: 'Hatch Back',
+            trainings: ['Laser Cutting Basics', 'Multi-Surface UV Printer Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'uv-1', nickname: 'Phoenix', status: 'available'}
+            ]
+        },
+        {
+            name: 'Cricut Maker 3',
+            category: 'Vinyl',
+            location: 'Hatch Back',
+            trainings: ['Vinyl Cutting Basics Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'cricut-1', nickname: 'Slice', status: 'available'},
+                {id: 'cricut-2', nickname: 'Dice', status: 'in-use'}
+            ]
+        },
+        {
+            name: 'Direct-to-Garment Printer',
+            category: 'Vinyl',
+            location: 'Prototyping Studio',
+            trainings: ['Vinyl Cutting Basics', 'Direct-to-Garment Printing Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'dtg-1', nickname: 'Threads', status: 'available'}
+            ]
+        },
+        {
+            name: 'Shapeoko 4 XXL CNC',
+            category: 'Woodworking',
+            location: 'Prototyping Shop',
+            trainings: ['Woodworking Basics Training', 'CNC Routing Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'cnc-1', nickname: 'Chipper', status: 'maintenance'},
+                {id: 'cnc-2', nickname: 'Carver', status: 'available'}
+            ]
+        },
+        {
+            name: 'SawStop Table Saw',
+            category: 'Woodworking',
+            location: 'Prototyping Shop',
+            trainings: ['Woodworking Basics Training', 'Intermediate Woodworking Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'saw-1', nickname: 'Sawyer', status: 'available'}
+            ]
+        },
+        {
+            name: 'Brother Embroidery Machine',
+            category: 'Textiles',
+            location: 'Hatch Back',
+            trainings: ['Sewing Machine Basics Training', 'Embroidery Machine Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'emb-1', nickname: 'Stitch', status: 'available'},
+                {id: 'emb-2', nickname: 'Patch', status: 'available'}
+            ]
+        },
+        {
+            name: 'OMAX Waterjet Cutter',
+            category: 'Metalworking',
+            location: 'Prototyping Shop',
+            trainings: ['Waterjet Cutting'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'wj-1', nickname: 'Tsunami', status: 'available'}
+            ]
+        },
+        {
+            name: 'Prusa i3 MK3S+',
+            category: '3D Printing',
+            location: 'Prototyping Studio',
+            trainings: ['Intro to 3D Printing'],
+            requiredTrainings: ['intro-3d-printing'],
+            certified: true,
+            instances: [
+                {id: 'prusa-1', nickname: 'Eddy', status: 'available'},
+                {id: 'prusa-2', nickname: 'Damian', status: 'in-use'},
+                {id: 'prusa-3', nickname: 'Felix', status: 'available'},
+                {id: 'prusa-4', nickname: 'Gizmo', status: 'available'},
+                {id: 'prusa-5', nickname: 'Hugo', status: 'in-use'},
+                {id: 'prusa-6', nickname: 'Iris', status: 'available'},
+                {id: 'prusa-7', nickname: 'Jasper', status: 'available'},
+                {id: 'prusa-8', nickname: 'Kira', status: 'maintenance'},
+                {id: 'prusa-9', nickname: 'Luna', status: 'available'},
+                {id: 'prusa-10', nickname: 'Max', status: 'available'}
+            ]
+        },
+        {
+            name: 'Ultimaker S5',
+            category: '3D Printing',
+            location: 'Prototyping Studio',
+            trainings: ['Intro to 3D Printing'],
+            requiredTrainings: ['intro-3d-printing'],
+            certified: true,
+            instances: [
+                {id: 'ulti-1', nickname: 'Titan', status: 'available'},
+                {id: 'ulti-2', nickname: 'Atlas', status: 'available'}
+            ]
+        },
+        {
+            name: 'Formlabs Form 3',
+            category: '3D Printing',
+            location: 'Prototyping Studio',
+            trainings: ['Intro to 3D Printing', 'High-Detail Resin 3D Printing Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'form-1', nickname: 'Resin', status: 'available'},
+                {id: 'form-2', nickname: 'Crystal', status: 'available'}
+            ]
+        },
+        {
+            name: 'Electronics Workbench',
+            category: 'Electronics',
+            location: 'Prototyping Studio',
+            trainings: ['Circuitry Basics Training', 'Soldering Basics Training'],
+            requiredTrainings: [],
+            instances: [
+                {id: 'elec-1', nickname: 'Station Alpha', status: 'available'},
+                {id: 'elec-2', nickname: 'Station Beta', status: 'available'},
+                {id: 'elec-3', nickname: 'Station Gamma', status: 'in-use'}
+            ]
+        }
+    ];
+
+    let currentFilter = 'all';
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        renderMachines();
+        setupEventListeners();
+        renderReservations();
+    });
+
+    function setupEventListeners() {
+        // Navigation buttons
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const viewId = this.getAttribute('data-view');
+                showView(viewId);
+            });
+        });
+
+        // Filter chips
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.getAttribute('data-filter');
+                renderMachines();
+            });
+        });
+
+        // Search input
+        document.getElementById('searchInput').addEventListener('input', function() {
+            renderMachines();
+        });
+    }
+
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+        
+        document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`nav button[data-view="${viewId}"]`).classList.add('active');
+        
+        if (viewId === 'myreservations') {
+            renderReservations();
+        }
+    }
+
+    function renderReservations() {
+        renderUpcomingReservations();
+        renderUpcomingTrainings();
+        renderCompletedTrainings();
+        renderPastReservations();
+    }
+
+    function renderUpcomingReservations() {
+        const container = document.getElementById('upcomingReservations');
+        const today = new Date();
+        const upcoming = equipmentReservations.filter(res => new Date(res.date) >= today);
+
+        if (upcoming.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No upcoming equipment reservations</p></div>';
+            return;
+        }
+
+        container.innerHTML = upcoming.map(res => `
+            <div class="reservation-card">
+                <h3>${res.machine}</h3>
+                <div class="reservation-details">
+                    <div class="reservation-detail">📅 ${formatDate(res.date)}</div>
+                    <div class="reservation-detail">🕐 ${res.time}</div>
+                    <div class="reservation-detail">📍 ${res.location}</div>
+                    <div class="reservation-detail">⏱️ ${res.duration} hours</div>
+                </div>
+                <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> ${res.project}</p>
+                <div class="reservation-actions">
+                    <button class="btn btn-secondary btn-small" onclick="modifyReservation('${res.id}', 'equipment')">Modify</button>
+                    <button class="btn btn-danger btn-small" onclick="cancelReservation('${res.id}', 'equipment')">Cancel</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderUpcomingTrainings() {
+        const container = document.getElementById('upcomingTrainings');
+        const today = new Date();
+        const upcoming = trainingReservations.filter(res => new Date(res.date) >= today);
+
+        if (upcoming.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No upcoming training sessions</p></div>';
+            return;
+        }
+
+        container.innerHTML = upcoming.map(res => `
+            <div class="reservation-card">
+                <h3>${res.training}</h3>
+                <div class="reservation-details">
+                    <div class="reservation-detail">📅 ${formatDate(res.date)}</div>
+                    <div class="reservation-detail">🕐 ${res.time}</div>
+                    <div class="reservation-detail">👤 Trainer: ${res.trainer}</div>
+                </div>
+                <p style="margin-top: 0.5rem; color: #666;"><strong>Machine:</strong> ${res.machine}</p>
+                <div class="reservation-actions">
+                    <button class="btn btn-secondary btn-small" onclick="modifyReservation('${res.id}', 'training')">Modify</button>
+                    <button class="btn btn-danger btn-small" onclick="cancelReservation('${res.id}', 'training')">Cancel</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderCompletedTrainings() {
+        const container = document.getElementById('completedTrainings');
+
+        if (completedTrainingHistory.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📚</div><p>No completed trainings yet</p></div>';
+            return;
+        }
+
+        container.innerHTML = completedTrainingHistory.map(training => `
+            <div class="training-history-card">
+                <h3>✓ ${training.training}</h3>
+                <div class="reservation-details">
+                    <div class="reservation-detail">📅 ${formatDate(training.date)}</div>
+                    <div class="reservation-detail">🕐 ${training.time}</div>
+                    <div class="reservation-detail">👤 Trainer: ${training.trainer}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderPastReservations() {
+        const container = document.getElementById('pastReservations');
+        const today = new Date();
+        const past = equipmentReservations.filter(res => new Date(res.date) < today);
+
+        if (past.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🕒</div><p>No past equipment reservations</p></div>';
+            return;
+        }
+
+        container.innerHTML = past.map(res => `
+            <div class="training-history-card">
+                <h3>${res.machine}</h3>
+                <div class="reservation-details">
+                    <div class="reservation-detail">📅 ${formatDate(res.date)}</div>
+                    <div class="reservation-detail">🕐 ${res.time}</div>
+                    <div class="reservation-detail">📍 ${res.location}</div>
+                    <div class="reservation-detail">⏱️ ${res.duration} hours</div>
+                </div>
+                <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> ${res.project}</p>
+            </div>
+        `).join('');
+    }
+
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function cancelReservation(id, type) {
+        if (!confirm('Are you sure you want to cancel this reservation?')) return;
+
+        if (type === 'equipment') {
+            equipmentReservations = equipmentReservations.filter(res => res.id !== id);
+        } else {
+            trainingReservations = trainingReservations.filter(res => res.id !== id);
+        }
+
+        saveData();
+        renderReservations();
+        alert('Reservation cancelled successfully!');
+    }
+
+    function modifyReservation(id, type) {
+        alert('Modification feature - In a full system, this would open a modal to edit the reservation details.');
+    }
+
+    function renderMachines() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const grid = document.getElementById('machineGrid');
+        
+        const filteredMachines = machines.filter(machine => {
+            const matchesFilter = currentFilter === 'all' || machine.category === currentFilter;
+            const matchesSearch = machine.name.toLowerCase().includes(searchTerm) || 
+                                machine.category.toLowerCase().includes(searchTerm);
+            return matchesFilter && matchesSearch;
+        });
+
+        grid.innerHTML = filteredMachines.map(machine => {
+            const isCertified = machine.certified;
+            const trainingBadges = machine.trainings.map(training => 
+                `<span class="training-badge ${isCertified ? 'completed' : ''}">${isCertified ? '✓ ' : ''}${training}</span>`
+            ).join('');
+
+            return `
+                <div class="machine-card" onclick='openMachineModal(${JSON.stringify(machine)})'>
+                    <h3>${machine.name}</h3>
+                    <p class="machine-category">Category: ${machine.category}</p>
+                    <p class="machine-location">📍 ${machine.location}</p>
+                    <div class="training-required ${isCertified ? 'certified' : ''}">
+                        <h4>${isCertified ? '✓ You are certified!' : '⚠️ Training Required:'}</h4>
+                        ${trainingBadges}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function openMachineModal(machine) {
+        document.getElementById('modalTitle').textContent = machine.name;
+        
+        const modalInfo = document.getElementById('modalInfo');
+        const modalActions = document.getElementById('modalActions');
+        
+        modalInfo.innerHTML = `
+            <p style="margin-bottom: 1rem;"><strong>Category:</strong> ${machine.category}</p>
+            <p style="margin-bottom: 1rem;"><strong>Location:</strong> ${machine.location}</p>
+        `;
+        
+        if (machine.certified) {
+            // Show all machine instances
+            const instancesHtml = `
+                <div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 2px solid #28a745;">
+                    <p style="color: #155724; font-weight: 600;">✓ You are certified for this machine</p>
+                </div>
+                <h3 style="color: var(--maroon); margin: 1.5rem 0 1rem;">Select a Machine:</h3>
+                <div class="machine-instance-grid">
+                    ${machine.instances.map(inst => {
+                        let statusClass = inst.status === 'available' ? 'available' : 
+                                        inst.status === 'in-use' ? 'in-use' : 'maintenance';
+                        let statusBadgeClass = inst.status === 'available' ? 'status-available-badge' : 
+                                              inst.status === 'in-use' ? 'status-in-use-badge' : 'status-maintenance-badge';
+                        let statusText = inst.status === 'available' ? 'Available' : 
+                                       inst.status === 'in-use' ? 'In Use' : 'Maintenance';
+                        let disabled = inst.status !== 'available' ? 'style="opacity: 0.6; cursor: not-allowed;"' : 
+                                     `onclick="selectMachineInstance('${inst.id}', '${inst.nickname}', ${JSON.stringify(machine).replace(/"/g, '&quot;')})"`;
+                        
+                        return `
+                            <div class="instance-card ${statusClass}" ${disabled}>
+                                <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">${inst.nickname}</h4>
+                                <p style="font-size: 0.85rem; color: #666;">${machine.name}</p>
+                                <span class="instance-status ${statusBadgeClass}">${statusText}</span>
+                                ${inst.status === 'in-use' ? '<div style="margin-top: 0.5rem;"><button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); joinWaitlist(\'' + inst.nickname + '\')">Join Waitlist</button></div>' : ''}
+                                ${inst.status === 'available' ? '<div style="margin-top: 0.5rem;"><button class="btn btn-danger btn-small" onclick="event.stopPropagation(); reportIssue(\'' + inst.nickname + '\')">Report Issue</button></div>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            modalActions.innerHTML = instancesHtml;
+        } else {
+            const trainingList = machine.trainings.map(t => `<li>${t}</li>`).join('');
+            modalActions.innerHTML = `
+                <div style="background: var(--light-maroon); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 2px solid var(--maroon);">
+                    <p style="color: var(--maroon); font-weight: 600; margin-bottom: 0.5rem;">⚠️ Training Required</p>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Complete these trainings to use this machine:</p>
+                    <ul style="margin-left: 1.5rem; font-size: 0.9rem;">${trainingList}</ul>
+                </div>
+                <form id="trainingForm" onsubmit="bookTraining(event, ${JSON.stringify(machine).replace(/"/g, '&quot;')})">
+                    <div class="form-group">
+                        <label>Select Training Session</label>
+                        <select id="trainSession" required>
+                            ${machine.trainings.map(t => `<option>${t}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Training Date</label>
+                        <input type="date" id="trainDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Time Slot</label>
+                        <select id="trainTime" required>
+                            <option>9:00 AM - 12:00 PM</option>
+                            <option>12:00 PM - 3:00 PM</option>
+                            <option>3:00 PM - 6:00 PM</option>
+                            <option>6:00 PM - 9:00 PM</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Book Training Session</button>
+                </form>
+            `;
+        }
+        
+        document.getElementById('machineModal').classList.add('active');
+    }
+
+    let selectedInstance = null;
+
+    function selectMachineInstance(instanceId, nickname, machine) {
+        selectedInstance = {id: instanceId, nickname: nickname, machine: machine};
+        
+        const modalActions = document.getElementById('modalActions');
+        modalActions.innerHTML = `
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 2px solid var(--gold);">
+                <p style="font-weight: 600; color: var(--maroon);">Selected: ${nickname}</p>
+            </div>
+            <form id="reservationForm" onsubmit="makeReservation(event, ${JSON.stringify(machine).replace(/"/g, '&quot;')}, '${nickname}')">
+                <div class="form-group">
+                    <label>Select Date</label>
+                    <input type="date" id="resDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Select Time Slot</label>
+                    <select id="resTime" required>
+                        <option>9:00 AM - 11:00 AM</option>
+                        <option>11:00 AM - 1:00 PM</option>
+                        <option>1:00 PM - 3:00 PM</option>
+                        <option>3:00 PM - 5:00 PM</option>
+                        <option>5:00 PM - 7:00 PM</option>
+                        <option>7:00 PM - 9:00 PM</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Duration (hours)</label>
+                    <input type="number" id="resDuration" min="1" max="3" value="2" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Description</label>
+                    <textarea id="resProject" rows="3" placeholder="Brief description of what you're making..." required></textarea>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="openMachineModal(${JSON.stringify(machine).replace(/"/g, '&quot;')})" style="flex: 1;">← Back</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 2;">Reserve ${nickname}</button>
+                </div>
+            </form>
+        `;
+    }
+
+    function joinWaitlist(nickname) {
+        alert(`✓ You've been added to the waitlist for ${nickname}!\n\nYou'll receive a notification when this machine becomes available.`);
+    }
+
+    function reportIssue(nickname) {
+        const issue = prompt(`Report an issue with ${nickname}:\n\nPlease describe the problem:`);
+        if (issue) {
+            alert(`Thank you for reporting an issue with ${nickname}.\n\nYour report has been submitted:\n"${issue}"\n\nOur staff will investigate and address this issue shortly.`);
+        }
+    }
+
+    function closeMachineModal() {
+        document.getElementById('machineModal').classList.remove('active');
+    }
+
+    function makeReservation(event, machine, nickname) {
+        event.preventDefault();
+        
+        const date = document.getElementById('resDate').value;
+        const time = document.getElementById('resTime').value;
+        const duration = parseInt(document.getElementById('resDuration').value);
+        const project = document.getElementById('resProject').value;
+
+        const newReservation = {
+            id: 'res-' + Date.now(),
+            machine: machine.name + ' (' + nickname + ')',
+            category: machine.category,
+            location: machine.location,
+            date: date,
+            time: time,
+            duration: duration,
+            project: project
+        };
+
+        equipmentReservations.push(newReservation);
+        saveData();
+        
+        alert(`Machine reserved successfully!\n\nYou've reserved ${nickname} for ${duration} hour(s) on ${formatDate(date)} at ${time}`);
+        closeMachineModal();
+    }
+
+    function bookTraining(event, machine) {
+        event.preventDefault();
+        
+        const training = document.getElementById('trainSession').value;
+        const date = document.getElementById('trainDate').value;
+        const time = document.getElementById('trainTime').value;
+
+        const trainers = ['Sarah Mitchell', 'Alex Kim', 'Jordan Park', 'Emma Lopez', 'Mike Rodriguez'];
+        const randomTrainer = trainers[Math.floor(Math.random() * trainers.length)];
+
+        const newTraining = {
+            id: 'train-' + Date.now(),
+            training: training,
+            machine: machine.name,
+            date: date,
+            time: time,
+            trainer: randomTrainer
+        };
+
+        trainingReservations.push(newTraining);
+        saveData();
+        
+        alert('Training session booked successfully!');
+        closeMachineModal();
+    }
+
+    function viewLocationDetails(locationName) {
+        document.getElementById('locationModalTitle').textContent = locationName;
+        
+        const locationMachines = machines.filter(m => m.location === locationName);
+        
+        let machineListHtml = '<div class="machine-list">';
+        locationMachines.forEach(machine => {
+            machineListHtml += `<div class="machine-item"><strong>${machine.name}</strong><span style="font-size: 0.85rem; color: #666;">${machine.category}</span></div>`;
+        });
+        machineListHtml += '</div>';
+        
+        document.getElementById('locationModalBody').innerHTML = `
+            <p style="margin-bottom: 1rem;"><strong>Machines at this location:</strong></p>
+            ${machineListHtml}
+        `;
+        
+        document.getElementById('locationModal').classList.add('active');
+    }
+
+    function closeLocationModal() {
+        document.getElementById('locationModal').classList.remove('active');
+    }
+
+    function openLocationModal() {
+        document.getElementById('editLocationModal').classList.add('active');
+    }
+
+    function closeEditLocationModal() {
+        document.getElementById('editLocationModal').classList.remove('active');
+    }
+
+    function openAutoScheduleModal() {
+        document.getElementById('autoScheduleModal').classList.add('active');
+    }
+
+    function closeAutoScheduleModal() {
+        document.getElementById('autoScheduleModal').classList.remove('active');
+    }
+
+    function runAutoSchedule() {
+        alert('Auto-scheduling in progress...\n\nThe system has analyzed:\n• 5 trainers\n• Their availability constraints\n• Tool category expertise\n• 2-hour block requirements\n\nSchedule generated successfully!\n\nEach 2-hour block now has:\n✓ Open hours staff assigned\n✓ At least 1 trainer per major category\n✓ Balanced hours across all trainers');
+        closeAutoScheduleModal();
+    }
+
+    function manageTrainers() {
+        document.getElementById('manageTrainersModal').classList.add('active');
+    }
+
+    function closeManageTrainersModal() {
+        document.getElementById('manageTrainersModal').classList.remove('active');
+    }
+
+    function editTrainer(name) {
+        alert(`Edit trainer: ${name}\n\nIn a full system, this would open a form to:\n• Update tool categories\n• Modify unavailability\n• Set preferred hours\n• Adjust max hours per week`);
+    }
+
+    function addNewTrainer() {
+        alert('Add New Trainer\n\nIn a full system, this would open a form to:\n• Enter trainer name\n• Select tool categories they can train\n• Set their unavailability\n• Configure preferences');
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'machineModal') closeMachineModal();
+        if (e.target.id === 'locationModal') closeLocationModal();
+        if (e.target.id === 'editLocationModal') closeEditLocationModal();
+        if (e.target.id === 'autoScheduleModal') closeAutoScheduleModal();
+        if (e.target.id === 'manageTrainersModal') closeManageTrainersModal();
+    });
+</script>
+</body>
+</html>
