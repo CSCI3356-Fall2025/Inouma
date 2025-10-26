@@ -1905,23 +1905,23 @@
         
         if (machine.certified) {
             // Show all machine instances
-            const instancesHtml = `
+            modalActions.innerHTML = `
                 <div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 2px solid #28a745;">
                     <p style="color: #155724; font-weight: 600;">✓ You are certified for this machine</p>
                 </div>
                 <h3 style="color: var(--maroon); margin: 1.5rem 0 1rem;">Select a Machine:</h3>
                 <div class="machine-instance-grid">
                     ${machine.instances.map(inst => {
-                        let statusClass = inst.status === 'available' ? 'available' : 
-                                        inst.status === 'in-use' ? 'in-use' : 'maintenance';
-                        let statusBadgeClass = inst.status === 'available' ? 'status-available-badge' : 
-                                              inst.status === 'in-use' ? 'status-in-use-badge' : 'status-maintenance-badge';
-                        let statusText = inst.status === 'available' ? 'Available' : 
-                                       inst.status === 'in-use' ? 'In Use' : 'Maintenance';
-                        let disabled = inst.status !== 'available' ? 'style="opacity: 0.6; cursor: not-allowed;"' : 
-                                     `onclick="selectMachineInstance('${inst.id}', '${inst.nickname}', ${JSON.stringify(machine).replace(/"/g, '&quot;')})"`;
-                        
-                        return `
+                let statusClass = inst.status === 'available' ? 'available' :
+                    inst.status === 'in-use' ? 'in-use' : 'maintenance';
+                let statusBadgeClass = inst.status === 'available' ? 'status-available-badge' :
+                    inst.status === 'in-use' ? 'status-in-use-badge' : 'status-maintenance-badge';
+                let statusText = inst.status === 'available' ? 'Available' :
+                    inst.status === 'in-use' ? 'In Use' : 'Maintenance';
+                let disabled = inst.status !== 'available' ? 'style="opacity: 0.6; cursor: not-allowed;"' :
+                    `onclick="selectMachineInstance('${inst.id}', '${inst.nickname}', ${JSON.stringify(machine).replace(/"/g, '&quot;')})"`;
+
+                return `
                             <div class="instance-card ${statusClass}" ${disabled}>
                                 <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">${inst.nickname}</h4>
                                 <p style="font-size: 0.85rem; color: #666;">${machine.name}</p>
@@ -1930,10 +1930,9 @@
                                 ${inst.status === 'available' ? '<div style="margin-top: 0.5rem;"><button class="btn btn-danger btn-small" onclick="event.stopPropagation(); reportIssue(\'' + inst.nickname + '\')">Report Issue</button></div>' : ''}
                             </div>
                         `;
-                    }).join('')}
+            }).join('')}
                 </div>
             `;
-            modalActions.innerHTML = instancesHtml;
         } else {
             const trainingList = machine.trainings.map(t => `<li>${t}</li>`).join('');
             modalActions.innerHTML = `
