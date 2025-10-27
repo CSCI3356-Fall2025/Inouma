@@ -1,0 +1,153 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Machine Directory - The Hatchery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🔍 Find & Reserve a Machine</h2>
+    
+    <!-- Search Bar -->
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" placeholder="Search for machines..." id="searchInput">
+    </div>
+    
+    <!-- Category Filters -->
+    <div class="filters" id="filterBar">
+        <div class="filter-chip active" data-filter="all">All Machines</div>
+        <div class="filter-chip" data-filter="Laser">Laser</div>
+        <div class="filter-chip" data-filter="Vinyl">Vinyl</div>
+        <div class="filter-chip" data-filter="Woodworking">Woodworking</div>
+        <div class="filter-chip" data-filter="Textiles">Textiles</div>
+        <div class="filter-chip" data-filter="Metalworking">Metalworking</div>
+        <div class="filter-chip" data-filter="3D Printing">3D Printing</div>
+        <div class="filter-chip" data-filter="Electronics">Electronics</div>
+    </div>
+    
+    <!-- Machine Grid -->
+    <div class="machine-grid" id="machineGrid">
+        <!-- Hardcoded prototype data -->
+        <div class="machine-card" 
+             data-category="Laser" 
+             data-name="epilog laser fusion pro"
+             data-location="hatch front"
+             onclick="openMachineModal(1)">
+            <h3>Epilog Laser Fusion Pro</h3>
+            <p class="machine-category">Category: Laser</p>
+            <p class="machine-location">📍 Hatch Front</p>
+            <div class="training-required">
+                <h4>⚠️ Training Required:</h4>
+                <span class="training-badge">Laser Cutting Basics</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">1/2 available</span>
+            </div>
+        </div>
+
+        <div class="machine-card" 
+             data-category="3D Printing" 
+             data-name="prusa i3 mk3s+"
+             data-location="prototyping studio"
+             onclick="openMachineModal(2)">
+            <h3>Prusa i3 MK3S+</h3>
+            <p class="machine-category">Category: 3D Printing</p>
+            <p class="machine-location">📍 Prototyping Studio</p>
+            <div class="training-required certified">
+                <h4>✓ You are certified!</h4>
+                <span class="training-badge completed">✓ Intro to 3D Printing</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">7/10 available</span>
+            </div>
+        </div>
+
+        <div class="machine-card" 
+             data-category="Vinyl" 
+             data-name="cricut maker 3"
+             data-location="hatch back"
+             onclick="openMachineModal(3)">
+            <h3>Cricut Maker 3</h3>
+            <p class="machine-category">Category: Vinyl</p>
+            <p class="machine-location">📍 Hatch Back</p>
+            <div class="training-required">
+                <h4>⚠️ Training Required:</h4>
+                <span class="training-badge">Vinyl Cutting Basics</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">1/2 available</span>
+            </div>
+        </div>
+
+        <div class="machine-card" 
+             data-category="Woodworking" 
+             data-name="shapeoko 4 xxl cnc"
+             data-location="prototyping shop"
+             onclick="openMachineModal(4)">
+            <h3>Shapeoko 4 XXL CNC</h3>
+            <p class="machine-category">Category: Woodworking</p>
+            <p class="machine-location">📍 Prototyping Shop</p>
+            <div class="training-required">
+                <h4>⚠️ Training Required:</h4>
+                <span class="training-badge">Woodworking Basics</span>
+                <span class="training-badge">CNC Routing</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">1/2 available</span>
+            </div>
+        </div>
+
+        <div class="machine-card" 
+             data-category="Electronics" 
+             data-name="electronics workbench"
+             data-location="prototyping studio"
+             onclick="openMachineModal(5)">
+            <h3>Electronics Workbench</h3>
+            <p class="machine-category">Category: Electronics</p>
+            <p class="machine-location">📍 Prototyping Studio</p>
+            <div class="training-required">
+                <h4>⚠️ Training Required:</h4>
+                <span class="training-badge">Circuitry Basics</span>
+                <span class="training-badge">Soldering Basics</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">2/3 available</span>
+            </div>
+        </div>
+
+        <div class="machine-card" 
+             data-category="3D Printing" 
+             data-name="ultimaker s5"
+             data-location="prototyping studio"
+             onclick="openMachineModal(6)">
+            <h3>Ultimaker S5</h3>
+            <p class="machine-category">Category: 3D Printing</p>
+            <p class="machine-location">📍 Prototyping Studio</p>
+            <div class="training-required certified">
+                <h4>✓ You are certified!</h4>
+                <span class="training-badge completed">✓ Intro to 3D Printing</span>
+            </div>
+            <div class="machine-availability">
+                <span class="availability-badge">2/2 available</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Machine Modal (populated by JavaScript) -->
+<div id="machineModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" style="color: var(--maroon);">Machine Details</h2>
+            <button class="close-btn" onclick="closeMachineModal()">×</button>
+        </div>
+        <div id="modalBody">
+            <!-- Content loaded by JavaScript -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/main.js' %}"></script>
+{% endblock %}

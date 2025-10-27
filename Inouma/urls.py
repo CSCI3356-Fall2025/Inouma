@@ -15,8 +15,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from Inouma import views
 
 urlpatterns = [
+    path('', views.machine_directory, name='machine_directory'),
+    path('staff/', views.staff_dashboard, name='staff_dashboard'),
+    path('reservations/', views.my_reservations, name='my_reservations'), 
     path('admin/', admin.site.urls),
 ]
+
+# Serve static files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])

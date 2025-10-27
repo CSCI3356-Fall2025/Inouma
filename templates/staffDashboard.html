@@ -1,0 +1,617 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Staff Dashboard - The Hatchery{% endblock %}
+
+{% block content %}
+<!-- Add Machine -->
+<div class="card">
+    <h2>➕ Add New Machine</h2>
+    <form onsubmit="event.preventDefault(); addMachine();">
+        <div class="two-column">
+            <div class="form-group">
+                <label>Machine Name</label>
+                <input type="text" id="machineName" placeholder="e.g., Ultimaker S5" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="machineCategory">
+                    <option>Laser</option>
+                    <option>Vinyl</option>
+                    <option>Woodworking</option>
+                    <option>Textiles</option>
+                    <option>Metalworking</option>
+                    <option>3D Printing</option>
+                    <option>Electronics</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Location</label>
+            <select id="machineLocation">
+                <option>Hatch Front (2nd Floor)</option>
+                <option>Hatch Back (2nd Floor)</option>
+                <option>Prototyping Studio (3rd Floor)</option>
+                <option>Prototyping Shop (3rd Floor)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="machineDescription" rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Required Training Levels</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="font-weight: normal;">
+                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                    Level 1 Training Required
+                </label>
+                <label style="font-weight: normal;">
+                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                    Level 2 Training Required
+                </label>
+                <label style="font-weight: normal;">
+                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
+                    Level 3 Training Required
+                </label>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Machine</button>
+    </form>
+
+    <div class="existing-machines">
+        <h3 style="color: var(--maroon); margin-bottom: 1rem;">Existing Machines</h3>
+        <div class="existing-machine-card">
+            <div>
+                <h4>Epilog Laser Fusion Pro</h4>
+                <p style="font-size: 0.9rem; color: #666;">Category: Laser | Location: Hatch Front</p>
+            </div>
+            <button class="btn btn-danger" onclick="removeMachine('Epilog Laser Fusion Pro')">Remove</button>
+        </div>
+        <div class="existing-machine-card">
+            <div>
+                <h4>Prusa i3 MK3S+</h4>
+                <p style="font-size: 0.9rem; color: #666;">Category: 3D Printing | Location: Prototyping Studio</p>
+            </div>
+            <button class="btn btn-danger" onclick="removeMachine('Prusa i3 MK3S+')">Remove</button>
+        </div>
+        <div class="existing-machine-card">
+            <div>
+                <h4>Shapeoko 4 XXL CNC</h4>
+                <p style="font-size: 0.9rem; color: #666;">Category: Woodworking | Location: Prototyping Shop</p>
+            </div>
+            <button class="btn btn-danger" onclick="removeMachine('Shapeoko 4 XXL CNC')">Remove</button>
+        </div>
+    </div>
+</div>
+
+<!-- Classroom Layout -->
+<div class="card">
+    <h2>🏗️ Location & Layout Management</h2>
+    <div style="margin-bottom: 1.5rem;">
+        <button class="btn btn-secondary" onclick="openEditLocationModal()">Add/Edit Location</button>
+    </div>
+    
+    <div class="location-grid">
+        <div class="floor-section">
+            <div class="floor-title">🏢 2nd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Front', 1)">
+                <h4>Hatch Front</h4>
+                <div class="location-info">
+                    <span>📊 8 stations</span>
+                    <span>👥 Capacity: 24</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Back', 2)">
+                <h4>Hatch Back</h4>
+                <div class="location-info">
+                    <span>📊 6 stations</span>
+                    <span>👥 Capacity: 18</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
+
+        <div class="floor-section">
+            <div class="floor-title">🏢 3rd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Studio', 3)">
+                <h4>Prototyping Studio</h4>
+                <div class="location-info">
+                    <span>📊 10 stations</span>
+                    <span>👥 Capacity: 30</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Shop', 4)">
+                <h4>Prototyping Shop</h4>
+                <div class="location-info">
+                    <span>📊 12 stations</span>
+                    <span>👥 Capacity: 36</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Semester Schedule -->
+<div class="card">
+    <h2>📅 Define Semester Schedule</h2>
+    <div class="two-column">
+        <div class="form-group">
+            <label>Semester</label>
+            <select>
+                <option>Fall 2025</option>
+                <option>Spring 2026</option>
+                <option>Summer 2026</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Date Range</label>
+            <input type="text" placeholder="Sept 1 - Dec 15, 2025">
+        </div>
+    </div>
+
+    <div style="margin: 1.5rem 0;">
+        <button class="btn btn-primary" onclick="openAutoScheduleModal()">⚡ Auto-Schedule Trainers</button>
+        <button class="btn btn-secondary" style="margin-left: 1rem;" onclick="openManageTrainersModal()">👥 Manage Trainers</button>
+    </div>
+    
+    <h3 style="margin: 1.5rem 0 1rem; color: var(--maroon);">Weekly Schedule - Open Hours & Training Coverage</h3>
+    <p style="margin-bottom: 1rem; color: #666;">Each cell shows: <strong>Open Hours Staff</strong> | <strong>Training Coverage</strong> (by category)</p>
+    
+    <div style="overflow-x: auto;">
+        <div class="schedule-grid-detailed">
+            <div class="schedule-header">Time</div>
+            <div class="schedule-header">Sunday</div>
+            <div class="schedule-header">Monday</div>
+            <div class="schedule-header">Tuesday</div>
+            <div class="schedule-header">Wednesday</div>
+            <div class="schedule-header">Thursday</div>
+            <div class="schedule-header">Friday</div>
+            <div class="schedule-header">Saturday</div>
+            
+            <!-- 9-11 AM -->
+            <div class="schedule-time">9-11am</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.<br>
+                    <span class="category-badge">Laser</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Mike R.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">3D</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Emma L.<br>
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.
+                </div>
+            </div>
+            
+            <!-- 11am-1pm -->
+            <div class="schedule-time">11am-1pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">Metal</span> Mike R.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.<br>
+                    <span class="category-badge">Elec</span> Jordan P.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Sarah M.<br>
+                    <span class="category-badge">Wood</span> Alex K.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Sarah M.<br>
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Mike R.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Mike R.<br>
+                    <span class="category-badge">Laser</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            
+            <!-- 1-3pm -->
+            <div class="schedule-time">1-3pm</div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Mike R.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Metal</span> Mike R.<br>
+                    <span class="category-badge">3D</span> Jordan P.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Emma L.<br>
+                    <span class="category-badge">3D</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Sarah M.<br>
+                    <span class="category-badge">Wood</span> Alex K.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Elec</span> Jordan P.<br>
+                    <span class="category-badge">Laser</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">3D</span> Jordan P.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Sarah M.<br>
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.
+                </div>
+            </div>
+            
+            <!-- 3-5pm -->
+            <div class="schedule-time">3-5pm</div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.<br>
+                    <span class="category-badge">Laser</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Emma L.<br>
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Laser</span> Emma L.<br>
+                    <span class="category-badge">Wood</span> Mike R.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Sarah M.
+                </div>
+            </div>
+            
+            <!-- 5-7pm -->
+            <div class="schedule-time">5-7pm</div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Emma L.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Vinyl</span> Emma L.<br>
+                    <span class="category-badge">3D</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.<br>
+                    <span class="category-badge">Elec</span> Jordan P.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">Metal</span> Mike R.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">3D</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 7-9pm -->
+            <div class="schedule-time">7-9pm</div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Sarah M.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Sarah M.<br>
+                    <span class="category-badge">Laser</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Mike R.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">Vinyl</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Jordan P.</div>
+                <div class="shift-training">
+                    <span class="category-badge">3D</span> Jordan P.<br>
+                    <span class="category-badge">Laser</span> Sarah M.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Mike R.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Metal</span> Mike R.<br>
+                    <span class="category-badge">3D</span> Jordan P.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed filled">
+                <div class="shift-open">Open: Alex K.</div>
+                <div class="shift-training">
+                    <span class="category-badge">Wood</span> Alex K.<br>
+                    <span class="category-badge">Laser</span> Emma L.
+                </div>
+            </div>
+            <div class="schedule-cell-detailed"></div>
+        </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top: 1.5rem;">Save Schedule</button>
+</div>
+
+<!-- Review Trainers -->
+<div class="card">
+    <h2>👥 Review Trainer Schedules</h2>
+    <div class="trainer-list">
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Sarah Mitchell</h3>
+                <p style="color: #666; font-size: 0.9rem;">3D Printing, Laser Cutting</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">15 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Sarah Mitchell')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Alex Kim</h3>
+                <p style="color: #666; font-size: 0.9rem;">CNC Milling, Woodworking</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">18 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Alex Kim')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Jordan Park</h3>
+                <p style="color: #666; font-size: 0.9rem;">3D Printing, Electronics</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">12 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Jordan Park')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Emma Lopez</h3>
+                <p style="color: #666; font-size: 0.9rem;">Laser Cutting, Vinyl Cutting</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">16 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Emma Lopez')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Mike Rodriguez</h3>
+                <p style="color: #666; font-size: 0.9rem;">All Equipment</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">20 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Mike Rodriguez')">View Schedule</button>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 2rem; padding: 1.5rem; background: var(--light-gold); border-radius: 12px; border: 2px solid var(--gold);">
+        <h3 style="color: var(--maroon); margin-bottom: 1rem;">🚀 Publish Schedule</h3>
+        <p style="margin-bottom: 1rem;">Review all trainer schedules and machine assignments before publishing to students.</p>
+        <button class="btn btn-primary" onclick="publishSchedule()">Publish to Students</button>
+    </div>
+</div>
+
+<!-- Location Details Modal -->
+<div id="locationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="locationModalTitle" style="color: var(--maroon);">Location Details</h2>
+            <button class="close-btn" onclick="closeLocationModal()">×</button>
+        </div>
+        <div id="locationModalBody">
+            <!-- Content loaded by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Location Modal -->
+<div id="editLocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">Add/Edit Location</h2>
+            <button class="close-btn" onclick="closeEditLocationModal()">×</button>
+        </div>
+        <form onsubmit="event.preventDefault(); saveLocation();">
+            <div class="form-group">
+                <label>Location Name</label>
+                <input type="text" id="locationName" placeholder="e.g., Hatch Front" required>
+            </div>
+            <div class="form-group">
+                <label>Floor</label>
+                <select id="locationFloor">
+                    <option>2nd Floor</option>
+                    <option>3rd Floor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Number of Tables/Stations</label>
+                <input type="number" id="locationStations" placeholder="8" required>
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" id="locationCapacity" placeholder="24" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Location</button>
+        </form>
+    </div>
+</div>
+
+<!-- Auto-Schedule Modal -->
+<div id="autoScheduleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">⚡ Auto-Schedule Trainers</h2>
+            <button class="close-btn" onclick="closeAutoScheduleModal()">×</button>
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <p style="margin-bottom: 1rem;">The system will automatically assign trainers to 2-hour blocks based on:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
+                <li>Trainer availability (unavailability already recorded)</li>
+                <li>Tool category expertise</li>
+                <li>Ensuring at least one trainer per category per block</li>
+                <li>Balanced distribution of hours</li>
+            </ul>
+        </div>
+        
+        <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">Current Trainer Pool:</h4>
+            <div style="font-size: 0.9rem; line-height: 1.8;">
+                <strong>Sarah Mitchell:</strong> 3D Printing, Laser<br>
+                <strong>Alex Kim:</strong> Woodworking, Metalworking<br>
+                <strong>Jordan Park:</strong> 3D Printing, Electronics<br>
+                <strong>Emma Lopez:</strong> Laser, Vinyl<br>
+                <strong>Mike Rodriguez:</strong> All Categories
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Schedule Priority</label>
+            <select id="schedulePriority">
+                <option>Balanced hours across all trainers</option>
+                <option>Maximize coverage</option>
+                <option>Minimize individual hours</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="runAutoSchedule()">Generate Schedule</button>
+    </div>
+</div>
+
+<!-- Manage Trainers Modal -->
+<div id="manageTrainersModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">👥 Manage Trainers</h2>
+            <button class="close-btn" onclick="closeManageTrainersModal()">×</button>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: var(--maroon); margin-bottom: 1rem;">Current Trainers</h3>
+            
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Emma Lopez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> Laser Cutting, Vinyl
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays, Mondays 9am-11am
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Emma Lopez')">Edit</button>
+                </div>
+            </div>
+
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Mike Rodriguez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> All Equipment (Master Trainer)
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays after 3pm
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Mike Rodriguez')">Edit</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="addNewTrainer()">+ Add New Trainer</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/main.js' %}"></script>
+{% endblock %}

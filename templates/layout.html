@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The Hatchery - BC Makerspace{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">H</div>
+                <div>
+                    <h1>The Hatchery</h1>
+                    <p>Boston College Makerspace</p>
+                </div>
+            </div>
+            <nav>
+                <a href="{% url 'machine_directory' %}" class="nav-btn {% if request.resolver_match.url_name == 'machine_directory' %}active{% endif %}">Machine Directory</a>
+                <a href="{% url 'my_reservations' %}" class="nav-btn {% if request.resolver_match.url_name == 'my_reservations' %}active{% endif %}">My Reservations</a>
+                {% if user.is_staff %}
+                    <a href="{% url 'staff_dashboard' %}" class="nav-btn {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">Staff Dashboard</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
+        </div>
+    </footer>
+
+    <!-- Base JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    {% block extra_scripts %}
+    <!-- For page-specific JS -->
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,153 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Reservations - The Hatchery{% endblock %}
+
+{% block content %}
+<!-- Upcoming Equipment Reservations -->
+<div class="card">
+    <h2>📅 Upcoming Equipment Reservations</h2>
+    <div id="upcomingReservations">
+        <!-- Sample upcoming reservation -->
+        <div class="reservation-card" data-reservation-id="res-1">
+            <h3>Prusa i3 MK3S+ (Eddy)</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Tue, Oct 29, 2025</div>
+                <div class="reservation-detail">🕐 12:00 PM - 3:00 PM</div>
+                <div class="reservation-detail">📍 Prototyping Studio</div>
+                <div class="reservation-detail">⏱️ 3 hours</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> Prototype housing for Arduino project</p>
+            <div class="reservation-actions">
+                <button class="btn btn-secondary btn-small" onclick="modifyReservation('res-1', 'equipment')">Modify</button>
+                <button class="btn btn-danger btn-small" onclick="cancelReservation('res-1', 'equipment')">Cancel</button>
+            </div>
+        </div>
+
+        <div class="reservation-card" data-reservation-id="res-2">
+            <h3>Ultimaker S5 (Titan)</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Wed, Oct 30, 2025</div>
+                <div class="reservation-detail">🕐 2:00 PM - 4:00 PM</div>
+                <div class="reservation-detail">📍 Prototyping Studio</div>
+                <div class="reservation-detail">⏱️ 2 hours</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> Final design iteration for capstone</p>
+            <div class="reservation-actions">
+                <button class="btn btn-secondary btn-small" onclick="modifyReservation('res-2', 'equipment')">Modify</button>
+                <button class="btn btn-danger btn-small" onclick="cancelReservation('res-2', 'equipment')">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Training Sessions -->
+<div class="card">
+    <h2>📚 Upcoming Training Sessions</h2>
+    <div id="upcomingTrainings">
+        <div class="reservation-card" data-reservation-id="train-1">
+            <h3>Laser Cutting Basics</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Fri, Nov 01, 2025</div>
+                <div class="reservation-detail">🕐 9:00 AM - 12:00 PM</div>
+                <div class="reservation-detail">👤 Trainer: Emma Lopez</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Machine:</strong> Epilog Laser Fusion Pro</p>
+            <div class="reservation-actions">
+                <button class="btn btn-secondary btn-small" onclick="modifyReservation('train-1', 'training')">Modify</button>
+                <button class="btn btn-danger btn-small" onclick="cancelReservation('train-1', 'training')">Cancel</button>
+            </div>
+        </div>
+
+        <div class="reservation-card" data-reservation-id="train-2">
+            <h3>CNC Routing Training</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Mon, Nov 04, 2025</div>
+                <div class="reservation-detail">🕐 1:00 PM - 4:00 PM</div>
+                <div class="reservation-detail">👤 Trainer: Alex Kim</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Machine:</strong> Shapeoko 4 XXL CNC</p>
+            <div class="reservation-actions">
+                <button class="btn btn-secondary btn-small" onclick="modifyReservation('train-2', 'training')">Modify</button>
+                <button class="btn btn-danger btn-small" onclick="cancelReservation('train-2', 'training')">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Completed Training History -->
+<div class="card">
+    <h2>✅ Completed Training History</h2>
+    <div id="completedTrainings">
+        <div class="training-history-card">
+            <h3>✓ Intro to 3D Printing</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Sun, Sep 15, 2024</div>
+                <div class="reservation-detail">🕐 2:00 PM - 3:30 PM</div>
+                <div class="reservation-detail">👤 Trainer: Sarah Mitchell</div>
+            </div>
+        </div>
+
+        <div class="training-history-card">
+            <h3>✓ Woodworking Basics Training</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Thu, Aug 22, 2024</div>
+                <div class="reservation-detail">🕐 10:00 AM - 12:00 PM</div>
+                <div class="reservation-detail">👤 Trainer: Alex Kim</div>
+            </div>
+        </div>
+
+        <div class="training-history-card">
+            <h3>✓ Soldering Basics Training</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Tue, Jul 10, 2024</div>
+                <div class="reservation-detail">🕐 3:00 PM - 4:00 PM</div>
+                <div class="reservation-detail">👤 Trainer: Jordan Park</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Past Equipment Reservations -->
+<div class="card">
+    <h2>🕒 Past Equipment Reservations</h2>
+    <div id="pastReservations">
+        <div class="training-history-card">
+            <h3>Prusa i3 MK3S+ (Felix)</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Fri, Oct 18, 2024</div>
+                <div class="reservation-detail">🕐 1:00 PM - 4:00 PM</div>
+                <div class="reservation-detail">📍 Prototyping Studio</div>
+                <div class="reservation-detail">⏱️ 3 hours</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> Sensor mount for robotics project</p>
+        </div>
+
+        <div class="training-history-card">
+            <h3>Epilog Laser Fusion Pro (Apollo)</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Mon, Oct 07, 2024</div>
+                <div class="reservation-detail">🕐 11:00 AM - 1:00 PM</div>
+                <div class="reservation-detail">📍 Hatch Front</div>
+                <div class="reservation-detail">⏱️ 2 hours</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> Acrylic enclosure panels</p>
+        </div>
+
+        <div class="training-history-card">
+            <h3>Ultimaker S5 (Atlas)</h3>
+            <div class="reservation-details">
+                <div class="reservation-detail">📅 Wed, Sep 25, 2024</div>
+                <div class="reservation-detail">🕐 9:00 AM - 11:00 AM</div>
+                <div class="reservation-detail">📍 Prototyping Studio</div>
+                <div class="reservation-detail">⏱️ 2 hours</div>
+            </div>
+            <p style="margin-top: 0.5rem; color: #666;"><strong>Project:</strong> Prototype parts for design review</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/main.js' %}"></script>
+{% endblock %}
