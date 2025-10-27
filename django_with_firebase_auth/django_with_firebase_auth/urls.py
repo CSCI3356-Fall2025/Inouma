@@ -1,5 +1,5 @@
 """
-URL configuration for Inouma project.
+URL configuration for django_with_firebase_auth project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -14,16 +14,9 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
 from django.contrib import admin
-from django.urls import path, include
-from django.views.generic import TemplateView
+from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Mount account-related routes under /auth/
-    path('auth/', include('accounts.urls')),
-    # Home / landing page
-    path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
 ]
-
