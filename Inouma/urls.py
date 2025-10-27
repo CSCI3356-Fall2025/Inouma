@@ -20,21 +20,23 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from Inouma import views
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView
+from django.urls import reverse_lazy
 
 urlpatterns = [
-    path('', views.machine_directory, name='machine_directory'),
+    path('home', views.machine_directory, name='machine_directory'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
-    path('reservations/', views.my_reservations, name='my_reservations'), 
+    path('reservations/', views.my_reservations, name='my_reservations'),
     path('admin/', admin.site.urls),
     # Mount account-related routes under /auth/
     path('auth/', include('accounts.urls')),
     # Home / landing page
-    path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
+    # Make root redirect to the auth sign-in page (HTML login)
+    path('', RedirectView.as_view(url=reverse_lazy('login')), name='landing'),
 ]
 
 
 # Serve static files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
-
+    urlpatterns += static(settings.STATIC_URL,
+                          document_root=settings.STATICFILES_DIRS[0])

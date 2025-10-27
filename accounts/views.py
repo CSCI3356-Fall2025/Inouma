@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
@@ -14,6 +14,13 @@ from .serializers import UserSerializer
 from Inouma.settings import auth
 from decouple import config
 import requests
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_protect
+from django.shortcuts import redirect
+from django.urls import reverse
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AuthCreateNewUserView(APIView):
@@ -25,7 +32,8 @@ class AuthCreateNewUserView(APIView):
         operation_description="Create a new user by providing the required fields.",
         tags=["User Management"],
         request_body=UserSerializer,
-        responses={201: UserSerializer(many=False), 400: "User creation failed."},
+        responses={201: UserSerializer(
+            many=False), 400: "User creation failed."},
     )
     def post(self, request):
         data = request.data
@@ -51,7 +59,8 @@ class AuthCreateNewUserView(APIView):
         # Validate password length
         if len(password) < 8:
             return Response(
-                {"status": "failed", "message": "Password must be at least 8 characters long."},
+                {"status": "failed",
+                    "message": "Password must be at least 8 characters long."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -105,7 +114,6 @@ class AuthCreateNewUserView(APIView):
             )
 
 
-
 class AuthLoginExistingUserView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -121,7 +129,8 @@ class AuthLoginExistingUserView(APIView):
                 'password': openapi.Schema(type=openapi.TYPE_STRING, description='Password of the user'),
             },
         ),
-        responses={200: UserSerializer(many=False), 404: "User does not exist."},
+        responses={200: UserSerializer(
+            many=False), 404: "User does not exist."},
     )
     def post(self, request: Request):
         data = request.data
@@ -156,7 +165,8 @@ class AuthLoginExistingUserView(APIView):
             }
 
             return Response(
-                {"status": "success", "message": "User logged in successfully.", "data": extra_data},
+                {"status": "success", "message": "User logged in successfully.",
+                    "data": extra_data},
                 status=status.HTTP_200_OK,
             )
 
@@ -183,7 +193,8 @@ class AuthGoogleOAuthCallbackView(APIView):
         client_id = config('GOOGLE_CLIENT_ID', default=None)
         client_secret = config('GOOGLE_CLIENT_SECRET', default=None)
         # Redirect URI must match the one registered exactly
-        redirect_uri = config('GOOGLE_REDIRECT_URI', default='http://localhost:8000/auth/oauth2callback')
+        redirect_uri = config(
+            'GOOGLE_REDIRECT_URI', default='http://localhost:8000/auth/oauth2callback')
 
         data = {
             'code': code,
@@ -208,7 +219,8 @@ class AuthGoogleOAuthCallbackView(APIView):
 
         # Fetch user info
         try:
-            userinfo_resp = requests.get('https://openidconnect.googleapis.com/v1/userinfo', headers={'Authorization': f'Bearer {access_token}'}, timeout=10)
+            userinfo_resp = requests.get('https://openidconnect.googleapis.com/v1/userinfo', headers={
+                                         'Authorization': f'Bearer {access_token}'}, timeout=10)
             userinfo_resp.raise_for_status()
             userinfo = userinfo_resp.json()
         except Exception as e:
@@ -248,6 +260,18 @@ class AuthGoogleOAuthCallbackView(APIView):
 
         serializer = UserSerializer(user)
 
+        # For browser-based OAuth flows, create a Django session and redirect to the protected home.
+        # Use request._request (the underlying HttpRequest) when calling Django's login().
+        try:
+            # When multiple authentication backends are configured, Django requires
+            # the backend path to be provided when logging a user in programmatically.
+            login(request._request, user,
+                  backend='accounts.backends.model_backend.EmailBackend')
+            return redirect(reverse('machine_directory'))
+        except Exception as e:
+            # Log the failure and fall back to returning JSON so API clients still get token data
+            logger.exception(
+                "Failed to create session on OAuth callback: %s", e)
         return Response({
             "status": "success",
             "message": "Google sign-in successful.",
@@ -259,7 +283,6 @@ class AuthGoogleOAuthCallbackView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-
 class AuthGoogleOAuthStartView(APIView):
 
     permission_classes = [AllowAny]
@@ -267,7 +290,8 @@ class AuthGoogleOAuthStartView(APIView):
 
     def get(self, request):
         client_id = config('GOOGLE_CLIENT_ID', default=None)
-        redirect_uri = config('GOOGLE_REDIRECT_URI', default='http://localhost:8000/auth/oauth2callback')
+        redirect_uri = config(
+            'GOOGLE_REDIRECT_URI', default='http://localhost:8000/auth/oauth2callback')
         scope = 'openid email profile'
         auth_url = (
             'https://accounts.google.com/o/oauth2/v2/auth'
@@ -278,3 +302,27 @@ class AuthGoogleOAuthStartView(APIView):
 
         # Redirect the user agent to Google's consent screen
         return redirect(auth_url)
+
+
+@csrf_protect
+def login_view(request):
+    """Simple form-based login view that authenticates against the Django user model.
+
+    This allows a browser-based login flow (session auth) and redirects to /home on success.
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('machine_directory')
+        else:
+            return render(request, 'accounts/login.html', {'error': 'Invalid email or password', 'email': email})
+
+    return render(request, 'accounts/login.html')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('/')

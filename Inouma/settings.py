@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import os
 
@@ -97,35 +98,43 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 # Add these lines:
-STATICFILES_DIRS = [ BASE_DIR / 'static' ]
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+logger = logging.getLogger(__name__)
+
 firebase = None
 auth = None
 if pyrebase is not None:
     try:
+        # Use python-decouple to read .env values so they are respected in development
         firebase_config = {
-            "apiKey": os.getenv("FIREBASE_API_KEY"),
-            "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
-            "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
-            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+            "apiKey": env_config("FIREBASE_API_KEY", default=""),
+            "authDomain": env_config("FIREBASE_AUTH_DOMAIN", default=""),
+            "databaseURL": env_config("FIREBASE_DATABASE_URL", default=""),
+            "storageBucket": env_config("FIREBASE_STORAGE_BUCKET", default=""),
         }
         # Only initialize if at least one key is present
         if any(firebase_config.values()):
             firebase = pyrebase.initialize_app(firebase_config)
             auth = firebase.auth()
         else:
-            # missing firebase credentials; keep auth as None
-            print("Warning: Firebase configuration not found in environment; skipping pyrebase initialization.")
+            # avoid duplicate prints from the autoreloader by only warning in main process
+            if os.environ.get("RUN_MAIN") == "true" or os.environ.get("RUN_MAIN") is None:
+                logger.warning(
+                    "Firebase configuration not found in environment; skipping pyrebase initialization."
+                )
     except Exception:
-        print("Warning: Failed to initialize pyrebase. Firebase features will be disabled.")
+        logger.warning(
+            "Failed to initialize pyrebase. Firebase features will be disabled.", exc_info=True)
 else:
-    print("Warning: pyrebase package not installed; Firebase features will be disabled.")
+    if os.environ.get("RUN_MAIN") == "true" or os.environ.get("RUN_MAIN") is None:
+        logger.warning(
+            "pyrebase package not installed; Firebase features will be disabled.")
 
 
 REST_FRAMEWORK = {
@@ -141,5 +150,11 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.model_backend.ModelBackend',
+    'accounts.backends.model_backend.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',  # keep default for admin access
 ]
+
+# Redirect URLS for login/logout
+LOGIN_URL = '/'
+LOGIN_REDIRECT_URL = '/home'
+LOGOUT_REDIRECT_URL = '/'
