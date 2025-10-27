@@ -1901,3 +1901,27 @@ input:checked + .slider:before {
     background: var(--gold);
     color: var(--dark);
 }
+
+/* === Machine thumbnails sizing === */
+.machine-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;      /* uniform box */
+  overflow: hidden;
+  border-radius: 10px;
+  border: 2px solid rgba(44, 44, 44, 0.08);
+  background: #fff;
+  margin-bottom: 0.75rem;
+}
+
+.machine-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.machine-thumb:hover img {
+  transform: scale(1.03);
+}
