@@ -10,6 +10,8 @@ from django.contrib.auth.hashers import check_password
 import re
 
 from .models import User
+from .models import StudentProfile
+from .forms import StudentProfileForm
 from .serializers import UserSerializer
 from Inouma.settings import auth
 from decouple import config
@@ -326,3 +328,18 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('/')
+
+def profile_detail(request):
+    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+    return render(request, "accounts/profile_detail.html", {"profile": profile})
+
+def profile_edit(request):
+    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = StudentProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("profile_detail")
+    else:
+        form = StudentProfileForm(instance=profile)
+    return render(request, "accounts/profile_form.html", {"form": form})
