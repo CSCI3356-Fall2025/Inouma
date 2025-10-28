@@ -27,7 +27,15 @@
             </nav>
             <div class="nav-right">
                 {% if user.is_authenticated %}
-                <a href="{% url 'profile_detail' %}" style="color:white; text-decoration:underline;">{{ user.get_full_name|default:user.email }} (<strong>{% if user.is_staff %}Staff{% else %}User{% endif %}</strong>)</a> &nbsp; <a href="{% url 'logout' %}" style="color:white; text-decoration:underline;">Logout</a>
+                <div class="dropdown" id="userDropdown">
+                    <a href="#" id="userDropdownToggle" style="color:white; text-decoration:underline;">
+                        {{ user.get_full_name|default:user.email }} (<strong>{% if user.is_staff %}Staff{% else %}User{% endif %}</strong>)
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="userDropdownToggle">
+                        <a class="dropdown-item" href="{% url 'profile_detail' %}">Profile</a>
+                        <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
+                    </div>
+                </div>
                 {% else %}
                 <a href="{% url 'login' %}" class="nav-btn">Login</a>
                 {% endif %}

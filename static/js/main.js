@@ -123,6 +123,7 @@ let selectedInstance = null;
 document.addEventListener('DOMContentLoaded', function() {
     initializeMachineDirectory();
     setupModalCloseHandlers();
+    setupUserDropdown();
 });
 
 // ============================================================================
@@ -149,6 +150,35 @@ function initializeMachineDirectory() {
     if (searchInput) {
         searchInput.addEventListener('input', filterMachines);
     }
+}
+
+// ============================================================================
+// USER DROPDOWN - Header menu on user name
+// ============================================================================
+
+function setupUserDropdown() {
+    const dropdown = document.getElementById('userDropdown');
+    const toggle = document.getElementById('userDropdownToggle');
+    if (!dropdown || !toggle) return;
+
+    toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        dropdown.classList.toggle('active');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            dropdown.classList.remove('active');
+        }
+    });
 }
 
 function filterMachines() {

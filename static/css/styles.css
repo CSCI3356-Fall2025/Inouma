@@ -1382,11 +1382,11 @@ textarea:focus {
     display: none;
     position: absolute;
     background: var(--white);
-    min-width: 200px;
+    min-width: 160px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     border-radius: 8px;
     z-index: 1;
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
 }
 
 .dropdown.active .dropdown-menu {
@@ -1395,10 +1395,11 @@ textarea:focus {
 
 .dropdown-item {
     color: var(--dark);
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     text-decoration: none;
     display: block;
     transition: all 0.3s;
+    font-size: 0.95rem;
 }
 
 .dropdown-item:hover {
