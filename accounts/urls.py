@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views
 from .views import (
     AuthCreateNewUserView,
     AuthLoginExistingUserView,
@@ -20,4 +21,6 @@ urlpatterns = [
          name='oauth2callback'),
     path('google/start/', AuthGoogleOAuthStartView.as_view(),
          name='auth-google-start'),
+     path("profile/", views.profile_detail, name="profile_detail"),
+     path("profile/edit/", views.profile_edit, name="profile_edit"),
 ]

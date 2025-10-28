@@ -25,6 +25,13 @@
                     <a href="{% url 'staff_dashboard' %}" class="nav-btn {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">Staff Dashboard</a>
                 {% endif %}
             </nav>
+            <div class="nav-right">
+                {% if user.is_authenticated %}
+                <span style="color:white;">{{ user.get_full_name|default:user.email }} (<strong>{% if user.is_staff %}Staff{% else %}User{% endif %}</strong>)</span> &nbsp; <a href="{% url 'logout' %}" style="color:white; text-decoration:underline;">Logout</a>
+                {% else %}
+                <a href="{% url 'login' %}" class="nav-btn">Login</a>
+                {% endif %}
+            </div>
         </div>
     </header>
 

@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h2>My Profile</h2>
+<div class="card">
+  <p><strong>Major 1:</strong> {{ profile.major1|default:"—" }}</p>
+  <p><strong>Major 2:</strong> {{ profile.major2|default:"—" }}</p>
+  <p><strong>Minor 1:</strong> {{ profile.minor1|default:"—" }}</p>
+  <p><strong>Minor 2:</strong> {{ profile.minor2|default:"—" }}</p>
+</div>
+<p style="margin-top:1rem">
+  <a href="{% url 'profile_edit' %}" class="btn">Edit Profile</a>
+</p>
+{% endblock %}
