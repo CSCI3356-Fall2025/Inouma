@@ -1,4 +1,4 @@
-from django.db import models
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
@@ -48,3 +48,13 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
         ordering = ['-date_joined']
+
+class StudentProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    major1 = models.TextField(blank = True)
+    major2 = models.TextField(blank = True)
+    minor1 = models.TextField(blank = True)
+    minor2 = models.TextField(blank = True)
+
+    def __str__(self):
+        return f"Profile for {self.user}"
