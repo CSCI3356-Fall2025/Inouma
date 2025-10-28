@@ -40,3 +40,8 @@ class StudentProfileAdmin(admin.ModelAdmin):
 # --- Register models ---
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(StudentProfile, StudentProfileAdmin)
+
+# Register your models here.
+class StudentProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "major1", "major2", "minor1", "minor2")
+    search_fields = ("user__username", "user__email", "major1", "major2", "minor1", "minor2")
