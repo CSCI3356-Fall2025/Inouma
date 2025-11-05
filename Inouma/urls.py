@@ -24,16 +24,14 @@ from django.views.generic import RedirectView
 from django.urls import reverse_lazy
 
 urlpatterns = [
+    path('', views.landing_page, name='landing'),  # 👈 custom landing page
     path('home', views.machine_directory, name='machine_directory'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
     path('reservations/', views.my_reservations, name='my_reservations'),
     path('admin/', admin.site.urls),
-    # Mount account-related routes under /auth/
     path('auth/', include('accounts.urls')),
-    # Home / landing page
-    # Make root redirect to the auth sign-in page (HTML login)
-    path('', RedirectView.as_view(url=reverse_lazy('login')), name='landing'),
 ]
+
 
 
 # Serve static files in development

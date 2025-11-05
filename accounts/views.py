@@ -22,6 +22,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -343,3 +344,4 @@ def profile_edit(request):
     else:
         form = StudentProfileForm(instance=profile)
     return render(request, "accounts/profile_form.html", {"form": form})
+
