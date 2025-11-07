@@ -1,3 +1,4 @@
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -331,17 +332,50 @@ def logout_view(request):
     return redirect('/')
 
 def profile_detail(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
-    return render(request, "accounts/profile_detail.html", {"profile": profile})
+    user = request.user
+    # Role-based profile routing
+    if user.role == 'student':
+        profile, _ = StudentProfile.objects.get_or_create(user=user)
+        return render(request, "accounts/profile_detail.html", {"profile": profile})
+
+    elif user.role == 'trainer':
+        # Example trainer redirect (adjust to your actual view name)
+        return redirect("trainer_profile_detail")
+
+    elif user.role == 'admin':
+        # Example admin redirect (adjust to your admin dashboard)
+        return redirect("admin_dashboard")
+
+    else:
+        return HttpResponseForbidden("Unknown user role.")
 
 def profile_edit(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
-    if request.method == "POST":
-        form = StudentProfileForm(request.POST, instance=profile)
-        if form.is_valid():
-            form.save()
-            return redirect("profile_detail")
+    user = request.user
+
+    if user.role == 'student':
+        profile, _ = StudentProfile.objects.get_or_create(user=user)
+
+        if request.method == "POST":
+            form = StudentProfileForm(request.POST, instance=profile)
+            if form.is_valid():
+                form.save()
+                return redirect("profile_detail")
+        else:
+            form = StudentProfileForm(instance=profile)
+
+        return render(request, "accounts/profile_form.html", {"form": form})
+
+    elif user.role == 'trainer':
+        # You can create a similar form and view for trainer profiles later
+        # I created HTML files for Trainer Detail and Trainer Form
+        return redirect("trainer_profile_edit")
+
+    elif user.role == 'admin':
+        # You can create a similar form and view for admin profiles later
+        # I created HTML files for Admin Detail and Admin Form
+        return redirect("admin_dashboard")
+
     else:
-        form = StudentProfileForm(instance=profile)
-    return render(request, "accounts/profile_form.html", {"form": form})
+        return HttpResponseForbidden("Unknown user role.")
+
 
