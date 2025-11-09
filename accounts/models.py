@@ -92,3 +92,53 @@ def create_role_profile(sender, instance, created, **kwargs):
             StudentProfile.objects.create(user=instance)
         elif instance.role == 'trainer':
             TrainerProfile.objects.create(user=instance)
+
+
+class Machine(models.Model):
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    required_training_level = models.PositiveSmallIntegerField(default=1)  # aligns with Level 1/2/3 in prototypes
+
+    def __str__(self):
+        return self.name
+
+
+class MachineInstance(models.Model):
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE, related_name="instances")
+    nickname = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=30, default="available")  # e.g., available / maintenance / down
+
+    def __str__(self):
+        return f"{self.machine.name} ({self.nickname or self.id})"
+
+
+class TrainingReservation(models.Model):
+    """
+    Student books a training session with a trainer on a specific machine instance and time span.
+    Overlap for the same trainer is disallowed (Delivery 4 requirement).
+    """
+    STATUS_CHOICES = (
+        ("CONFIRMED", "Confirmed"),
+        ("CANCELED", "Canceled"),
+    )
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="training_reservations")
+    trainer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="trainer_reservations")
+    machine_instance = models.ForeignKey(MachineInstance, on_delete=models.PROTECT, related_name="training_reservations")
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="CONFIRMED")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["trainer", "start_time"]),
+            models.Index(fields=["trainer", "end_time"]),
+        ]
+
+    def __str__(self):
+        return f"{self.student} with {self.trainer} @ {self.start_time}"
+
+    def overlaps(self, other_start, other_end):
+        return not (self.end_time <= other_start or self.start_time >= other_end)

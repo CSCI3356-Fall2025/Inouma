@@ -1,5 +1,7 @@
+# accounts/urls.py
 from django.urls import path
 from . import views
+from .views_booking_page import training_booking_page
 from .views import (
     AuthCreateNewUserView,
     AuthLoginExistingUserView,
@@ -7,20 +9,31 @@ from .views import (
     AuthGoogleOAuthStartView,
     login_view,
     logout_view,
+    TrainingReservationView,
+    TrainerAvailabilityView,
 )
 
 urlpatterns = [
     # Paths are relative so the project can include this file at '/auth/' or '/api/'
     path('sign-up/', AuthCreateNewUserView.as_view(), name='auth-create-user'),
     path('sign-in/', AuthLoginExistingUserView.as_view(), name='auth-login-user'),
+
     path('login/', AuthGoogleOAuthStartView.as_view(), name='login'),
     path('logout/', logout_view, name='logout'),
-    path('google/callback/', AuthGoogleOAuthCallbackView.as_view(),
-         name='auth-google-callback'),
-    path('oauth2callback', AuthGoogleOAuthCallbackView.as_view(),
-         name='oauth2callback'),
-    path('google/start/', AuthGoogleOAuthStartView.as_view(),
-         name='auth-google-start'),
-     path("profile/", views.profile_detail, name="profile_detail"),
-     path("profile/edit/", views.profile_edit, name="profile_edit"),
+
+    path('google/callback/', AuthGoogleOAuthCallbackView.as_view(), name='auth-google-callback'),
+    path('oauth2callback', AuthGoogleOAuthCallbackView.as_view(), name='oauth2callback'),
+    path('google/start/', AuthGoogleOAuthStartView.as_view(), name='auth-google-start'),
+
+    path('profile/', views.profile_detail, name='profile_detail'),
+    path('profile/edit/', views.profile_edit, name='profile_edit'),
+
+    # Booking page (machine id)
+    path('book/machine/<int:machine_id>/', training_booking_page, name='training_booking'),
+
+    # Training reservations API (create/list)
+    path('api/training-reservations/', TrainingReservationView.as_view(), name='training_reservations'),
+
+    # Trainer availability API — use INT ids (not UUID) to match your User model ids
+    path('api/trainers/<uuid:trainer_id>/availability/', TrainerAvailabilityView.as_view(), name='trainer_availability'),
 ]
