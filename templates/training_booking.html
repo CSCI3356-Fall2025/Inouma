@@ -14,6 +14,8 @@
             {% if full %}{{ full }}{% else %}{{ t.email }}{% endif %}
           </option>
         {% endwith %}
+      {% empty %}
+        <option disabled>No trainers available (ask a staff to mark is_staff=True)</option>
       {% endfor %}
     </select>
   </div>

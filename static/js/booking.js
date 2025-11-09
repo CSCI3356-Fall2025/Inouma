@@ -18,68 +18,74 @@ async function fetchJSON(url, opts = {}) {
 }
 
 async function loadSlots() {
+  const btn = document.getElementById('loadSlotsBtn');
   const trainerId = document.getElementById('trainerSelect').value;
   const date = document.getElementById('dateInput').value;
-  if (!trainerId || !date) { alert('Select a trainer and date'); return; }
-  const data = await fetchJSON(`/auth/api/trainers/${trainerId}/availability/?date=${encodeURIComponent(date)}`);
   const c = document.getElementById('slotsContainer');
+  if (!trainerId || !date) { alert('Select a trainer and date'); return; }
+
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = 'Loading…';
   c.innerHTML = '';
-  if (!data.slots.length) { c.textContent = 'No available slots.'; return; }
-  data.slots.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-outline-primary slot-btn';
-    btn.textContent =
-      new Date(s.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) +
-      ' - ' +
-      new Date(s.end_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    btn.dataset.trainerId = trainerId;
-    btn.dataset.startIso = s.start_time;
-    btn.dataset.endIso = s.end_time;
-    btn.addEventListener('click', onBookClick);
-    c.appendChild(btn);
-    c.appendChild(document.createTextNode(' '));
-  });
+
+  try {
+    const data = await fetchJSON(`/auth/api/trainers/${encodeURIComponent(trainerId)}/availability/?date=${encodeURIComponent(date)}`);
+    if (!data.slots || !data.slots.length) { c.textContent = 'No available slots.'; return; }
+    data.slots.forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'btn btn-outline-primary slot-btn';
+      b.textContent =
+        new Date(s.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) +
+        ' - ' +
+        new Date(s.end_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      b.dataset.trainerId = trainerId;
+      b.dataset.startIso = s.start_time;
+      b.dataset.endIso = s.end_time;
+      b.addEventListener('click', onBookClick);
+      c.appendChild(b);
+      c.appendChild(document.createTextNode(' '));
+    });
+  } catch (e) {
+    console.error('Load slots failed:', e);
+    alert(e.message || 'Failed to load slots');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
 }
 
 async function onBookClick(e) {
   const btn = e.currentTarget;
   btn.disabled = true;
   try {
-    const trainerId = btn.dataset.trainerId;
-    const startISO = btn.dataset.startIso;
-    const endISO = btn.dataset.endIso;
-    const machineInstanceId = (window.TRAINING_CONTEXT && window.TRAINING_CONTEXT.machineInstanceId) || '';
     const payload = {
-      trainer: trainerId,
-      machine_instance: machineInstanceId,
-      start_time: startISO,
-      end_time: endISO
+      trainer: btn.dataset.trainerId,
+      machine_instance: (window.TRAINING_CONTEXT && window.TRAINING_CONTEXT.machineInstanceId) || '',
+      start_time: btn.dataset.startIso,
+      end_time: btn.dataset.endIso
     };
     const data = await fetchJSON('/auth/api/training-reservations/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
+        'X-CSRFToken': getCsrfToken(),
       },
       body: JSON.stringify(payload),
-      credentials: 'same-origin'
     });
 
     btn.classList.add('disabled');
     btn.setAttribute('aria-disabled', 'true');
     btn.textContent = 'Booked';
-    console.info('Training booked', data);
-
-    alert('Training booked. Check server console for the confirmation email (dev mode).');
-    await loadSlots();
-  } catch (err) {
+    alert('Training booked!');
+    await loadSlots(); // refresh grid; your chosen slot disappears
+  } catch (e2) {
     btn.disabled = false;
-    alert(err.message || 'Booking failed');
+    alert(e2.message || 'Booking failed');
   }
 }
 
-function init() {
+document.addEventListener('DOMContentLoaded', () => {
   const loadBtn = document.getElementById('loadSlotsBtn');
   if (loadBtn) loadBtn.addEventListener('click', loadSlots);
-}
-document.addEventListener('DOMContentLoaded', init);
+});
