@@ -271,7 +271,11 @@ class AuthGoogleOAuthCallbackView(APIView):
             # the backend path to be provided when logging a user in programmatically.
             login(request._request, user,
                   backend='accounts.backends.model_backend.EmailBackend')
-            return redirect(reverse('machine_directory'))
+            if created:
+                return redirect('/auth/profile/edit/?new=true')
+            else:
+                return redirect('/home')
+            #return redirect(reverse('machine_directory'))
         except Exception as e:
             # Log the failure and fall back to returning JSON so API clients still get token data
             logger.exception(
@@ -334,13 +338,9 @@ def logout_view(request):
 def profile_detail(request):
     user = request.user
     # Role-based profile routing
-    if user.role == 'student':
+    if user.role == 'student' or 'trainer':
         profile, _ = StudentProfile.objects.get_or_create(user=user)
         return render(request, "accounts/profile_detail.html", {"profile": profile})
-
-    elif user.role == 'trainer':
-        # Example trainer redirect (adjust to your actual view name)
-        return redirect("trainer_profile_detail")
 
     elif user.role == 'admin':
         # Example admin redirect (adjust to your admin dashboard)
@@ -352,7 +352,10 @@ def profile_detail(request):
 def profile_edit(request):
     user = request.user
 
-    if user.role == 'student':
+    if not user.is_authenticated:
+        return redirect('/auth/login/')
+
+    if user.role == 'student' or user.role == 'trainer':
         profile, _ = StudentProfile.objects.get_or_create(user=user)
 
         if request.method == "POST":
@@ -364,11 +367,6 @@ def profile_edit(request):
             form = StudentProfileForm(instance=profile)
 
         return render(request, "accounts/profile_form.html", {"form": form})
-
-    elif user.role == 'trainer':
-        # You can create a similar form and view for trainer profiles later
-        # I created HTML files for Trainer Detail and Trainer Form
-        return redirect("trainer_profile_edit")
 
     elif user.role == 'admin':
         # You can create a similar form and view for admin profiles later
