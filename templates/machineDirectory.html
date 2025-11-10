@@ -47,6 +47,14 @@
             <div class="machine-availability">
                 <span class="availability-badge">1/2 available</span>
             </div>
+            <!-- Reserve button (routes to booking page for machine 1) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='epilog-laser-fusion-pro' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
+            </div>
         </div>
 
         <div class="machine-card" 
@@ -55,7 +63,7 @@
              data-location="prototyping studio"
              onclick="openMachineModal(2)">
               <div class="machine-thumb">
-                <img src="{% static 'images\machines\prusa-mk3s.jpg' %}"
+                <img src="{% static 'images\\machines\\prusa-mk3s.jpg' %}"
                 alt="Prusa i3 MK3S+" loading="lazy">
             </div>
             <h3>Prusa i3 MK3S+</h3>
@@ -67,6 +75,14 @@
             </div>
             <div class="machine-availability">
                 <span class="availability-badge">7/10 available</span>
+            </div>
+            <!-- Reserve button (routes to booking page for machine 2) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='prusa-i3-mk3s' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
             </div>
         </div>
 
@@ -88,6 +104,14 @@
             </div>
             <div class="machine-availability">
                 <span class="availability-badge">1/2 available</span>
+            </div>
+            <!-- Reserve button (routes to booking page for machine 3) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='cricut-maker-3' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
             </div>
         </div>
 
@@ -111,6 +135,14 @@
             <div class="machine-availability">
                 <span class="availability-badge">1/2 available</span>
             </div>
+            <!-- Reserve button (routes to booking page for machine 4) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='shapeoko-4-xxl-cnc' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
+            </div>
         </div>
 
         <div class="machine-card" 
@@ -133,6 +165,14 @@
             <div class="machine-availability">
                 <span class="availability-badge">2/3 available</span>
             </div>
+            <!-- Reserve button (routes to booking page for machine 5) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='electronics-workbench' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
+            </div>
         </div>
 
         <div class="machine-card" 
@@ -154,6 +194,14 @@
             <div class="machine-availability">
                 <span class="availability-badge">2/2 available</span>
             </div>
+            <!-- Reserve button (routes to booking page for machine 6) -->
+            <div class="machine-actions">
+                <a class="btn btn-primary btn-sm"
+                    href="{% url 'training_booking_by_name' machine_slug='ultimaker-s5' %}"
+                    onclick="event.stopPropagation();">
+                    Reserve Training
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -174,4 +222,11 @@
 
 {% block extra_scripts %}
 <script src="{% static 'js/main.js' %}"></script>
+<script>
+  // small helper to route to the Django booking page by machine id
+  function goToBooking(machineId) {
+    // matches the route: path("book/machine/<int:machine_id>/", training_booking_page, name="training_booking")
+    window.location.href = `/auth/book/machine/${machineId}/`;
+  }
+</script>
 {% endblock %}

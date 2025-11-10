@@ -32,3 +32,6 @@ def staff_dashboard(request):
         # For now, the template has hardcoded prototype data
     }
     return render(request, 'staffDashboard.html', context)
+
+def landing_page(request):
+    return render(request, 'landing.html')
