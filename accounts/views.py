@@ -10,6 +10,23 @@ from drf_yasg import openapi
 from django.contrib.auth.hashers import check_password
 import re
 
+from datetime import datetime, time, timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import TrainingReservation, MachineInstance
+from .serializers import (
+    TrainingReservationCreateSerializer,
+    TrainingReservationSerializer,
+)
+
 from .models import User
 from .models import StudentProfile
 from .forms import StudentProfileForm
@@ -271,7 +288,11 @@ class AuthGoogleOAuthCallbackView(APIView):
             # the backend path to be provided when logging a user in programmatically.
             login(request._request, user,
                   backend='accounts.backends.model_backend.EmailBackend')
-            return redirect(reverse('machine_directory'))
+            if created:
+                return redirect('/auth/profile/edit/?new=true')
+            else:
+                return redirect('/home')
+            #return redirect(reverse('machine_directory'))
         except Exception as e:
             # Log the failure and fall back to returning JSON so API clients still get token data
             logger.exception(
@@ -334,13 +355,9 @@ def logout_view(request):
 def profile_detail(request):
     user = request.user
     # Role-based profile routing
-    if user.role == 'student':
+    if user.role == 'student' or 'trainer':
         profile, _ = StudentProfile.objects.get_or_create(user=user)
         return render(request, "accounts/profile_detail.html", {"profile": profile})
-
-    elif user.role == 'trainer':
-        # Example trainer redirect (adjust to your actual view name)
-        return redirect("trainer_profile_detail")
 
     elif user.role == 'admin':
         # Example admin redirect (adjust to your admin dashboard)
@@ -352,7 +369,10 @@ def profile_detail(request):
 def profile_edit(request):
     user = request.user
 
-    if user.role == 'student':
+    if not user.is_authenticated:
+        return redirect('/auth/login/')
+
+    if user.role == 'student' or user.role == 'trainer':
         profile, _ = StudentProfile.objects.get_or_create(user=user)
 
         if request.method == "POST":
@@ -365,11 +385,6 @@ def profile_edit(request):
 
         return render(request, "accounts/profile_form.html", {"form": form})
 
-    elif user.role == 'trainer':
-        # You can create a similar form and view for trainer profiles later
-        # I created HTML files for Trainer Detail and Trainer Form
-        return redirect("trainer_profile_edit")
-
     elif user.role == 'admin':
         # You can create a similar form and view for admin profiles later
         # I created HTML files for Admin Detail and Admin Form
@@ -379,3 +394,81 @@ def profile_edit(request):
         return HttpResponseForbidden("Unknown user role.")
 
 
+
+User = get_user_model()
+
+
+class TrainingReservationView(APIView):
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = TrainingReservation.objects.filter(student=request.user).order_by("start_time")
+        return Response(TrainingReservationSerializer(qs, many=True).data)
+
+    def post(self, request):
+        ser = TrainingReservationCreateSerializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        res = ser.save()
+
+        # dev-mode email to console backend
+        try:
+            student_email = getattr(request.user, "email", "")
+            trainer_email = getattr(res.trainer, "email", "")
+            machine_name = res.machine_instance.machine.name
+            start_str = timezone.localtime(res.start_time).strftime("%Y-%m-%d %H:%M")
+            end_str = timezone.localtime(res.end_time).strftime("%Y-%m-%d %H:%M")
+
+            if student_email:
+                send_mail(
+                    subject="Training booked",
+                    message=f"You booked training on {machine_name} with {trainer_email} from {start_str} to {end_str}.",
+                    from_email=None,
+                    recipient_list=[student_email],
+                    fail_silently=True,
+                )
+            if trainer_email:
+                send_mail(
+                    subject="New training assigned",
+                    message=f"You have a new training with {student_email} on {machine_name} from {start_str} to {end_str}.",
+                    from_email=None,
+                    recipient_list=[trainer_email],
+                    fail_silently=True,
+                )
+        except Exception:
+            pass
+
+        return Response(TrainingReservationSerializer(res).data, status=status.HTTP_201_CREATED)
+
+
+class TrainerAvailabilityView(APIView):
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, trainer_id):
+        date_str = request.query_params.get("date")
+        if not date_str:
+            return Response({"detail": "date query param required (YYYY-MM-DD)"}, status=400)
+
+        day = datetime.fromisoformat(date_str).date()
+        start_of_day = timezone.make_aware(datetime.combine(day, time(9, 0)))
+        end_of_day = timezone.make_aware(datetime.combine(day, time(17, 0)))
+        slot = timedelta(minutes=60)
+
+        trainer = User.objects.get(id=trainer_id)
+        existing = TrainingReservation.objects.filter(
+            trainer=trainer,
+            status="CONFIRMED",
+            start_time__lt=end_of_day,
+            end_time__gt=start_of_day,
+        )
+
+        slots = []
+        t = start_of_day
+        while t + slot <= end_of_day:
+            conflict = any(not (r.end_time <= t or r.start_time >= t + slot) for r in existing)
+            if not conflict:
+                slots.append({"start_time": t.isoformat(), "end_time": (t + slot).isoformat()})
+            t += slot
+
+        return Response({"trainer_id": str(trainer_id), "slots": slots})
