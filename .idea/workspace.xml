@@ -17,6 +17,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
@@ -33,6 +34,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
     "Django Server.Inouma.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.OpenDjangoStructureViewOnStart": "true",
@@ -130,6 +132,9 @@
       <workItem from="1761618275921" duration="206000" />
       <workItem from="1761619571143" duration="367000" />
       <workItem from="1762361640329" duration="1106000" />
+      <workItem from="1762535640090" duration="3000" />
+      <workItem from="1762535677509" duration="2052000" />
+      <workItem from="1762722359079" duration="3604000" />
     </task>
     <servers />
   </component>

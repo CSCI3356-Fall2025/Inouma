@@ -1,3 +1,4 @@
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -287,7 +288,11 @@ class AuthGoogleOAuthCallbackView(APIView):
             # the backend path to be provided when logging a user in programmatically.
             login(request._request, user,
                   backend='accounts.backends.model_backend.EmailBackend')
-            return redirect(reverse('machine_directory'))
+            if created:
+                return redirect('/auth/profile/edit/?new=true')
+            else:
+                return redirect('/home')
+            #return redirect(reverse('machine_directory'))
         except Exception as e:
             # Log the failure and fall back to returning JSON so API clients still get token data
             logger.exception(
@@ -348,19 +353,46 @@ def logout_view(request):
     return redirect('/')
 
 def profile_detail(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
-    return render(request, "accounts/profile_detail.html", {"profile": profile})
+    user = request.user
+    # Role-based profile routing
+    if user.role == 'student' or 'trainer':
+        profile, _ = StudentProfile.objects.get_or_create(user=user)
+        return render(request, "accounts/profile_detail.html", {"profile": profile})
+
+    elif user.role == 'admin':
+        # Example admin redirect (adjust to your admin dashboard)
+        return redirect("admin_dashboard")
+
+    else:
+        return HttpResponseForbidden("Unknown user role.")
 
 def profile_edit(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
-    if request.method == "POST":
-        form = StudentProfileForm(request.POST, instance=profile)
-        if form.is_valid():
-            form.save()
-            return redirect("profile_detail")
+    user = request.user
+
+    if not user.is_authenticated:
+        return redirect('/auth/login/')
+
+    if user.role == 'student' or user.role == 'trainer':
+        profile, _ = StudentProfile.objects.get_or_create(user=user)
+
+        if request.method == "POST":
+            form = StudentProfileForm(request.POST, instance=profile)
+            if form.is_valid():
+                form.save()
+                return redirect("profile_detail")
+        else:
+            form = StudentProfileForm(instance=profile)
+
+        return render(request, "accounts/profile_form.html", {"form": form})
+
+    elif user.role == 'admin':
+        # You can create a similar form and view for admin profiles later
+        # I created HTML files for Admin Detail and Admin Form
+        return redirect("admin_dashboard")
+
     else:
-        form = StudentProfileForm(instance=profile)
-    return render(request, "accounts/profile_form.html", {"form": form})
+        return HttpResponseForbidden("Unknown user role.")
+
 
 
 User = get_user_model()
