@@ -1,0 +1,31 @@
+<!-- Add/Edit Location Modal -->
+<div id="editLocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">Add/Edit Location</h2>
+            <button class="close-btn" onclick="closeEditLocationModal()">×</button>
+        </div>
+        <form onsubmit="event.preventDefault(); saveLocation();">
+            <div class="form-group">
+                <label>Location Name</label>
+                <input type="text" id="locationName" placeholder="e.g., Hatch Front" required>
+            </div>
+            <div class="form-group">
+                <label>Floor</label>
+                <select id="locationFloor">
+                    <option>2nd Floor</option>
+                    <option>3rd Floor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Number of Tables/Stations</label>
+                <input type="number" id="locationStations" placeholder="8" required>
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" id="locationCapacity" placeholder="24" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Location</button>
+        </form>
+    </div>
+</div>

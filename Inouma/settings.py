@@ -37,6 +37,9 @@ INSTALLED_APPS = [
 
     # Local apps
     'accounts',
+
+    #m Machines
+    'machines',
 ]
 
 MIDDLEWARE = [
@@ -162,3 +165,7 @@ LOGOUT_REDIRECT_URL = '/'
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@inouma.local"
+
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

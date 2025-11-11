@@ -4,10 +4,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 
 
-@login_required
-def machine_directory(request):
-    # return HttpResponse("Hello World! I'm Home.")
-    return render(request, 'machineDirectory.html')
+# @login_required
+# def machine_directory(request):
+#     # return HttpResponse("Hello World! I'm Home.")
+#     return render(request, 'machineDirectory.html')
 
 
 @login_required
