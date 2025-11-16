@@ -70,9 +70,22 @@ class StudentProfile(models.Model):
     major2 = models.TextField(blank=True)
     minor1 = models.TextField(blank=True)
     minor2 = models.TextField(blank=True)
+    birthday = models.DateField(null=True, blank=True, help_text="Date of birth")
+    graduation_year = models.IntegerField(null=True, blank=True, help_text="Expected graduation year (e.g., 2025)")
+    role_specification = models.CharField(max_length=100, blank=True, help_text="Additional role details (e.g., 'Undergraduate', 'Graduate Student')")
 
     def __str__(self):
         return f"Student Profile for {self.user.email}"
+    
+    def clean(self):
+        """Validate graduation year is reasonable"""
+        from django.core.exceptions import ValidationError
+        if self.graduation_year:
+            current_year = 2024 
+            if self.graduation_year < 1900 or self.graduation_year > current_year + 10:
+                raise ValidationError({
+                    'graduation_year': f'Graduation year must be between 1900 and {current_year + 10}'
+                })
 
 
 # Customizable Trainer Profile

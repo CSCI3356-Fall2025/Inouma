@@ -145,6 +145,41 @@
     {% endif %}
   </div>
   
+  {% if user.role == 'student' %}
+  <div class="form-group">
+    <label for="{{ form.graduation_year.id_for_label }}">{{ form.graduation_year.label }}</label>
+    {{ form.graduation_year }}
+    {% if form.graduation_year.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.graduation_year.help_text }}</small>
+    {% endif %}
+    {% if form.graduation_year.errors %}
+      <div class="error">{{ form.graduation_year.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  <div class="form-group">
+    <label for="{{ form.birthday.id_for_label }}">{{ form.birthday.label }}</label>
+    {{ form.birthday }}
+    {% if form.birthday.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.birthday.help_text }}</small>
+    {% endif %}
+    {% if form.birthday.errors %}
+      <div class="error">{{ form.birthday.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.role_specification.id_for_label }}">{{ form.role_specification.label }}</label>
+    {{ form.role_specification }}
+    {% if form.role_specification.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.role_specification.help_text }}</small>
+    {% endif %}
+    {% if form.role_specification.errors %}
+      <div class="error">{{ form.role_specification.errors }}</div>
+    {% endif %}
+  </div>
+  
   <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
     <button type="submit" class="btn">Save</button>
     <a href="{% url 'profile_detail' %}" class="btn btn-secondary">Cancel</a>
@@ -178,10 +213,27 @@
     opacity: 0.6;
   }
   
+  .form-group input[type="date"],
+  .form-group input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: white;
+  }
+  
   .form-group .error {
     color: #dc3545;
     font-size: 0.875rem;
     margin-top: 0.25rem;
+  }
+  
+  .form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.875rem;
   }
 </style>
 {% endblock %}

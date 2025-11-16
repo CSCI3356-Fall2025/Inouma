@@ -1,0 +1,152 @@
+<!-- Add Machine -->
+<div class="card">
+    <div class="collapsible-header" onclick="toggleAddMachineSection()" style="cursor:pointer; user-select:none; display:flex; align-items:center; gap:0.5rem;">
+        <span id="addMachineToggleIcon" style="font-size:1.25rem; transition: transform 0.25s;">▶</span>
+        <h2 style="margin:0;">➕ Add New Machine</h2>
+    </div>
+    <div id="addMachineSection" style="display: none; margin-top:1rem;">
+        <form method="POST" action="{% url 'add_machine' %}" enctype="multipart/form-data">
+
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+            <div class="two-column">
+                <div class="form-group">
+                    <label>Machine Type/Model <span style="color: red;">*</span></label>
+                    <input type="text" name="machine_name" id="machineTypeInput" placeholder="e.g., Ultimaker S5" required autocomplete="off">
+                    <div id="suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; width: calc(50% - 1rem); z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    <small style="color: #666;">Start typing to see existing machine types</small>
+                </div>
+                <div class="form-group">
+                    <label>Machine Name/Identifier <span style="color: red;">*</span></label>
+                    <input type="text" name="name" id="machineNameInput" placeholder="e.g., Ultimaker #1" required>
+                    <small style="color: #666;">Unique name to distinguish this specific machine</small>
+                    
+                    <!-- Duplicate warning -->
+                    <div id="duplicateWarning" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                        <span style="color: #856404; font-size: 0.9rem;">
+                            ⚠️ <span id="duplicateWarningText"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="two-column">
+                <div class="form-group">
+                    <label>Category <span style="color: red;">*</span></label>
+                    <select name="category" required>
+                        <option value="">Select Category</option>
+                        <option value="Laser">Laser</option>
+                        <option value="Vinyl">Vinyl</option>
+                        <option value="Woodworking">Woodworking</option>
+                        <option value="Textile">Textile</option>
+                        <option value="Metalworking">Metalworking</option>
+                        <option value="3D Printing">3D Printing</option>
+                        <option value="Electronics">Electronics</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Location <span style="color: red;">*</span></label>
+                    <select name="location" required>
+                        <option value="">Select Location</option>
+                        <option value="Hatch Front (2nd Floor)">Hatch Front (2nd Floor)</option>
+                        <option value="Hatch Back (2nd Floor)">Hatch Back (2nd Floor)</option>
+                        <option value="Prototyping Studio (3rd Floor)">Prototyping Studio (3rd Floor)</option>
+                        <option value="Prototyping Shop (3rd Floor)">Prototyping Shop (3rd Floor)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Optional Technical Details -->
+            <div class="two-column">
+                <div class="form-group">
+                    <label>MAC Address <span style="color: #999;">(Optional)</span></label>
+                    <input type="text" name="mac_address" placeholder="e.g., 00:1B:44:11:3A:B7" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$">
+                    <small style="color: #666;">Format: XX:XX:XX:XX:XX:XX</small>
+                </div>
+                <div class="form-group">
+                    <label>Year Bought <span style="color: #999;">(Optional)</span></label>
+                    <input type="number" name="year_bought" placeholder="e.g., 2023" min="1900" max="2100">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Description <span style="color: #999;">(Optional)</span></label>
+                <textarea name="description" rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
+            </div>
+            
+            <!-- Image Selection -->
+            <div class="form-group">
+                <label>Machine Image</label>
+                <select id="imageChoice" onchange="handleImageChoice()" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                    <option value="none">No Image (Use Default)</option>
+                    <option value="existing">Select Existing Image</option>
+                    <option value="upload">Upload New Image</option>
+                </select>
+                
+                <!-- Hidden field to store the actual choice -->
+                <input type="hidden" name="image_choice" id="imageChoiceHidden" value="default">
+                
+                <!-- Existing Images Section (Hidden by default) -->
+                <div id="existingImageSection" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px;">
+                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Filter by Category:</label>
+                    <select id="categoryFilter" onchange="filterImagesByCategory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1rem;">
+                        <option value="all">All Categories</option>
+                        {% for category in category_order %}
+                            <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    {% if images_by_category %}
+                        <div id="imageGallery" style="max-height: 300px; overflow-y: auto;">
+                            {% for category, images in images_by_category.items %}
+                                <div class="category-images" data-category="{{ category }}" style="margin-bottom: 1.5rem;">
+                                    <h5 style="color: var(--maroon); margin-bottom: 0.75rem; font-size: 0.9rem;">📁 {{ category }}</h5>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;">
+                                        {% for img in images %}
+                                            <label style="cursor: pointer; text-align: center;">
+                                                <input type="radio" name="existing_image" value="{{ img.name }}" style="display: none;" onchange="selectExistingImage(this)">
+                                                <div class="image-option" style="border: 2px solid #ddd; border-radius: 8px; padding: 0.5rem; transition: all 0.2s; background: white;">
+                                                    <img src="{{ img.url }}" alt="{{ img.name }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;">
+                                                    <p style="font-size: 0.7rem; margin-top: 0.5rem; color: #666; line-height: 1.3;">{{ img.machine_example }}</p>
+                                                </div>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No images uploaded yet. Upload a new image below!</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Upload New Image Section (Hidden by default) - No HEIC Images -->
+                <div id="uploadImageSection" style="display: none; margin-top: 1rem;">
+                    <input type="file" name="custom_image" id="customImageInput" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                </div>
+            </div>
+            
+            <!-- Training Requirements -->
+            <div class="form-group">
+                <label>Required Training Levels</label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" name="requires_level_1" id="level1" style="width: auto; margin-right: 0.5rem;" onchange="handleTrainingLevelChange()">
+                        Level 1 Training Required
+                    </label>
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" name="requires_level_2" id="level2" style="width: auto; margin-right: 0.5rem;" onchange="handleTrainingLevelChange()">
+                        Level 2 Training Required
+                    </label>
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" name="requires_level_3" id="level3" style="width: auto; margin-right: 0.5rem;" onchange="handleTrainingLevelChange()">
+                        Level 3 Training Required
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Add Machine</button>
+        </form>
+    </div>
+</div>
