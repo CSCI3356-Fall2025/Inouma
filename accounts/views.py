@@ -357,7 +357,7 @@ def profile_detail(request):
     # Role-based profile routing
     if user.role == 'student' or 'trainer':
         profile, _ = StudentProfile.objects.get_or_create(user=user)
-        return render(request, "accounts/profile_detail.html", {"profile": profile})
+        return render(request, "accounts/profile_detail.html", {"profile": profile, "user": user})
 
     elif user.role == 'admin':
         # Example admin redirect (adjust to your admin dashboard)

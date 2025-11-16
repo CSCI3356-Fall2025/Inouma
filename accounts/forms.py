@@ -1,4 +1,6 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from datetime import date
 from .models import StudentProfile
 
 # School choices
@@ -139,9 +141,39 @@ class StudentProfileForm(forms.ModelForm):
         widget=forms.Select(attrs={"id": "id_school2", "class": "school-select"})
     )
     
+    # Role specification choices
+    ROLE_SPEC_CHOICES = [
+        ('', 'Select Role Type'),
+        ('Undergraduate', 'Undergraduate'),
+        ('Graduate Student', 'Graduate Student'),
+        ('PhD Student', 'PhD Student'),
+        ('Other', 'Other'),
+    ]
+    
+    role_specification = forms.ChoiceField(
+        choices=ROLE_SPEC_CHOICES,
+        required=False,
+        label="Role Specification",
+        help_text="Specify your student type"
+    )
+    
+    birthday = forms.DateField(
+        required=False,
+        label="Birthday",
+        widget=forms.DateInput(attrs={"type": "date", "id": "id_birthday", "class": "date-input"}),
+        help_text="Your date of birth"
+    )
+    
+    graduation_year = forms.IntegerField(
+        required=False,
+        label="Graduation Year",
+        widget=forms.NumberInput(attrs={"id": "id_graduation_year", "class": "year-input", "min": "1900", "max": "2100"}),
+        help_text="Expected graduation year (e.g., 2025)"
+    )
+    
     class Meta:
         model = StudentProfile
-        fields = ["major1", "major2", "minor1", "minor2"]
+        fields = ["major1", "major2", "minor1", "minor2", "birthday", "graduation_year", "role_specification"]
         widgets = {
             "major1": forms.Select(attrs={"id": "id_major1", "class": "major-select"}),
             "major2": forms.Select(attrs={"id": "id_major2", "class": "major-select"}),
@@ -150,8 +182,22 @@ class StudentProfileForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        # Extract user from kwargs if provided (for role-based access control)
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         instance = kwargs.get('instance')
+        
+        # Access control: Restrict major and graduation_year to students only
+        if self.user and self.user.role != 'student':
+            # Hide/disable major and graduation year fields for non-students
+            self.fields['major1'].widget = forms.HiddenInput()
+            self.fields['major2'].widget = forms.HiddenInput()
+            self.fields['minor1'].widget = forms.HiddenInput()
+            self.fields['minor2'].widget = forms.HiddenInput()
+            self.fields['school1'].widget = forms.HiddenInput()
+            self.fields['school2'].widget = forms.HiddenInput()
+            self.fields['graduation_year'].widget = forms.HiddenInput()
+            # Keep birthday and role_specification visible for all roles
         
         # Set initial choices for majors (will be updated by JavaScript)
         self.fields['major1'].choices = [('', 'Select school first')]
@@ -176,3 +222,40 @@ class StudentProfileForm(forms.ModelForm):
                         # Populate major2 choices for this school
                         self.fields['major2'].choices = [('', 'Select Major')] + MAJORS_BY_SCHOOL[school]
                         break
+    
+    def clean_birthday(self):
+        """Validate birthday is not in the future and reasonable"""
+        birthday = self.cleaned_data.get('birthday')
+        if birthday:
+            if birthday > date.today():
+                raise ValidationError("Birthday cannot be in the future.")
+            # Check if age is reasonable (at least 13 years old, not more than 150)
+            age = (date.today() - birthday).days // 365
+            if age < 13:
+                raise ValidationError("You must be at least 13 years old.")
+            if age > 150:
+                raise ValidationError("Please enter a valid birthday.")
+        return birthday
+    
+    def clean_graduation_year(self):
+        """Validate graduation year"""
+        graduation_year = self.cleaned_data.get('graduation_year')
+        if graduation_year:
+            current_year = date.today().year
+            if graduation_year < 1900 or graduation_year > current_year + 10:
+                raise ValidationError(f'Graduation year must be between 1900 and {current_year + 10}')
+        return graduation_year
+    
+    def clean(self):
+        """Cross-field validation"""
+        cleaned_data = super().clean()
+        
+        # Ensure students have at least major1 if they're a student
+        if self.user and self.user.role == 'student':
+            major1 = cleaned_data.get('major1')
+            if not major1:
+                raise ValidationError({
+                    'major1': 'Students must select at least one major.'
+                })
+        
+        return cleaned_data

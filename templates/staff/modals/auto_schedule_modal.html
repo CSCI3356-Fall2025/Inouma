@@ -1,0 +1,40 @@
+<!-- Auto-Schedule Modal -->
+<div id="autoScheduleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">⚡ Auto-Schedule Trainers</h2>
+            <button class="close-btn" onclick="closeAutoScheduleModal()">×</button>
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <p style="margin-bottom: 1rem;">The system will automatically assign trainers to 2-hour blocks based on:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
+                <li>Trainer availability (unavailability already recorded)</li>
+                <li>Tool category expertise</li>
+                <li>Ensuring at least one trainer per category per block</li>
+                <li>Balanced distribution of hours</li>
+            </ul>
+        </div>
+        
+        <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">Current Trainer Pool:</h4>
+            <div style="font-size: 0.9rem; line-height: 1.8;">
+                <strong>Sarah Mitchell:</strong> 3D Printing, Laser<br>
+                <strong>Alex Kim:</strong> Woodworking, Metalworking<br>
+                <strong>Jordan Park:</strong> 3D Printing, Electronics<br>
+                <strong>Emma Lopez:</strong> Laser, Vinyl<br>
+                <strong>Mike Rodriguez:</strong> All Categories
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Schedule Priority</label>
+            <select id="schedulePriority">
+                <option>Balanced hours across all trainers</option>
+                <option>Maximize coverage</option>
+                <option>Minimize individual hours</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="runAutoSchedule()">Generate Schedule</button>
+    </div>
+</div>
