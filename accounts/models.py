@@ -35,16 +35,18 @@ class CustomUserManager(BaseUserManager):
 # User Model
 class User(AbstractUser):
     ROLE_CHOICES = (
-        ('student', 'Student'),
-        ('trainer', 'Trainer'),
-        ('admin', 'Admin'),
+        ('User', 'User'),
+        ('Collaborator', 'Collaborator'),
+        ('Team Member', 'Team Member'),
+        ('Staff', 'Staff'),
     )
+
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     username = None
     firebase_uid = models.CharField(max_length=255, blank=True, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User')
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -88,11 +90,10 @@ class TrainerProfile(models.Model):
 @receiver(post_save, sender=User)
 def create_role_profile(sender, instance, created, **kwargs):
     if created:
-        if instance.role == 'student':
+        if instance.role in ['User', 'Collaborator']:
             StudentProfile.objects.create(user=instance)
-        elif instance.role == 'trainer':
+        elif instance.role in ['Team Member', 'Trainer']:
             TrainerProfile.objects.create(user=instance)
-
 
 class Machine(models.Model):
     name = models.CharField(max_length=100)

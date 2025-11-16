@@ -27,6 +27,7 @@ urlpatterns = [
     path('', views.landing_page, name='landing'),  # 👈 custom landing page
     path('home', views.machine_directory, name='machine_directory'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
+    path('user/', views.user_dashboard, name='user_dashboard'),
     path('reservations/', views.my_reservations, name='my_reservations'),
     path('admin/', admin.site.urls),
     path('auth/', include('accounts.urls')),
