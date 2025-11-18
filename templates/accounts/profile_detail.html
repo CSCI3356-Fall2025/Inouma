@@ -1,12 +1,26 @@
 {% extends "layout.html" %}
+{% load static %}
 {% block title %}My Profile{% endblock %}
 {% block content %}
 <h2>My Profile</h2>
 <div class="card">
+  {% if user.role == 'student' %}
   <p><strong>Major 1:</strong> {{ profile.major1|default:"—" }}</p>
   <p><strong>Major 2:</strong> {{ profile.major2|default:"—" }}</p>
   <p><strong>Minor 1:</strong> {{ profile.minor1|default:"—" }}</p>
   <p><strong>Minor 2:</strong> {{ profile.minor2|default:"—" }}</p>
+  <p><strong>Graduation Year:</strong> {{ profile.graduation_year|default:"—" }}</p>
+  {% endif %}
+  
+  <p><strong>Birthday:</strong> 
+    {% if profile.birthday %}
+      {{ profile.birthday|date:"F d, Y" }}
+    {% else %}
+      —
+    {% endif %}
+  </p>
+  
+  <p><strong>Role Specification:</strong> {{ profile.role_specification|default:"—" }}</p>
 </div>
 <p style="margin-top:1rem">
   <a href="{% url 'profile_edit' %}" class="btn">Edit Profile</a>

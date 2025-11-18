@@ -25,16 +25,21 @@ from django.urls import reverse_lazy
 
 urlpatterns = [
     path('', views.landing_page, name='landing'),  # 👈 custom landing page
-    path('home', views.machine_directory, name='machine_directory'),
+    # path('home', views.machine_directory, name='machine_directory'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
+    path('user/', views.user_dashboard, name='user_dashboard'),
     path('reservations/', views.my_reservations, name='my_reservations'),
     path('admin/', admin.site.urls),
     path('auth/', include('accounts.urls')),
+    path('', include('machines.urls')),
 ]
 
 
 
-# Serve static files in development
+# # Serve static files in development
+# if settings.DEBUG:
+#     urlpatterns += static(settings.STATIC_URL,
+#                           document_root=settings.STATICFILES_DIRS[0])
+# Serve media files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL,
-                          document_root=settings.STATICFILES_DIRS[0])
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
