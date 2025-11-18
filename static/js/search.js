@@ -9,6 +9,7 @@ searchInput.addEventListener('input', function() {
     
     if (query.length < 1) {
         suggestionsDiv.style.display = 'none';
+        filterMachines();
         return;
     }
     
@@ -27,12 +28,15 @@ searchInput.addEventListener('input', function() {
                 } else {
                     suggestionsDiv.style.display = 'none';
                 }
-            });
+            })
+            .catch(error => console.error('Search suggestions error:', error));
     }, 300);
+    
+    filterMachines();
 });
 
 function selectSearchSuggestion(value) {
-    searchInput.value = value;  // Only fills the actual value (e.g., "James" not "James (Machine Name)")
+    searchInput.value = value;
     suggestionsDiv.style.display = 'none';
     filterMachines();
 }
@@ -44,47 +48,71 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Search and filter functionality
+// Combined filter function with debug logging
 function filterMachines() {
-    const searchTerm = searchInput.value.toLowerCase();
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const activeFilter = document.querySelector('.filter-chip.active');
+    const categoryFilter = activeFilter ? activeFilter.getAttribute('data-filter') : 'all';
+    
+    console.log('Search term:', searchTerm);
+    console.log('Category filter:', categoryFilter);
+    
     const machines = document.querySelectorAll('.machine-card');
+    console.log('Total machines found:', machines.length);
+    
+    let visibleCount = 0;
     
     machines.forEach(machine => {
-        const machineType = machine.getAttribute('data-machine-type') || '';
-        const machineName = machine.getAttribute('data-machine-name') || '';
+        const machineType = (machine.getAttribute('data-machine-type') || '').toLowerCase();
+        const machineName = (machine.getAttribute('data-machine-name') || '').toLowerCase();
         const category = machine.getAttribute('data-category') || '';
-        const location = machine.getAttribute('data-location') || '';
+        const location = (machine.getAttribute('data-location') || '').toLowerCase();
         
-        const matchesSearch = machineType.includes(searchTerm) || 
-                            machineName.includes(searchTerm) ||
-                            category.toLowerCase().includes(searchTerm) || 
-                            location.includes(searchTerm);
+        // Condition 1: Search filter
+        let passesSearchFilter = true;
+        if (searchTerm !== '') {
+            passesSearchFilter = machineType.includes(searchTerm) || 
+                                machineName.includes(searchTerm) ||
+                                category.toLowerCase().includes(searchTerm) || 
+                                location.includes(searchTerm);
+        }
         
-        machine.style.display = matchesSearch ? 'block' : 'none';
+        // Condition 2: Category filter
+        let passesCategoryFilter = true;
+        if (categoryFilter !== 'all') {
+            passesCategoryFilter = (category === categoryFilter);
+        }
+        
+        // Show if BOTH conditions pass
+        const shouldShow = passesSearchFilter && passesCategoryFilter;
+        
+        if (shouldShow) {
+            machine.style.display = 'block';
+            visibleCount++;
+        } else {
+            machine.style.display = 'none';
+        }
+        
     });
+    
 }
 
-
-// Filter on input
-searchInput.addEventListener('input', filterMachines);
-
-// Category filter functionality
+// Category filter click handlers
 const filterChips = document.querySelectorAll('.filter-chip');
+
 filterChips.forEach(chip => {
     chip.addEventListener('click', function() {
+        
+        // Update active state
         filterChips.forEach(c => c.classList.remove('active'));
         this.classList.add('active');
         
-        const filter = this.getAttribute('data-filter');
-        const machines = document.querySelectorAll('.machine-card');
-        
-        machines.forEach(machine => {
-            const category = machine.getAttribute('data-category');
-            if (filter === 'all' || category === filter) {
-                machine.style.display = 'block';
-            } else {
-                machine.style.display = 'none';
-            }
-        });
+        // Re-run filter
+        filterMachines();
     });
 });
+
+// Initial load - show all machines
+console.log('Search.js loaded successfully');
+filterMachines();

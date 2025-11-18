@@ -248,3 +248,21 @@ duplicateModal.addEventListener('click', function(e) {
 });
 
 
+function toggleAddMachineSection() {
+    var section = document.getElementById('addMachineSection');
+    var icon = document.getElementById('addMachineToggleIcon');
+    if (!section || !icon) return;
+    
+    if (section.style.display === "none" || section.style.display === "") {
+        section.style.display = "block";
+        icon.textContent = "▼";
+        icon.style.transform = "rotate(90deg)";
+    } else {
+        section.style.display = "none";
+        icon.textContent = "▶";
+        icon.style.transform = "rotate(0deg)";
+    }
+}
+
+
+

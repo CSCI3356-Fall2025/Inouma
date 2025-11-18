@@ -33,5 +33,12 @@ def staff_dashboard(request):
     }
     return render(request, 'staffDashboard.html', context)
 
+@login_required
+def user_dashboard(request):
+    context = {
+
+    }
+    return render(request, 'userDashboard.html', context)
+
 def landing_page(request):
     return render(request, 'landing.html')
