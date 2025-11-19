@@ -40,13 +40,42 @@ class User(AbstractUser):
         ('Team Member', 'Team Member'),
         ('Staff', 'Staff'),
     )
-
+    
+    SCHOOL_CHOICES = (
+        ('', 'Select School'),
+        ('MCAS', 'MCAS - Morrissey College of Arts and Sciences'),
+        ('CSOM', 'CSOM - Carroll School of Management'),
+        ('CSON', 'CSON - Connell School of Nursing'),
+        ('LSEHD', 'LSEHD - Lynch School of Education and Human Development'),
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     username = None
     firebase_uid = models.CharField(max_length=255, blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User')
+    
+    # Additional user information
+    school = models.CharField(max_length=100, choices=SCHOOL_CHOICES, blank=True, help_text="School")
+    department = models.CharField(max_length=100, blank=True, help_text="Department")
+    profile_picture = models.ImageField(upload_to='users/profile_pictures/', blank=True, null=True, help_text="Profile picture")
+    
+    # Team Lead flag - only applies to Team Member role
+    is_team_lead = models.BooleanField(default=False, help_text="Designated to lead other team members (only applies to Team Member role)")
+    
+    def clean(self):
+        """Validate that is_team_lead can only be True for Team Member role"""
+        from django.core.exceptions import ValidationError
+        if self.is_team_lead and self.role != 'Team Member':
+            raise ValidationError({
+                'is_team_lead': 'Team Lead flag can only be set for users with Team Member role.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Automatically clear is_team_lead if role is not Team Member"""
+        if self.role != 'Team Member':
+            self.is_team_lead = False
+        super().save(*args, **kwargs)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -117,7 +146,7 @@ def create_role_profile(sender, instance, created, **kwargs):
     if created:
         if instance.role in ['User', 'Collaborator']:
             StudentProfile.objects.create(user=instance)
-        elif instance.role in ['Team Member', 'Trainer']:
+        elif instance.role in ['Team Member', 'Staff']:
             TrainerProfile.objects.create(user=instance)
 
 class Machine(models.Model):
