@@ -80,11 +80,60 @@
             </ul>
         {% else %}
             <div class="empty-state">
-                <div class="empty-state-icon">📅</div>
+                <div class="empty-state-icon"></div>
                 <p>No training sessions found.</p>
             </div>
         {% endif %}
     </div>
 
+    <div class="card">
+    <h2>Hatchery Open Hours</h2>
+    <p>
+        The Hatchery is open to the Boston College community during our regular open hours,
+        providing access to space and equipment for making and prototyping needs.
+    </p>
+
+    <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+
+        <!-- LEFT COLUMN -->
+        <div style="flex: 1; min-width: 260px;">
+            <h3 style="margin-top: 24px;">Open Hours</h3>
+            <ul class="machine-list">
+                <li class="machine-item"><strong>Monday</strong> 12:00PM – 10:00PM</li>
+                <li class="machine-item"><strong>Tuesday</strong> 12:00PM – 10:00PM</li>
+                <li class="machine-item"><strong>Wednesday</strong> 12:00PM – 10:00PM</li>
+                <li class="machine-item"><strong>Thursday</strong> 12:00PM – 10:00PM</li>
+                <li class="machine-item"><strong>Friday</strong> 12:00PM – 6:00PM</li>
+                <li class="machine-item"><strong>Saturday</strong> CLOSED</li>
+                <li class="machine-item"><strong>Sunday</strong> 12:00PM – 8:00PM</li>
+            </ul>
+
+            <h3 style="margin-top: 24px;">Equipment Training Hours</h3>
+            <p>
+                Equipment trainings are offered <strong>9:00AM – 12:00PM</strong> on weekdays
+                and are available on <strong>Saturdays</strong>. Additional training can be booked during open hours.
+            </p>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="flex: 1; min-width: 260px;">
+            <h3 style="margin-top: 24px;">Special Dates & Closures</h3>
+            <ul class="machine-list">
+                <li class="machine-item"><strong>September 1</strong> CLOSED</li>
+                <li class="machine-item"><strong>October 11–14</strong> CLOSED</li>
+                <li class="machine-item"><strong>November 26 – December 1</strong>CLOSED</li>
+                <li class="machine-item"><strong>December 9 –</strong> CLOSED FOR SEMESTER</li>
+
+                <li class="machine-item"><strong>January 12–22</strong>CLOSED</li>
+                <li class="machine-item"><strong>March 1–8</strong>CLOSED</li>
+                <li class="machine-item"><strong>April 2–6</strong>CLOSED</li>
+                <li class="machine-item"><strong>May 1 –</strong> CLOSED FOR SEMESTER</li>
+            </ul>
+
+            <p style="margin-top: 20px;"><em>The space is closed on all university holidays and home football game days.</em></p>
+        </div>
+
+    </div>
+    </div>
 </div>
 {% endblock %}
