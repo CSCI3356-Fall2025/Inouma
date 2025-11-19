@@ -98,6 +98,18 @@ class TrainerProfile(models.Model):
     def __str__(self):
         return f"Trainer Profile for {self.user.email}"
 
+class Certification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="certifications"   # THIS IS REQUIRED
+    )
+    name = models.CharField(max_length=150)
+    issued_at = models.DateField()
+    expires_at = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} for {self.user.email}"
 
 # Auto Create Profiles
 @receiver(post_save, sender=User)

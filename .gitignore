@@ -208,3 +208,6 @@ __marimo__/
 
 # Intelij Config Idea File
 .idea/
+.idea/workspace.xml
+.idea/workspace.xml
+accounts/migrations/0001_initial.py

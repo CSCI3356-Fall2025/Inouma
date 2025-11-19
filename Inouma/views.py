@@ -2,6 +2,8 @@
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from accounts.models import Certification, TrainingReservation
+from datetime import date, datetime
 
 
 # @login_required
@@ -35,10 +37,19 @@ def staff_dashboard(request):
 
 @login_required
 def user_dashboard(request):
-    context = {
+    certifications = Certification.objects.filter(user=request.user)
 
+    training_sessions = TrainingReservation.objects.filter(
+        student=request.user
+    ).order_by('start_time')
+
+    context = {
+        "certifications": certifications,
+        "training_sessions": training_sessions,
+        "today": date.today(),
+        "now": datetime.now(),
     }
-    return render(request, 'userDashboard.html', context)
+    return render(request, "userDashboard.html", context)
 
 def landing_page(request):
     return render(request, 'landing.html')
