@@ -1,10 +1,90 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>This will be the user dashboard</title>
-</head>
-<body>
+{% extends "layout.html" %}
+{% load static %}
 
-</body>
-</html>
+{% block title %}User Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- PAGE HEADER -->
+    <div class="card">
+        <h2>Welcome, {{ request.user.first_name|default:request.user.email }}</h2>
+        <p>Your certifications and training sessions are displayed below.</p>
+    </div>
+
+     <!-- CERTIFICATIONS ONLY -->
+    <div class="card">
+        <h2>Your Certifications</h2>
+
+        {% if certifications %}
+            <ul class="machine-list">
+                {% for cert in certifications %}
+                <li class="machine-item">
+                    <div>
+                        <strong>{{ cert.name }}</strong><br>
+                        <small>
+                            Issued: {{ cert.issued_at }}<br>
+
+                            {% if cert.expires_at %}
+                                Expires: {{ cert.expires_at }}
+                            {% else %}
+                                No expiration
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Status badge -->
+                    {% if cert.expires_at and cert.expires_at < today %}
+                        <span class="badge badge-danger">Expired</span>
+                    {% else %}
+                        <span class="badge badge-success">Active</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📄</div>
+                <p>No certifications found.</p>
+            </div>
+        {% endif %}
+    </div>
+
+
+    <!-- TRAINING SESSIONS -->
+    <div class="card">
+        <h2>Your Training Sessions</h2>
+
+        {% if training_sessions %}
+            <ul class="machine-list">
+                {% for session in training_sessions %}
+                <li class="machine-item">
+                    <div>
+                        <strong>{{ session.machine_instance.machine.name }}</strong><br>
+                        <small>
+                            With trainer: {{ session.trainer.first_name|default:session.trainer.email }}<br>
+                            Start: {{ session.start_time|date:"M j, Y H:i" }}<br>
+                            End: {{ session.end_time|date:"M j, Y H:i" }}
+                        </small>
+                    </div>
+
+                    {% if session.status == "CANCELED" %}
+                        <span class="badge badge-danger">Canceled</span>
+                    {% elif session.start_time < now %}
+                        <span class="badge badge-secondary">Completed</span>
+                    {% else %}
+                        <span class="badge badge-success">Upcoming</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <p>No training sessions found.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
