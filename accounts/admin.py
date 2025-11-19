@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, StudentProfile, TrainerProfile, Machine, MachineInstance, TrainingReservation
+from .models import User, StudentProfile, TrainerProfile, Machine, MachineInstance, TrainingReservation, Certification
 
 
 class StudentProfileInline(admin.StackedInline):
@@ -51,7 +51,7 @@ class CustomUserAdmin(UserAdmin):
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(StudentProfile)
 admin.site.register(TrainerProfile)
-
 admin.site.register(Machine)
 admin.site.register(MachineInstance)
 admin.site.register(TrainingReservation)
+admin.site.register(Certification)
