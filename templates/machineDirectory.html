@@ -82,28 +82,38 @@
                 <!-- Training Requirements -->
                 <div class="training-required">
                     <h4>⚠️ Training Required:</h4>
-                    {% if machine.requires_level_1 %}
-                        <span class="training-badge">Level 1 Training</span>
-                    {% endif %}
-                    {% if machine.requires_level_2 %}
-                        <span class="training-badge">Level 2 Training</span>
-                    {% endif %}
-                    {% if machine.requires_level_3 %}
-                        <span class="training-badge">Level 3 Training</span>
-                    {% endif %}
-                    {% if not machine.requires_level_1 and not machine.requires_level_2 and not machine.requires_level_3 %}
-                        <p style="color: #666; font-size: 0.9rem;">No training required</p>
-                    {% endif %}
+
+                    {% with trainings=machine.required_trainings.all %}
+                        {% if trainings %}
+                            <div class="training-badges">
+                                {% for t in trainings %}
+                                    <span class="training-badge">{{ t.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% elif machine.requires_level_1 or machine.requires_level_2 or machine.requires_level_3 %}
+                            {% if machine.requires_level_1 %}
+                                <span class="training-badge">Level 1 Training</span>
+                            {% endif %}
+                            {% if machine.requires_level_2 %}
+                                <span class="training-badge">Level 2 Training</span>
+                            {% endif %}
+                            {% if machine.requires_level_3 %}
+                                <span class="training-badge">Level 3 Training</span>
+                            {% endif %}
+                        {% else %}
+                            <p style="color: #666; font-size: 0.9rem;">No training required</p>
+                        {% endif %}
+                    {% endwith %}
                 </div>
                 
                 <!-- Actions -->
                 <div class="machine-actions" style="margin-top: 1rem;">
-                    <a class="btn btn-primary btn-sm"
-                        href="{% url 'training_booking_by_name' machine_slug=machine.machine_name|slugify %}"
-                        onclick="event.stopPropagation();"
-                        style="width: 100%; text-align: center;">
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            onclick="event.stopPropagation(); openTrainingModal('{{ machine.machine_name|slugify }}');"
+                            style="width: 100%; text-align: center;">
                         Reserve Machine
-                    </a>
+                    </button>
                 </div>
             </div>
             {% endfor %}

@@ -197,3 +197,35 @@ class TrainingReservation(models.Model):
 
     def overlaps(self, other_start, other_end):
         return not (self.end_time <= other_start or self.start_time >= other_end)
+
+class TrainerAvailability(models.Model):
+    """
+    Weekly recurring availability blocks for each trainer.
+    Example:
+      Monday 09:00–12:00
+      Wednesday 13:00–17:00
+    """
+    WEEKDAYS = [
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ]
+
+    trainer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="weekly_available_blocks"
+    )
+    weekday = models.IntegerField(choices=WEEKDAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["trainer", "weekday", "start_time"]
+
+    def __str__(self):
+        return f"{self.trainer.email} – {self.get_weekday_display()} {self.start_time}-{self.end_time}"

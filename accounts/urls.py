@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views_booking_page import training_booking_page_by_name  # new import
+from .views_booking_page import training_booking_page_by_name
 from .views import (
     AuthCreateNewUserView,
     AuthLoginExistingUserView,
@@ -10,6 +10,8 @@ from .views import (
     logout_view,
     TrainingReservationView,
     TrainerAvailabilityView,
+    profile_detail,
+    profile_edit,
 )
 
 urlpatterns = [
@@ -34,5 +36,5 @@ urlpatterns = [
 
     # APIs
     path('api/training-reservations/', TrainingReservationView.as_view(), name='training_reservations'),
-    path('api/trainers/<uuid:trainer_id>/availability/', TrainerAvailabilityView.as_view(), name='trainer_availability'),
+    path("api/trainers/<uuid:trainer_id>/availability/", TrainerAvailabilityView.as_view(), name="trainer_availability",),
 ]
