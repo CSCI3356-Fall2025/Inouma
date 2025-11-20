@@ -22,6 +22,18 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+          <entry type="LOCAL">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="main" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectColorInfo">{
@@ -135,6 +147,15 @@
       <workItem from="1762535640090" duration="3000" />
       <workItem from="1762535677509" duration="2052000" />
       <workItem from="1762722359079" duration="3604000" />
+      <workItem from="1762726515492" duration="199000" />
+      <workItem from="1762726722113" duration="1422000" />
+      <workItem from="1762737456568" duration="4333000" />
+      <workItem from="1762795654111" duration="177000" />
+      <workItem from="1762829389721" duration="124000" />
+      <workItem from="1762891246706" duration="224000" />
+      <workItem from="1762895933681" duration="633000" />
+      <workItem from="1763177253837" duration="656000" />
+      <workItem from="1763309270702" duration="2403000" />
     </task>
     <servers />
   </component>

@@ -35,16 +35,47 @@ class CustomUserManager(BaseUserManager):
 # User Model
 class User(AbstractUser):
     ROLE_CHOICES = (
-        ('student', 'Student'),
-        ('trainer', 'Trainer'),
-        ('admin', 'Admin'),
+        ('User', 'User'),
+        ('Collaborator', 'Collaborator'),
+        ('Team Member', 'Team Member'),
+        ('Staff', 'Staff'),
+    )
+    
+    SCHOOL_CHOICES = (
+        ('', 'Select School'),
+        ('MCAS', 'MCAS - Morrissey College of Arts and Sciences'),
+        ('CSOM', 'CSOM - Carroll School of Management'),
+        ('CSON', 'CSON - Connell School of Nursing'),
+        ('LSEHD', 'LSEHD - Lynch School of Education and Human Development'),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     username = None
     firebase_uid = models.CharField(max_length=255, blank=True, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User')
+    
+    # Additional user information
+    school = models.CharField(max_length=100, choices=SCHOOL_CHOICES, blank=True, help_text="School")
+    department = models.CharField(max_length=100, blank=True, help_text="Department")
+    profile_picture = models.ImageField(upload_to='users/profile_pictures/', blank=True, null=True, help_text="Profile picture")
+    
+    # Team Lead flag - only applies to Team Member role
+    is_team_lead = models.BooleanField(default=False, help_text="Designated to lead other team members (only applies to Team Member role)")
+    
+    def clean(self):
+        """Validate that is_team_lead can only be True for Team Member role"""
+        from django.core.exceptions import ValidationError
+        if self.is_team_lead and self.role != 'Team Member':
+            raise ValidationError({
+                'is_team_lead': 'Team Lead flag can only be set for users with Team Member role.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Automatically clear is_team_lead if role is not Team Member"""
+        if self.role != 'Team Member':
+            self.is_team_lead = False
+        super().save(*args, **kwargs)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -68,9 +99,22 @@ class StudentProfile(models.Model):
     major2 = models.TextField(blank=True)
     minor1 = models.TextField(blank=True)
     minor2 = models.TextField(blank=True)
+    birthday = models.DateField(null=True, blank=True, help_text="Date of birth")
+    graduation_year = models.IntegerField(null=True, blank=True, help_text="Expected graduation year (e.g., 2025)")
+    role_specification = models.CharField(max_length=100, blank=True, help_text="Additional role details (e.g., 'Undergraduate', 'Graduate Student')")
 
     def __str__(self):
         return f"Student Profile for {self.user.email}"
+    
+    def clean(self):
+        """Validate graduation year is reasonable"""
+        from django.core.exceptions import ValidationError
+        if self.graduation_year:
+            current_year = 2024 
+            if self.graduation_year < 1900 or self.graduation_year > current_year + 10:
+                raise ValidationError({
+                    'graduation_year': f'Graduation year must be between 1900 and {current_year + 10}'
+                })
 
 
 # Customizable Trainer Profile
@@ -83,16 +127,27 @@ class TrainerProfile(models.Model):
     def __str__(self):
         return f"Trainer Profile for {self.user.email}"
 
+class Certification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="certifications"   # THIS IS REQUIRED
+    )
+    name = models.CharField(max_length=150)
+    issued_at = models.DateField()
+    expires_at = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} for {self.user.email}"
 
 # Auto Create Profiles
 @receiver(post_save, sender=User)
 def create_role_profile(sender, instance, created, **kwargs):
     if created:
-        if instance.role == 'student':
+        if instance.role in ['User', 'Collaborator']:
             StudentProfile.objects.create(user=instance)
-        elif instance.role == 'trainer':
+        elif instance.role in ['Team Member', 'Staff']:
             TrainerProfile.objects.create(user=instance)
-
 
 class Machine(models.Model):
     name = models.CharField(max_length=100)
@@ -142,3 +197,35 @@ class TrainingReservation(models.Model):
 
     def overlaps(self, other_start, other_end):
         return not (self.end_time <= other_start or self.start_time >= other_end)
+
+class TrainerAvailability(models.Model):
+    """
+    Weekly recurring availability blocks for each trainer.
+    Example:
+      Monday 09:00–12:00
+      Wednesday 13:00–17:00
+    """
+    WEEKDAYS = [
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ]
+
+    trainer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="weekly_available_blocks"
+    )
+    weekday = models.IntegerField(choices=WEEKDAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["trainer", "weekday", "start_time"]
+
+    def __str__(self):
+        return f"{self.trainer.email} – {self.get_weekday_display()} {self.start_time}-{self.end_time}"

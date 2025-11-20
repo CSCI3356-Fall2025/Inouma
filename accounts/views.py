@@ -20,6 +20,8 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.views.decorators.clickjacking import xframe_options_exempt
+
 
 from .models import TrainingReservation, MachineInstance
 from .serializers import (
@@ -28,6 +30,7 @@ from .serializers import (
 )
 
 from .models import User
+from .models import TrainerAvailability
 from .models import StudentProfile
 from .forms import StudentProfileForm
 from .serializers import UserSerializer
@@ -354,17 +357,8 @@ def logout_view(request):
 
 def profile_detail(request):
     user = request.user
-    # Role-based profile routing
-    if user.role == 'student' or 'trainer':
-        profile, _ = StudentProfile.objects.get_or_create(user=user)
-        return render(request, "accounts/profile_detail.html", {"profile": profile})
-
-    elif user.role == 'admin':
-        # Example admin redirect (adjust to your admin dashboard)
-        return redirect("admin_dashboard")
-
-    else:
-        return HttpResponseForbidden("Unknown user role.")
+    profile, _ = StudentProfile.objects.get_or_create(user=user)
+    return render(request, "accounts/profile_detail.html", {"profile": profile})
 
 def profile_edit(request):
     user = request.user
@@ -372,30 +366,18 @@ def profile_edit(request):
     if not user.is_authenticated:
         return redirect('/auth/login/')
 
-    if user.role == 'student' or user.role == 'trainer':
-        profile, _ = StudentProfile.objects.get_or_create(user=user)
+    profile, _ = StudentProfile.objects.get_or_create(user=user)
 
-        if request.method == "POST":
-            form = StudentProfileForm(request.POST, instance=profile)
-            if form.is_valid():
-                form.save()
-                return redirect("profile_detail")
-        else:
-            form = StudentProfileForm(instance=profile)
-
-        return render(request, "accounts/profile_form.html", {"form": form})
-
-    elif user.role == 'admin':
-        # You can create a similar form and view for admin profiles later
-        # I created HTML files for Admin Detail and Admin Form
-        return redirect("admin_dashboard")
-
+    if request.method == "POST":
+        form = StudentProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("profile_detail")
     else:
-        return HttpResponseForbidden("Unknown user role.")
+        form = StudentProfileForm(instance=profile)
 
+    return render(request, "accounts/profile_form.html", {"form": form})
 
-
-User = get_user_model()
 
 
 class TrainingReservationView(APIView):
@@ -442,33 +424,76 @@ class TrainingReservationView(APIView):
 
 
 class TrainerAvailabilityView(APIView):
+    """
+    Returns free time slots for a trainer on a given date.
+    Slots = trainer's weekly availability MINUS existing reservations.
+    """
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, trainer_id):
         date_str = request.query_params.get("date")
         if not date_str:
-            return Response({"detail": "date query param required (YYYY-MM-DD)"}, status=400)
+            return Response(
+                {"detail": "date query param required (YYYY-MM-DD)"},
+                status=400
+            )
 
-        day = datetime.fromisoformat(date_str).date()
-        start_of_day = timezone.make_aware(datetime.combine(day, time(9, 0)))
-        end_of_day = timezone.make_aware(datetime.combine(day, time(17, 0)))
-        slot = timedelta(minutes=60)
+        try:
+            day = datetime.fromisoformat(date_str).date()
+        except Exception:
+            return Response({"detail": "invalid date"}, status=400)
 
         trainer = User.objects.get(id=trainer_id)
+
+        weekday = day.weekday()  # Monday = 0
+        availability_blocks = TrainerAvailability.objects.filter(
+            trainer=trainer,
+            weekday=weekday
+        )
+
+        # If no availability defined → trainer not working today
+        if not availability_blocks.exists():
+            return Response({"trainer_id": str(trainer_id), "slots": []})
+
+        SLOT = timedelta(hours=1)
+
+        # Get all reservations for this trainer on the selected date
         existing = TrainingReservation.objects.filter(
             trainer=trainer,
             status="CONFIRMED",
-            start_time__lt=end_of_day,
-            end_time__gt=start_of_day,
+            start_time__date=day
         )
 
-        slots = []
-        t = start_of_day
-        while t + slot <= end_of_day:
-            conflict = any(not (r.end_time <= t or r.start_time >= t + slot) for r in existing)
-            if not conflict:
-                slots.append({"start_time": t.isoformat(), "end_time": (t + slot).isoformat()})
-            t += slot
+        free_slots = []
 
-        return Response({"trainer_id": str(trainer_id), "slots": slots})
+        for block in availability_blocks:
+            block_start = timezone.make_aware(datetime.combine(day, block.start_time))
+            block_end = timezone.make_aware(datetime.combine(day, block.end_time))
+
+            t = block_start
+            while t + SLOT <= block_end:
+                potential_start = t
+                potential_end = t + SLOT
+
+                # Check overlap with existing reservations
+                conflict = any(
+                    not (
+                        r.end_time <= potential_start or
+                        r.start_time >= potential_end
+                    )
+                    for r in existing
+                )
+
+                if not conflict:
+                    free_slots.append({
+                        "start_time": potential_start.isoformat(),
+                        "end_time": potential_end.isoformat()
+                    })
+
+                t += SLOT
+
+        return Response({
+            "trainer_id": str(trainer_id),
+            "slots": free_slots
+        })
