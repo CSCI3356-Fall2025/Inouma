@@ -37,7 +37,6 @@ INSTALLED_APPS = [
 
     # Local apps
     'accounts',
-    'schedule',
 
     # Machines
     'machines',
