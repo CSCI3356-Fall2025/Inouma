@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction, models
 from django.shortcuts import render
 from django.utils.text import slugify
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 from .models import Machine, MachineInstance
 
@@ -59,6 +60,7 @@ MACHINE_DEFAULTS = {
     },
 }
 
+
 def _set_required_training_level(machine, label: str):
     """
     Assigns Machine.required_training_level in a schema-agnostic way:
@@ -112,6 +114,8 @@ def _set_required_training_level(machine, label: str):
     # Any other field types – skip
     return
 
+
+@xframe_options_exempt
 @login_required
 def training_booking_page_by_name(request, machine_slug):
     """
@@ -119,7 +123,11 @@ def training_booking_page_by_name(request, machine_slug):
     - Creates Machine if missing (safe fields only).
     - Sets required_training_level using schema-aware helper above.
     - Ensures at least one MachineInstance exists.
+    - Supports 'embedded' mode for iframe use (no global nav).
     """
+    # NEW: detect whether this is being loaded inside the modal iframe
+    embedded = request.GET.get("embedded") == "1"
+
     defaults = MACHINE_DEFAULTS.get(machine_slug)
     if defaults:
         name = defaults["name"]
@@ -178,4 +186,5 @@ def training_booking_page_by_name(request, machine_slug):
         "machine": machine,
         "machine_instance": instance,
         "trainers": trainers,
+        "embedded": embedded,   # <-- NEW
     })

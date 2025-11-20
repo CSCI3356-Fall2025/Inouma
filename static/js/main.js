@@ -684,3 +684,21 @@ function publishSchedule() {
     
     showMessage('success', '🚀 Schedule published successfully! Students can now view open hours and book training sessions.');
 }
+
+function openTrainingModal(machineSlug) {
+    const modal = document.getElementById('machineModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    modalTitle.textContent = 'Reserve Machine';
+    modal.classList.add('active');
+
+    modalBody.innerHTML = `
+        <iframe
+            src="/auth/book/machine/by-name/${machineSlug}/?embedded=1"
+            style="width: 100%; height: 80vh; border: none;"
+            title="Machine training booking">
+        </iframe>
+    `;
+}
+
