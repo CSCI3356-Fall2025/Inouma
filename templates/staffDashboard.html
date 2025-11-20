@@ -4,6 +4,7 @@
 {% block title %}Staff Dashboard - The Hatchery{% endblock %}
 
 {% block content %}
+<<<<<<< Updated upstream
 <!-- Add Machine -->
 <div class="card">
     <h2>➕ Add New Machine</h2>
@@ -91,6 +92,12 @@
     <div style="margin-bottom: 1.5rem;">
         <button class="btn btn-secondary" onclick="openEditLocationModal()">Add/Edit Location</button>
     </div>
+=======
+    {% include 'staff/machine_management_card.html' %}
+    {% include 'staff/location_management_card.html' %}
+    {% include 'staff/semester_schedule.html' %}
+    {% include 'staff/trainer_review.html' %}
+>>>>>>> Stashed changes
     
     <div class="location-grid">
         <div class="floor-section">

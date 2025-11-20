@@ -1,0 +1,362 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Machine Management - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > Machine Management
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>➕ Add New Machine</h2>
+    
+    <form method="POST" action="{% url 'add_machine' %}" enctype="multipart/form-data" style="margin-top: 2rem;">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="two-column">
+            <div class="form-group">
+                <label>Machine Type/Model <span style="color: red;">*</span></label>
+                <input type="text" name="machine_name" id="machineTypeInput" placeholder="e.g., Ultimaker S5" required autocomplete="off">
+                <div id="suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; width: calc(50% - 1rem); z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                <small style="color: #666;">Start typing to see existing machine types</small>
+            </div>
+            <div class="form-group">
+                <label>Machine Name/Identifier <span style="color: red;">*</span></label>
+                <input type="text" name="name" id="machineNameInput" placeholder="e.g., Ultimaker #1" required>
+                <small style="color: #666;">Unique name to distinguish this specific machine</small>
+                
+                <!-- Duplicate warning -->
+                <div id="duplicateWarning" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                    <span style="color: #856404; font-size: 0.9rem;">
+                        ⚠️ <span id="duplicateWarningText"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="two-column">
+            <div class="form-group">
+                <label>Category <span style="color: red;">*</span></label>
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Laser">Laser</option>
+                    <option value="Vinyl">Vinyl</option>
+                    <option value="Woodworking">Woodworking</option>
+                    <option value="Textile">Textile</option>
+                    <option value="Metalworking">Metalworking</option>
+                    <option value="3D Printing">3D Printing</option>
+                    <option value="Electronics">Electronics</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Location <span style="color: red;">*</span></label>
+                <select name="location" id="locationSelect" required onchange="handleLocationChange()">
+                    <option value="">Select Location</option>
+                    {% for location in locations %}
+                        <option value="{{ location.id }}" 
+                                data-location-id="{{ location.id }}"
+                                data-machine-types="{{ location.get_machine_types_list|join:', ' }}"
+                                data-stations="{{ location.num_stations }}"
+                                data-capacity="{{ location.capacity }}">
+                            {{ location.name }} - {{ location.floor }}
+                        </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Location Details Tooltip -->
+                <div id="locationDetails" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 6px; font-size: 0.85rem;">
+                    <div style="color: #666; margin-bottom: 0.25rem;"><strong>Building:</strong> <span id="detailBuilding"></span></div>
+                    <div style="color: #666; margin-bottom: 0.25rem;"><strong>Stations:</strong> <span id="detailStations"></span> | <strong>Capacity:</strong> <span id="detailCapacity"></span></div>
+                    <div style="color: #666;"><strong>Machine Types:</strong> <span id="detailTypes"></span></div>
+                </div>
+                
+                <!-- Hidden fields for map coordinates -->
+                <input type="hidden" name="map_position_x" id="mapPositionX">
+                <input type="hidden" name="map_position_y" id="mapPositionY">
+                
+                <!-- Pin Machine Button (shown only when location with floorplan is selected) -->
+                <button type="button" id="pinMachineBtn" onclick="openFloorplanModal()" 
+                        style="display: none; margin-top: 0.75rem;" 
+                        class="btn btn-secondary btn-small">
+                    📍 Pin Machine on Diagram
+                </button>
+                <div id="pinStatus" style="display: none; margin-top: 0.5rem; color: var(--gold); font-size: 0.85rem; font-weight: 500;">
+                    ✓ Machine location pinned
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rest of your existing form fields ... -->
+        <!-- Optional Technical Details -->
+        <div class="two-column">
+            <div class="form-group">
+                <label>MAC Address <span style="color: #999;">(Optional)</span></label>
+                <input type="text" name="mac_address" placeholder="e.g., 00:1B:44:11:3A:B7" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$">
+                <small style="color: #666;">Format: XX:XX:XX:XX:XX:XX</small>
+            </div>
+            <div class="form-group">
+                <label>Year Bought <span style="color: #999;">(Optional)</span></label>
+                <input type="number" name="year_bought" placeholder="e.g., 2023" min="1900" max="2100">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Description <span style="color: #999;">(Optional)</span></label>
+            <textarea name="description" rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
+        </div>
+        
+        <!-- Image Selection -->
+        <div class="form-group">
+            <label>Machine Image</label>
+            <select id="imageChoice" onchange="handleImageChoice()">
+                <option value="none">No Image (Use Default)</option>
+                <option value="existing">Select Existing Image</option>
+                <option value="upload">Upload New Image</option>
+            </select>
+            
+            <input type="hidden" name="image_choice" id="imageChoiceHidden" value="default">
+            
+            <div id="existingImageSection" style="display: none; margin-top: 1rem; padding: 1rem; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px;">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block; color: var(--dark);">Filter by Category:</label>
+                <select id="categoryFilter" onchange="filterImagesByCategory()" style="margin-bottom: 1rem;">
+                    <option value="all">All Categories</option>
+                    {% for category in category_order %}
+                        <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+                
+                {% if images_by_category %}
+                    <div id="imageGallery" style="max-height: 300px; overflow-y: auto;">
+                        {% for category, images in images_by_category.items %}
+                            <div class="category-images" data-category="{{ category }}" style="margin-bottom: 1.5rem;">
+                                <h5 style="color: var(--dark); margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600;">{{ category }}</h5>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;">
+                                    {% for img in images %}
+                                        <label style="cursor: pointer; text-align: center;">
+                                            <input type="radio" name="existing_image" value="{{ img.name }}" style="display: none;" onchange="selectExistingImage(this)">
+                                            <div class="image-option" style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; transition: all 0.2s; background: white;">
+                                                <img src="{{ img.url }}" alt="{{ img.name }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;">
+                                                <p style="font-size: 0.7rem; margin-top: 0.5rem; color: #666; line-height: 1.3;">{{ img.machine_example }}</p>
+                                            </div>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No images uploaded yet. Upload a new image below!</p>
+                {% endif %}
+            </div>
+            
+            <div id="uploadImageSection" style="display: none; margin-top: 1rem;">
+                <input type="file" name="custom_image" id="customImageInput" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif">
+            </div>
+        </div>
+        
+        <!-- Training Requirements -->
+        <div class="form-group">
+            <label>Required Training Levels</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="font-weight: normal;">
+                    <input type="checkbox" name="requires_level_1" id="level1" style="width: auto; margin-right: 0.5rem;">
+                    Level 1 Training Required
+                </label>
+                <label style="font-weight: normal;">
+                    <input type="checkbox" name="requires_level_2" id="level2" style="width: auto; margin-right: 0.5rem;">
+                    Level 2 Training Required
+                </label>
+                <label style="font-weight: normal;">
+                    <input type="checkbox" name="requires_level_3" id="level3" style="width: auto; margin-right: 0.5rem;">
+                    Level 3 Training Required
+                </label>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary">Add Machine</button>
+            <a href="{% url 'staff_dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Floorplan Modal -->
+<div id="floorplanModal" class="modal">
+    <div class="modal-content" style="max-width: 90vw; max-height: 90vh;">
+        <div class="modal-header">
+            <h2>📍 Pin Machine Location</h2>
+            <button class="close-btn" onclick="closeFloorplanModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: #666; margin-bottom: 1rem;">Click on the floorplan to place your machine pin. Existing machines are shown below.</p>
+            <div style="position: relative; display: inline-block; border: 2px solid var(--gold); border-radius: 8px; overflow: hidden;">
+                <img id="floorplanImage" src="" alt="Floorplan" style="max-width: 100%; height: auto; display: block; cursor: crosshair;">
+                <div id="existingPins"></div>
+                <div id="newPin" style="display: none; position: absolute; transform: translate(-50%, -100%); pointer-events: none; z-index: 100;">
+                    <span style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">📍</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store locations data from Django
+const locationsData = JSON.parse('{{ locations_data_json|escapejs }}');
+
+// Debug: Check if data loaded correctly
+console.log('Locations data loaded:', locationsData);
+
+// Handle location selection change
+function handleLocationChange() {
+    const select = document.getElementById('locationSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    const locationId = selectedOption.value;
+    
+    const detailsDiv = document.getElementById('locationDetails');
+    const pinBtn = document.getElementById('pinMachineBtn');
+    const pinStatus = document.getElementById('pinStatus');
+    
+    if (!locationId) {
+        detailsDiv.style.display = 'none';
+        pinBtn.style.display = 'none';
+        pinStatus.style.display = 'none';
+        return;
+    }
+    
+    // Find location data
+    const locationData = locationsData.find(loc => loc.id == locationId);
+    
+    // Show location details
+    document.getElementById('detailBuilding').textContent = locationData.building;
+    document.getElementById('detailStations').textContent = locationData.num_stations;
+    document.getElementById('detailCapacity').textContent = locationData.capacity;
+    document.getElementById('detailTypes').textContent = locationData.machine_types.join(', ');
+    detailsDiv.style.display = 'block';
+    
+    // Show pin button only if location has floorplan
+    if (locationData.has_floorplan) {
+        pinBtn.style.display = 'inline-block';
+    } else {
+        pinBtn.style.display = 'none';
+    }
+    
+    // Reset pin status
+    pinStatus.style.display = 'none';
+    document.getElementById('mapPositionX').value = '';
+    document.getElementById('mapPositionY').value = '';
+}
+
+// Open floorplan modal
+function openFloorplanModal() {
+    const select = document.getElementById('locationSelect');
+    const locationId = select.value;
+    const locationData = locationsData.find(loc => loc.id == locationId);
+    
+    if (!locationData || !locationData.has_floorplan) return;
+    
+    // Set floorplan image
+    document.getElementById('floorplanImage').src = locationData.floorplan_url;
+    
+    // Show existing machine pins
+    const pinsContainer = document.getElementById('existingPins');
+    pinsContainer.innerHTML = '';
+    
+    locationData.machines.forEach(machine => {
+        const pin = document.createElement('div');
+        pin.style.position = 'absolute';
+        pin.style.left = machine.x + '%';
+        pin.style.top = machine.y + '%';
+        pin.style.transform = 'translate(-50%, -100%)';
+        pin.style.fontSize = '24px';
+        pin.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+        pin.style.opacity = '0.6';
+        pin.innerHTML = '📍';
+        pin.title = `${machine.name} (${machine.machine_name})`;
+        pinsContainer.appendChild(pin);
+    });
+    
+    // Show modal
+    document.getElementById('floorplanModal').classList.add('active');
+}
+
+// Close floorplan modal
+function closeFloorplanModal() {
+    document.getElementById('floorplanModal').classList.remove('active');
+}
+
+// Handle click on floorplan to place pin
+document.getElementById('floorplanImage').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Update new pin position
+    const newPin = document.getElementById('newPin');
+    newPin.style.left = x + '%';
+    newPin.style.top = y + '%';
+    newPin.style.display = 'block';
+    
+    // Store coordinates
+    document.getElementById('mapPositionX').value = x.toFixed(2);
+    document.getElementById('mapPositionY').value = y.toFixed(2);
+    
+    // Show confirmation
+    document.getElementById('pinStatus').style.display = 'block';
+    
+    // Close modal after a short delay
+    setTimeout(() => {
+        closeFloorplanModal();
+    }, 500);
+});
+
+// Image choice handler
+function handleImageChoice() {
+    const choice = document.getElementById('imageChoice').value;
+    const existingSection = document.getElementById('existingImageSection');
+    const uploadSection = document.getElementById('uploadImageSection');
+    const hiddenField = document.getElementById('imageChoiceHidden');
+    
+    existingSection.style.display = 'none';
+    uploadSection.style.display = 'none';
+    
+    if (choice === 'existing') {
+        existingSection.style.display = 'block';
+        hiddenField.value = 'existing';
+    } else if (choice === 'upload') {
+        uploadSection.style.display = 'block';
+        hiddenField.value = 'upload';
+    } else {
+        hiddenField.value = 'default';
+    }
+}
+
+// Select existing image
+function selectExistingImage(radio) {
+    document.querySelectorAll('.image-option').forEach(opt => {
+        opt.style.borderColor = '#e0e0e0';
+        opt.style.background = 'white';
+    });
+    
+    const imageOption = radio.closest('label').querySelector('.image-option');
+    imageOption.style.borderColor = 'var(--gold)';
+    imageOption.style.background = 'rgba(246, 200, 81, 0.1)';
+}
+
+// Filter images by category
+function filterImagesByCategory() {
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const categoryDivs = document.querySelectorAll('.category-images');
+    
+    categoryDivs.forEach(div => {
+        if (selectedCategory === 'all' || div.dataset.category === selectedCategory) {
+            div.style.display = 'block';
+        } else {
+            div.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

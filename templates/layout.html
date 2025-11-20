@@ -9,9 +9,11 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <header>
-        <div class="header-content">
+    <!-- Left Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
             <div class="logo">
+<<<<<<< Updated upstream
                 <div class="logo-icon">H</div>
                 <div>
                     <h1>The Hatchery</h1>
@@ -39,31 +41,84 @@
                 {% else %}
                 <a href="{% url 'login' %}" class="nav-btn">Login</a>
                 {% endif %}
+=======
+                <img src="{% static 'images/HatcheryLogo.png' %}" alt="The Hatchery Logo" class="logo-image">
+>>>>>>> Stashed changes
             </div>
         </div>
-    </header>
+        
+        <nav class="sidebar-nav">
+            <a href="{% url 'machine_directory' %}" 
+               class="nav-link {% if request.resolver_match.url_name == 'machine_directory' %}active{% endif %}">
+                <span class="nav-icon">🔧</span>
+                <span>Machine Directory</span>
+            </a>
+            <a href="{% url 'my_reservations' %}" 
+               class="nav-link {% if request.resolver_match.url_name == 'my_reservations' %}active{% endif %}">
+                <span class="nav-icon">📅</span>
+                <span>My Reservations</span>
+            </a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'user_dashboard' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+                    <span class="nav-icon">👤</span>
+                    <span>User Dashboard</span>
+                </a>
+            {% endif %}
+            {% if user.is_staff %}
+                <a href="{% url 'staff_dashboard' %}" 
+                   class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Staff Dashboard</span>
+                </a>
+            {% endif %}
+        </nav>
 
-    <div class="container">
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-            {% endfor %}
+        <div class="sidebar-footer">
+            {% if user.is_authenticated %}
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
+                    <div class="user-role">{% if user.is_staff %}Staff{% else %}User{% endif %}</div>
+                </div>
+                <div class="user-actions">
+                    <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
+                    <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="login-btn">Login</a>
+            {% endif %}
         </div>
-        {% endif %}
+    </aside>
 
-        {% block content %}
-        <!-- Page-specific content goes here -->
-        {% endblock %}
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="breadcrumb">
+                {% block breadcrumb %}
+                {% endblock %}
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}
+            <!-- Page-specific content goes here -->
+            {% endblock %}
+        </main>
+
+        <footer class="footer">
+            <p>&copy; {% now "Y" %} The Hatchery - Boston College Design & Innovation</p>
+        </footer>
     </div>
-
-    <footer>
-        <div class="footer-content">
-            <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
-        </div>
-    </footer>
 
     <!-- Base JavaScript -->
     <script src="{% static 'js/main.js' %}"></script>

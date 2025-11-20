@@ -37,6 +37,16 @@ INSTALLED_APPS = [
 
     # Local apps
     'accounts',
+<<<<<<< Updated upstream
+=======
+
+    # Machines
+    'machines',
+
+    # Locations
+    'locations',
+    
+>>>>>>> Stashed changes
 ]
 
 MIDDLEWARE = [

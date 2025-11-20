@@ -30,9 +30,15 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Mount account-related routes under /auth/
     path('auth/', include('accounts.urls')),
+<<<<<<< Updated upstream
     # Home / landing page
     # Make root redirect to the auth sign-in page (HTML login)
     path('', RedirectView.as_view(url=reverse_lazy('login')), name='landing'),
+=======
+    path('', include('machines.urls')),
+    path('staff/locations/', include('locations.urls')),
+    path('', include('machines.urls')),
+>>>>>>> Stashed changes
 ]
 
 
