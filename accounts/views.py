@@ -30,6 +30,7 @@ from .serializers import (
 )
 
 from .models import User
+from .models import TrainerAvailability
 from .models import StudentProfile
 from .forms import StudentProfileForm
 from .serializers import UserSerializer
@@ -423,33 +424,76 @@ class TrainingReservationView(APIView):
 
 
 class TrainerAvailabilityView(APIView):
+    """
+    Returns free time slots for a trainer on a given date.
+    Slots = trainer's weekly availability MINUS existing reservations.
+    """
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, trainer_id):
         date_str = request.query_params.get("date")
         if not date_str:
-            return Response({"detail": "date query param required (YYYY-MM-DD)"}, status=400)
+            return Response(
+                {"detail": "date query param required (YYYY-MM-DD)"},
+                status=400
+            )
 
-        day = datetime.fromisoformat(date_str).date()
-        start_of_day = timezone.make_aware(datetime.combine(day, time(9, 0)))
-        end_of_day = timezone.make_aware(datetime.combine(day, time(17, 0)))
-        slot = timedelta(minutes=60)
+        try:
+            day = datetime.fromisoformat(date_str).date()
+        except Exception:
+            return Response({"detail": "invalid date"}, status=400)
 
         trainer = User.objects.get(id=trainer_id)
+
+        weekday = day.weekday()  # Monday = 0
+        availability_blocks = TrainerAvailability.objects.filter(
+            trainer=trainer,
+            weekday=weekday
+        )
+
+        # If no availability defined → trainer not working today
+        if not availability_blocks.exists():
+            return Response({"trainer_id": str(trainer_id), "slots": []})
+
+        SLOT = timedelta(hours=1)
+
+        # Get all reservations for this trainer on the selected date
         existing = TrainingReservation.objects.filter(
             trainer=trainer,
             status="CONFIRMED",
-            start_time__lt=end_of_day,
-            end_time__gt=start_of_day,
+            start_time__date=day
         )
 
-        slots = []
-        t = start_of_day
-        while t + slot <= end_of_day:
-            conflict = any(not (r.end_time <= t or r.start_time >= t + slot) for r in existing)
-            if not conflict:
-                slots.append({"start_time": t.isoformat(), "end_time": (t + slot).isoformat()})
-            t += slot
+        free_slots = []
 
-        return Response({"trainer_id": str(trainer_id), "slots": slots})
+        for block in availability_blocks:
+            block_start = timezone.make_aware(datetime.combine(day, block.start_time))
+            block_end = timezone.make_aware(datetime.combine(day, block.end_time))
+
+            t = block_start
+            while t + SLOT <= block_end:
+                potential_start = t
+                potential_end = t + SLOT
+
+                # Check overlap with existing reservations
+                conflict = any(
+                    not (
+                        r.end_time <= potential_start or
+                        r.start_time >= potential_end
+                    )
+                    for r in existing
+                )
+
+                if not conflict:
+                    free_slots.append({
+                        "start_time": potential_start.isoformat(),
+                        "end_time": potential_end.isoformat()
+                    })
+
+                t += SLOT
+
+        return Response({
+            "trainer_id": str(trainer_id),
+            "slots": free_slots
+        })

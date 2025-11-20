@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, StudentProfile, TrainerProfile, Machine, MachineInstance, TrainingReservation, Certification
+from .models import User, StudentProfile, TrainerProfile, Machine, MachineInstance, TrainingReservation, Certification, TrainerAvailability
 
 
 class StudentProfileInline(admin.StackedInline):
@@ -61,6 +61,11 @@ class CustomUserAdmin(UserAdmin):
         elif obj.role in ['Team Member', 'Staff']:
             return [TrainerProfileInline]
         return []
+
+@admin.register(TrainerAvailability)
+class TrainerAvailabilityAdmin(admin.ModelAdmin):
+    list_display = ("trainer", "weekday", "start_time", "end_time")
+    list_filter = ("trainer", "weekday")
 
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(StudentProfile)
