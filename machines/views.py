@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import Machine
+from .models import Machine, TrainingType
 from collections import defaultdict
 import os
 from django.conf import settings
@@ -126,6 +126,28 @@ def add_machine(request):
             machine.image = machine_image
         
         machine.save()
+
+        # Auto-assign a default training based on category (Delivery 6)
+        category_default_trainings = {
+            'Laser': 'Laser Cutter Training',
+            '3D Printing': 'Intro to 3D Printing',
+            'Vinyl': 'Vinyl Cutter Training',
+            'Woodworking': 'Wood Shop Safety',
+            'Textile': 'Sewing / Textile Training',
+            'Metalworking': 'Metal Shop Safety',
+            'Electronics': 'Electronics Bench Training',
+        }
+
+        default_name = category_default_trainings.get(machine.category)
+        if default_name:
+            training, _ = TrainingType.objects.get_or_create(
+                name=default_name,
+                defaults={
+                    'description': f'Default required training for {machine.category} machines.'
+                },
+            )
+            machine.required_trainings.add(training)
+
         messages.success(request, f'Machine "{machine.name}" added successfully!')
         return redirect('staff_dashboard')
     return redirect('staff_dashboard')
