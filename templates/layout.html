@@ -14,68 +14,36 @@
     <header>
         <div class="header-content">
             <div class="logo">
-                <div class="logo-icon">H</div>
-                <div>
-                    <h1>The Hatchery</h1>
-                    <p>Boston College Makerspace</p>
-                </div>
-            </div>
-            <nav>
-                <a href="{% url 'machine_directory' %}"
-                   class="nav-btn {% if request.resolver_match.url_name == 'machine_directory' %}active{% endif %}">
-                    Machine Directory
-                </a>
-                <a href="{% url 'my_reservations' %}"
-                   class="nav-btn {% if request.resolver_match.url_name == 'my_reservations' %}active{% endif %}">
-                    My Reservations
-                </a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'user_dashboard' %}"
-                       class="nav-btn {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
-                        User Dashboard
-                    </a>
-                {% endif %}
-                {% if user.is_staff %}
-                    <a href="{% url 'staff_dashboard' %}"
-                       class="nav-btn {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
-                        Staff Dashboard
-                    </a>
-                {% endif %}
-            </nav>
-            <div class="nav-right">
-                {% if user.is_authenticated %}
-                <div class="dropdown" id="userDropdown">
-                    <a href="#" id="userDropdownToggle" style="color:white; text-decoration:underline;">
-                        {{ user.get_full_name|default:user.email }} (<strong>{% if user.is_staff %}Staff{% else %}User{% endif %}</strong>)
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="userDropdownToggle">
-                        <a class="dropdown-item" href="{% url 'profile_detail' %}">Profile</a>
-                        <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
-                    </div>
-                </div>
-                {% else %}
-                <a href="{% url 'login' %}" class="nav-btn">Login</a>
-                {% endif %}
+                <img src="{% static 'images/HatcheryLogo.png' %}" alt="The Hatchery Logo" class="logo-image">
             </div>
         </div>
     </header>
     {% endif %}
 
-    <div class="container">
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-            {% endfor %}
+        <div class="sidebar-footer">
+            {% if user.is_authenticated %}
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
+                    <div class="user-role">{% if user.is_staff %}Staff{% else %}User{% endif %}</div>
+                </div>
+                <div class="user-actions">
+                    <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
+                    <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="login-btn">Login</a>
+            {% endif %}
         </div>
-        {% endif %}
+    </aside>
 
-        {% block content %}
-        <!-- Page-specific content goes here -->
-        {% endblock %}
-    </div>
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="breadcrumb">
+                {% block breadcrumb %}
+                {% endblock %}
+            </div>
+        </header>
 
     {# Hide the global footer when embedded inside the reservation modal #}
     {% if not embedded %}
