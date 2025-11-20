@@ -1,4 +1,5 @@
 import datetime as dt
+from datetime import datetime, timedelta
 import json
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
@@ -20,7 +21,7 @@ def list_shifts_json(request):
     if week_start_str:
         week_start = parse_date(week_start_str)
         if week_start:
-            week_end = week_start + dt.timedelta(days=6)
+            week_end = week_start + timedelta(days=6)
             items = items.filter(date__gte=week_start, date__lt=week_end)
 
     data = [
@@ -60,6 +61,33 @@ def add_unavailability(request):
         return JsonResponse({"ok": True})
     except Exception as e:
         return HttpResponseBadRequest(str(e))
+
+def api_shifts(request):
+    week = request.GET.get("week")
+
+    qs = Shift.objects.all()
+
+    if week:
+        week_date = datetime.strptime(week, "%Y-%m-%d").date()
+        start = week_date
+        end = week_date + timedelta(days=7)
+
+        qs = qs.filter(date__gte=start, date__lt=end)
+
+    data = []
+    for shift in qs:
+        data.append({
+            "id": shift.id,
+            "date": str(shift.date),
+            "start": shift.start_time.strftime("%H:%M"),
+            "end": shift.end_time.strftime("%H:%M"),
+            "trainer": str(shift.trainer),
+            "trainer_id": str(shift.trainer.id),
+            "team": shift.trainer.team if hasattr(shift.trainer, "team") else "",
+        })
+
+    return JsonResponse({"shifts": data})
+
 
 @login_required
 @user_passes_test(is_admin)
