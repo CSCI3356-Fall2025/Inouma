@@ -186,5 +186,5 @@ def training_booking_page_by_name(request, machine_slug):
         "machine": machine,
         "machine_instance": instance,
         "trainers": trainers,
-        "embedded": embedded,   # <-- NEW
+        "embedded": embedded,  
     })
