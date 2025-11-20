@@ -97,6 +97,7 @@
 
 <h2>Edit Profile</h2>
 <form method="post" style="max-width:600px">{% csrf_token %}
+  {% if user.role == 'User' or user.role == 'Team Member' %}
   <div class="form-group">
     <label for="{{ form.school1.id_for_label }}">{{ form.school1.label }}</label>
     {{ form.school1 }}
@@ -145,7 +146,6 @@
     {% endif %}
   </div>
   
-  {% if user.role == 'student' %}
   <div class="form-group">
     <label for="{{ form.graduation_year.id_for_label }}">{{ form.graduation_year.label }}</label>
     {{ form.graduation_year }}
