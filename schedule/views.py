@@ -15,6 +15,14 @@ User = get_user_model()
 @user_passes_test(is_admin)
 def list_shifts_json(request):
     items = Shift.objects.select_related("trainer").order_by("date", "start_time")
+    
+    week_start_str = request.GET.get("week_start")
+    if week_start_str:
+        week_start = parse_date(week_start_str)
+        if week_start:
+            week_end = week_start + dt.timedelta(days=6)
+            items = items.filter(date__gte=week_start, date__lt=week_end)
+
     data = [
         {
             "id": s.id,

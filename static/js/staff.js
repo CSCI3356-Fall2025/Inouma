@@ -82,11 +82,15 @@ function renderShiftCell(shift) {
   cell.appendChild(divOpen);
 }
 
-async function loadShifts() {
+async function loadShifts(queryString = "") {
   indexGrid();
 
   try {
-    const res = await fetch("/schedule/api/shifts/");
+    let url = "/schedule/api/shifts/";
+    if (queryString) {
+      url += "?" + queryString;
+    }
+    const res = await fetch(url);
     if (!res.ok) throw new Error("Failed to load shifts");
 
     const data = await res.json(); // expected format: {shifts:[...]}
@@ -94,6 +98,17 @@ async function loadShifts() {
   } catch (err) {
     console.error("Error loading shifts:", err);
   }
+}
+
+async function loadSelectedWeek() {
+  const weekSelect = document.getElementById("weekSelect");
+  if (!weekSelect || !weekSelect.value) {
+    alert("Please select a week.");
+    return;
+  }
+
+  const weekStart = weekSelect.value; // expected format: "YYYY-MM-DD"
+  await loadShifts("week_start=" + encodeURIComponent(weekStart));
 }
 
 async function runAutoSchedule() {
@@ -134,4 +149,11 @@ function closeAutoScheduleModal() {
 }
 
 // initialize
-document.addEventListener("DOMContentLoaded", loadShifts);
+document.addEventListener("DOMContentLoaded", () => {
+  const weekSelect = document.getElementById("weekSelect");
+  if (weekSelect && weekSelect.value) {
+    loadShifts("week_start=" + encodeURIComponent(weekSelect.value));
+  } else {
+    loadShifts();
+  }
+});
