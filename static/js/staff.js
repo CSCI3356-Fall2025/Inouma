@@ -1,3 +1,5 @@
+console.log("staff.js is loaded!");
+
 const SLOT_LABELS = ["9-11am", "11am-1pm", "1-3pm", "3-5pm", "5-7pm", "7-9pm"];
 let GRID = Array(SLOT_LABELS.length)
   .fill(null)
