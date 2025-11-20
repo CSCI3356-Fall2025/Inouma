@@ -142,15 +142,19 @@
         <div class="form-group">
             <label>Semester</label>
             <select>
-                <option>Fall 2025</option>
-                <option>Spring 2026</option>
-                <option>Summer 2026</option>
+                <option value="fall25">Fall 2025</option>
+                <option value="spring26">Spring 2026</option>
+                <option value="summer26">Summer 2026</option>
             </select>
         </div>
         <div class="form-group">
             <label>Date Range</label>
             <input type="text" placeholder="Sept 1 - Dec 15, 2025">
         </div>
+    </div>
+
+    <div style="margin: 1.5rem 0;">
+        <button class="btn btn-primary" onclick="loadScheduleForRange()">Load Schedule</button>
     </div>
 
     <div style="margin: 1.5rem 0;">
