@@ -37,9 +37,14 @@ INSTALLED_APPS = [
 
     # Local apps
     'accounts',
+    'schedule',
 
-    #m Machines
+    # Machines
     'machines',
+
+    # Locations
+    'locations',
+  
 ]
 
 MIDDLEWARE = [
