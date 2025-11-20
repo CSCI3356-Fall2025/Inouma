@@ -7,11 +7,30 @@
 <div class="card">
     <h2>🔍 Find & Reserve a Machine</h2>
     
-    <!-- Search Bar -->
-    <div class="search-container">
+    <!-- Search Bar with Autocomplete -->
+    <div class="search-container" style="position: relative;">
         <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" placeholder="Search for machines..." id="searchInput">
+        <input type="text" 
+            class="search-input" 
+            id="searchInput"
+            placeholder="Search by type (Ultimaker) or ID (James)..."
+            autocomplete="off">
+        <div id="searchSuggestions" 
+            style="display: none; 
+                    position: absolute; 
+                    background: white; 
+                    border: 1px solid #ddd; 
+                    border-radius: 8px; 
+                    max-height: 250px; 
+                    overflow-y: auto; 
+                    width: 100%; 
+                    z-index: 1000; 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    top: 100%;
+                    margin-top: 0.5rem;">
+        </div>
     </div>
+
     
     <!-- Category Filters -->
     <div class="filters" id="filterBar">
@@ -19,7 +38,7 @@
         <div class="filter-chip" data-filter="Laser">Laser</div>
         <div class="filter-chip" data-filter="Vinyl">Vinyl</div>
         <div class="filter-chip" data-filter="Woodworking">Woodworking</div>
-        <div class="filter-chip" data-filter="Textiles">Textiles</div>
+        <div class="filter-chip" data-filter="Textile">Textile</div>
         <div class="filter-chip" data-filter="Metalworking">Metalworking</div>
         <div class="filter-chip" data-filter="3D Printing">3D Printing</div>
         <div class="filter-chip" data-filter="Electronics">Electronics</div>
@@ -27,138 +46,86 @@
     
     <!-- Machine Grid -->
     <div class="machine-grid" id="machineGrid">
-        <!-- Hardcoded prototype data -->
-        <div class="machine-card" 
-             data-category="Laser" 
-             data-name="epilog laser fusion pro"
-             data-location="hatch front"
-             onclick="openMachineModal(1)">
-              <div class="machine-thumb">
-                <img src="{% static 'images/machines/epilog-fusion-pro.jpeg' %}"
-                alt="Epilog Laser Fusion Pro" loading="lazy">
-            </div>
-            <h3>Epilog Laser Fusion Pro</h3>
-            <p class="machine-category">Category: Laser</p>
-            <p class="machine-location">📍 Hatch Front</p>
-            <div class="training-required">
-                <h4>⚠️ Training Required:</h4>
-                <span class="training-badge">Laser Cutting Basics</span>
-            </div>
-            <div class="machine-availability">
-                <span class="availability-badge">1/2 available</span>
-            </div>
-        </div>
+        {% if machines %}
+            {% for machine in machines %}
+            <div class="machine-card" 
+                data-category="{{ machine.category }}" 
+                data-machine-type="{{ machine.machine_name|lower }}"
+                data-machine-name="{{ machine.name|lower }}"
+                data-location="{{ machine.location|lower }}"
+                onclick="openMachineModal('{{ machine.id }}')">
+       
+                
+                <!-- Machine Image -->
+                <div class="machine-thumb">
+                    {% if machine.image %}
+                        <img src="{{ machine.image.url }}" 
+                             alt="{{ machine.name }}" 
+                             loading="lazy">
+                    {% else %}
+                        <img src="{% static 'images/machines/default-machine.png' %}" 
+                             alt="Default machine image" 
+                             loading="lazy">
+                    {% endif %}
+                </div>
+                
+                <!-- Machine Info -->
+                <h3>{{ machine.machine_name }}</h3>
+                <p class="machine-category">{{ machine.name }}</p>
+                <p class="machine-category">Category: {{ machine.category }}</p>
+                <p class="machine-location">📍 {{ machine.location }}</p>
+                
+                {% if machine.description %}
+                    <p style="font-size: 0.9rem; color: #666; margin: 0.5rem 0;">{{ machine.description }}</p>
+                {% endif %}
+                
+                <!-- Training Requirements -->
+                <div class="training-required">
+                    <h4>⚠️ Training Required:</h4>
 
-        <div class="machine-card" 
-             data-category="3D Printing" 
-             data-name="prusa i3 mk3s+"
-             data-location="prototyping studio"
-             onclick="openMachineModal(2)">
-              <div class="machine-thumb">
-                <img src="{% static 'images\machines\prusa-mk3s.jpg' %}"
-                alt="Prusa i3 MK3S+" loading="lazy">
+                    {% with trainings=machine.required_trainings.all %}
+                        {% if trainings %}
+                            <div class="training-badges">
+                                {% for t in trainings %}
+                                    <span class="training-badge">{{ t.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% elif machine.requires_level_1 or machine.requires_level_2 or machine.requires_level_3 %}
+                            {% if machine.requires_level_1 %}
+                                <span class="training-badge">Level 1 Training</span>
+                            {% endif %}
+                            {% if machine.requires_level_2 %}
+                                <span class="training-badge">Level 2 Training</span>
+                            {% endif %}
+                            {% if machine.requires_level_3 %}
+                                <span class="training-badge">Level 3 Training</span>
+                            {% endif %}
+                        {% else %}
+                            <p style="color: #666; font-size: 0.9rem;">No training required</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <!-- Actions -->
+                <div class="machine-actions" style="margin-top: 1rem;">
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            onclick="event.stopPropagation(); openTrainingModal('{{ machine.machine_name|slugify }}');"
+                            style="width: 100%; text-align: center;">
+                        Reserve Machine
+                    </button>
+                </div>
             </div>
-            <h3>Prusa i3 MK3S+</h3>
-            <p class="machine-category">Category: 3D Printing</p>
-            <p class="machine-location">📍 Prototyping Studio</p>
-            <div class="training-required certified">
-                <h4>✓ You are certified!</h4>
-                <span class="training-badge completed">✓ Intro to 3D Printing</span>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                <p style="color: #999; font-size: 1.1rem;">No machines available yet.</p>
             </div>
-            <div class="machine-availability">
-                <span class="availability-badge">7/10 available</span>
-            </div>
-        </div>
-
-        <div class="machine-card" 
-             data-category="Vinyl" 
-             data-name="cricut maker 3"
-             data-location="hatch back"
-             onclick="openMachineModal(3)">
-              <div class="machine-thumb">
-                <img src="{% static 'images/machines/cricut-maker-3.jpg' %}"
-                alt="Cricut Maker 3" loading="lazy">
-            </div>
-            <h3>Cricut Maker 3</h3>
-            <p class="machine-category">Category: Vinyl</p>
-            <p class="machine-location">📍 Hatch Back</p>
-            <div class="training-required">
-                <h4>⚠️ Training Required:</h4>
-                <span class="training-badge">Vinyl Cutting Basics</span>
-            </div>
-            <div class="machine-availability">
-                <span class="availability-badge">1/2 available</span>
-            </div>
-        </div>
-
-        <div class="machine-card" 
-             data-category="Woodworking" 
-             data-name="shapeoko 4 xxl cnc"
-             data-location="prototyping shop"
-             onclick="openMachineModal(4)">
-              <div class="machine-thumb">
-                <img src="{% static 'images/machines/shapeoko-4-xxl.webp' %}"
-                alt="Shapeoko 4 XXL CNC" loading="lazy">
-            </div>
-            <h3>Shapeoko 4 XXL CNC</h3>
-            <p class="machine-category">Category: Woodworking</p>
-            <p class="machine-location">📍 Prototyping Shop</p>
-            <div class="training-required">
-                <h4>⚠️ Training Required:</h4>
-                <span class="training-badge">Woodworking Basics</span>
-                <span class="training-badge">CNC Routing</span>
-            </div>
-            <div class="machine-availability">
-                <span class="availability-badge">1/2 available</span>
-            </div>
-        </div>
-
-        <div class="machine-card" 
-             data-category="Electronics" 
-             data-name="electronics workbench"
-             data-location="prototyping studio"
-             onclick="openMachineModal(5)">
-              <div class="machine-thumb">
-                <img src="{% static 'images/machines/electronics-bench.webp' %}"
-                alt="Electronics Workbench" loading="lazy">
-            </div>
-            <h3>Electronics Workbench</h3>
-            <p class="machine-category">Category: Electronics</p>
-            <p class="machine-location">📍 Prototyping Studio</p>
-            <div class="training-required">
-                <h4>⚠️ Training Required:</h4>
-                <span class="training-badge">Circuitry Basics</span>
-                <span class="training-badge">Soldering Basics</span>
-            </div>
-            <div class="machine-availability">
-                <span class="availability-badge">2/3 available</span>
-            </div>
-        </div>
-
-        <div class="machine-card" 
-             data-category="3D Printing" 
-             data-name="ultimaker s5"
-             data-location="prototyping studio"
-             onclick="openMachineModal(6)">
-              <div class="machine-thumb">
-                <img src="{% static 'images/machines/ultimaker-s5.png' %}"
-                alt="Ultimaker S5" loading="lazy">
-            </div>
-            <h3>Ultimaker S5</h3>
-            <p class="machine-category">Category: 3D Printing</p>
-            <p class="machine-location">📍 Prototyping Studio</p>
-            <div class="training-required certified">
-                <h4>✓ You are certified!</h4>
-                <span class="training-badge completed">✓ Intro to 3D Printing</span>
-            </div>
-            <div class="machine-availability">
-                <span class="availability-badge">2/2 available</span>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Machine Modal (populated by JavaScript) -->
+<!-- Machine Modal -->
 <div id="machineModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -170,8 +137,36 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
+
 <script src="{% static 'js/main.js' %}"></script>
+
+<script src="{% static 'js/search.js' %}"></script>
+
+
+<script>
+  function openMachineModal(machineId) {
+    // You can populate modal with machine details here if needed
+    const modal = document.getElementById('machineModal');
+    modal.classList.add('active');
+  }
+
+  function closeMachineModal() {
+    const modal = document.getElementById('machineModal');
+    modal.classList.remove('active');
+  }
+
+  // Close modal when clicking outside of it
+  document.getElementById('machineModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeMachineModal();
+    }
+  });
+</script>
+
 {% endblock %}
+
+

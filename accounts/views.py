@@ -1,3 +1,4 @@
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,7 +10,27 @@ from drf_yasg import openapi
 from django.contrib.auth.hashers import check_password
 import re
 
+from datetime import datetime, time, timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.views.decorators.clickjacking import xframe_options_exempt
+
+
+from .models import TrainingReservation, MachineInstance
+from .serializers import (
+    TrainingReservationCreateSerializer,
+    TrainingReservationSerializer,
+)
+
 from .models import User
+from .models import TrainerAvailability
 from .models import StudentProfile
 from .forms import StudentProfileForm
 from .serializers import UserSerializer
@@ -21,6 +42,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.shortcuts import redirect
 from django.urls import reverse
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -269,7 +291,11 @@ class AuthGoogleOAuthCallbackView(APIView):
             # the backend path to be provided when logging a user in programmatically.
             login(request._request, user,
                   backend='accounts.backends.model_backend.EmailBackend')
-            return redirect(reverse('machine_directory'))
+            if created:
+                return redirect('/auth/profile/edit/?new=true')
+            else:
+                return redirect('/home')
+            #return redirect(reverse('machine_directory'))
         except Exception as e:
             # Log the failure and fall back to returning JSON so API clients still get token data
             logger.exception(
@@ -330,11 +356,18 @@ def logout_view(request):
     return redirect('/')
 
 def profile_detail(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+    user = request.user
+    profile, _ = StudentProfile.objects.get_or_create(user=user)
     return render(request, "accounts/profile_detail.html", {"profile": profile})
 
 def profile_edit(request):
-    profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+    user = request.user
+
+    if not user.is_authenticated:
+        return redirect('/auth/login/')
+
+    profile, _ = StudentProfile.objects.get_or_create(user=user)
+
     if request.method == "POST":
         form = StudentProfileForm(request.POST, instance=profile)
         if form.is_valid():
@@ -342,4 +375,125 @@ def profile_edit(request):
             return redirect("profile_detail")
     else:
         form = StudentProfileForm(instance=profile)
+
     return render(request, "accounts/profile_form.html", {"form": form})
+
+
+
+class TrainingReservationView(APIView):
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = TrainingReservation.objects.filter(student=request.user).order_by("start_time")
+        return Response(TrainingReservationSerializer(qs, many=True).data)
+
+    def post(self, request):
+        ser = TrainingReservationCreateSerializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        res = ser.save()
+
+        # dev-mode email to console backend
+        try:
+            student_email = getattr(request.user, "email", "")
+            trainer_email = getattr(res.trainer, "email", "")
+            machine_name = res.machine_instance.machine.name
+            start_str = timezone.localtime(res.start_time).strftime("%Y-%m-%d %H:%M")
+            end_str = timezone.localtime(res.end_time).strftime("%Y-%m-%d %H:%M")
+
+            if student_email:
+                send_mail(
+                    subject="Training booked",
+                    message=f"You booked training on {machine_name} with {trainer_email} from {start_str} to {end_str}.",
+                    from_email=None,
+                    recipient_list=[student_email],
+                    fail_silently=True,
+                )
+            if trainer_email:
+                send_mail(
+                    subject="New training assigned",
+                    message=f"You have a new training with {student_email} on {machine_name} from {start_str} to {end_str}.",
+                    from_email=None,
+                    recipient_list=[trainer_email],
+                    fail_silently=True,
+                )
+        except Exception:
+            pass
+
+        return Response(TrainingReservationSerializer(res).data, status=status.HTTP_201_CREATED)
+
+
+class TrainerAvailabilityView(APIView):
+    """
+    Returns free time slots for a trainer on a given date.
+    Slots = trainer's weekly availability MINUS existing reservations.
+    """
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, trainer_id):
+        date_str = request.query_params.get("date")
+        if not date_str:
+            return Response(
+                {"detail": "date query param required (YYYY-MM-DD)"},
+                status=400
+            )
+
+        try:
+            day = datetime.fromisoformat(date_str).date()
+        except Exception:
+            return Response({"detail": "invalid date"}, status=400)
+
+        trainer = User.objects.get(id=trainer_id)
+
+        weekday = day.weekday()  # Monday = 0
+        availability_blocks = TrainerAvailability.objects.filter(
+            trainer=trainer,
+            weekday=weekday
+        )
+
+        # If no availability defined → trainer not working today
+        if not availability_blocks.exists():
+            return Response({"trainer_id": str(trainer_id), "slots": []})
+
+        SLOT = timedelta(hours=1)
+
+        # Get all reservations for this trainer on the selected date
+        existing = TrainingReservation.objects.filter(
+            trainer=trainer,
+            status="CONFIRMED",
+            start_time__date=day
+        )
+
+        free_slots = []
+
+        for block in availability_blocks:
+            block_start = timezone.make_aware(datetime.combine(day, block.start_time))
+            block_end = timezone.make_aware(datetime.combine(day, block.end_time))
+
+            t = block_start
+            while t + SLOT <= block_end:
+                potential_start = t
+                potential_end = t + SLOT
+
+                # Check overlap with existing reservations
+                conflict = any(
+                    not (
+                        r.end_time <= potential_start or
+                        r.start_time >= potential_end
+                    )
+                    for r in existing
+                )
+
+                if not conflict:
+                    free_slots.append({
+                        "start_time": potential_start.isoformat(),
+                        "end_time": potential_end.isoformat()
+                    })
+
+                t += SLOT
+
+        return Response({
+            "trainer_id": str(trainer_id),
+            "slots": free_slots
+        })

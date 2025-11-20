@@ -1,92 +1,13 @@
-import json
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import Machine
+from .models import Machine, TrainingType
 from collections import defaultdict
 import os
 from django.conf import settings
 from .utils import convert_heic_to_jpg
-
-
-def is_superuser(user):
-    return user.is_superuser
-
-@user_passes_test(is_superuser)
-def machine_management(request):
-    """Machine management page - superuser only"""
-    from locations.models import Location
-    
-    # Get all locations with their details
-    locations = Location.objects.all()
-    
-    # For each location, get machines that are already placed there
-    locations_data = []
-    for location in locations:
-        # Get machines at this location with map positions
-        machines_at_location = Machine.objects.filter(
-            location=str(location.id)
-        ).exclude(
-            map_position_x__isnull=True
-        ).exclude(
-            map_position_y__isnull=True
-        )
-        
-        location_machines = [{
-            'id': m.id,
-            'name': m.name,
-            'machine_name': m.machine_name,
-            'category': m.category,
-            'x': m.map_position_x,
-            'y': m.map_position_y
-        } for m in machines_at_location]
-        
-        locations_data.append({
-            'id': location.id,
-            'name': location.name,
-            'building': location.building,
-            'floor': location.floor,
-            'machine_types': location.get_machine_types_list(),
-            'num_stations': location.num_stations,
-            'capacity': location.capacity,
-            'has_floorplan': bool(location.floorplan_image),
-            'floorplan_url': location.floorplan_image.url if location.floorplan_image else '',
-            'machines': location_machines
-        })
-    
-    # Get all unique images grouped by category
-    images_by_category = defaultdict(list)
-    seen_images = defaultdict(set)
-    
-    all_machines_with_images = Machine.objects.filter(
-        image__isnull=False
-    ).exclude(
-        image=''
-    ).order_by('category', '-created_at')
-    
-    for machine in all_machines_with_images:
-        if machine.image:
-            image_name = machine.image.name
-            
-            if image_name not in seen_images[machine.category]:
-                images_by_category[machine.category].append({
-                    'url': machine.image.url,
-                    'name': image_name,
-                    'machine_example': f"{machine.name} ({machine.machine_name})"
-                })
-                seen_images[machine.category].add(image_name)
-    
-    category_order = ['Laser', 'Vinyl', 'Woodworking', 'Textile', 'Metalworking', '3D Printing', 'Electronics']
-    
-    context = {
-        'locations': locations,
-        'locations_data': locations_data,  # This includes all the detailed info
-        'images_by_category': dict(images_by_category),
-        'category_order': category_order,
-    }
-    return render(request, 'machines/add_machine_form.html', context)
-
+from .models import Machine
 
 @login_required
 def staff_dashboard(request):
@@ -139,7 +60,6 @@ def staff_dashboard(request):
 
 @login_required
 def add_machine(request):
-
     if request.method == 'POST':
         # Handle image selection and validation
         image_choice = request.POST.get('image_choice')
@@ -199,17 +119,35 @@ def add_machine(request):
             requires_level_1=request.POST.get('requires_level_1') == 'on',
             requires_level_2=request.POST.get('requires_level_2') == 'on',
             requires_level_3=request.POST.get('requires_level_3') == 'on',
-            # Add map position coordinates
-            map_position_x=request.POST.get('map_position_x') or None,
-            map_position_y=request.POST.get('map_position_y') or None,
         )
-        
         
         # Assign image if provided
         if machine_image:
             machine.image = machine_image
         
         machine.save()
+
+        # Auto-assign a default training based on category (Delivery 6)
+        category_default_trainings = {
+            'Laser': 'Laser Cutter Training',
+            '3D Printing': 'Intro to 3D Printing',
+            'Vinyl': 'Vinyl Cutter Training',
+            'Woodworking': 'Wood Shop Safety',
+            'Textile': 'Sewing / Textile Training',
+            'Metalworking': 'Metal Shop Safety',
+            'Electronics': 'Electronics Bench Training',
+        }
+
+        default_name = category_default_trainings.get(machine.category)
+        if default_name:
+            training, _ = TrainingType.objects.get_or_create(
+                name=default_name,
+                defaults={
+                    'description': f'Default required training for {machine.category} machines.'
+                },
+            )
+            machine.required_trainings.add(training)
+
         messages.success(request, f'Machine "{machine.name}" added successfully!')
         return redirect('staff_dashboard')
     return redirect('staff_dashboard')
@@ -328,7 +266,6 @@ def get_search_suggestions(request):
             seen.add(mn.lower())
     
     return JsonResponse({'suggestions': suggestions})
-
 
 
 

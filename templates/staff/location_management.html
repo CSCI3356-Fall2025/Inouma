@@ -1,0 +1,49 @@
+<!-- Space Layout -->
+<div class="card">
+    <h2>🏗️ Location & Layout Management</h2>
+    <div style="margin-bottom: 1.5rem;">
+        <button class="btn btn-secondary" onclick="openEditLocationModal()">Add/Edit Location</button>
+    </div>
+    
+    <div class="location-grid">
+        <div class="floor-section">
+            <div class="floor-title">🏢 2nd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Front', 1)">
+                <h4>Hatch Front</h4>
+                <div class="location-info">
+                    <span>📊 8 stations</span>
+                    <span>👥 Capacity: 24</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Back', 2)">
+                <h4>Hatch Back</h4>
+                <div class="location-info">
+                    <span>📊 6 stations</span>
+                    <span>👥 Capacity: 18</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
+
+        <div class="floor-section">
+            <div class="floor-title">🏢 3rd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Studio', 3)">
+                <h4>Prototyping Studio</h4>
+                <div class="location-info">
+                    <span>📊 10 stations</span>
+                    <span>👥 Capacity: 30</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Shop', 4)">
+                <h4>Prototyping Shop</h4>
+                <div class="location-info">
+                    <span>📊 12 stations</span>
+                    <span>👥 Capacity: 36</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
+    </div>
+</div>

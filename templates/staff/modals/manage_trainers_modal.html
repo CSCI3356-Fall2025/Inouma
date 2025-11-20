@@ -1,0 +1,45 @@
+<!-- Manage Trainers Modal -->
+<div id="manageTrainersModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="color: var(--maroon);">👥 Manage Trainers</h2>
+            <button class="close-btn" onclick="closeManageTrainersModal()">×</button>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: var(--maroon); margin-bottom: 1rem;">Current Trainers</h3>
+            
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Emma Lopez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> Laser Cutting, Vinyl
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays, Mondays 9am-11am
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Emma Lopez')">Edit</button>
+                </div>
+            </div>
+
+            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Mike Rodriguez</h4>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                            <strong>Categories:</strong> All Equipment (Master Trainer)
+                        </p>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <strong>Unavailable:</strong> Sundays after 3pm
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Mike Rodriguez')">Edit</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="addNewTrainer()">+ Add New Trainer</button>
+    </div>
+</div>

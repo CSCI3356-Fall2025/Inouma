@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <h2>Book Training for {{ machine.name }}</h2>
+
+  <div class="form-row" style="margin-top:1rem;">
+    <label>Trainer</label>
+    <select id="trainerSelect" class="form-control">
+      {% for t in trainers %}
+        {% with full=t.get_full_name %}
+          <option value="{{ t.id }}">
+            {% if full %}{{ full }}{% else %}{{ t.email }}{% endif %}
+          </option>
+        {% endwith %}
+      {% empty %}
+        <option disabled>No trainers available (ask a staff to mark is_staff=True)</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="form-row" style="margin-top:1rem;">
+    <label>Date</label>
+    <input type="date" id="dateInput" class="form-control" />
+  </div>
+
+  <div class="form-row" style="margin-top:1rem;">
+    <button id="loadSlotsBtn" class="btn btn-secondary">Load Available Slots</button>
+  </div>
+
+  <div id="slotsContainer" style="margin-top:1rem;"></div>
+</div>
+
+<script src="{% static 'js/booking.js' %}"></script>
+
+<script id="training-context" type="application/json">
+{
+  "machineId": "{{ machine.id }}",
+  "machineInstanceId": "{{ machine_instance.id|default_if_none:'' }}",
+  "trainers": [
+    {% for t in trainers %}
+      {"id": "{{ t.id }}", "email": "{{ t.email|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+
+<script>
+  (function(){
+    try {
+      window.TRAINING_CONTEXT = JSON.parse(document.getElementById('training-context').textContent);
+    } catch(e) {
+      console.error("Failed to parse TRAINING_CONTEXT:", e);
+      window.TRAINING_CONTEXT = {};
+    }
+  })();
+</script>
+{% endblock %}

@@ -4,100 +4,10 @@
 {% block title %}Staff Dashboard - The Hatchery{% endblock %}
 
 {% block content %}
-<<<<<<< Updated upstream
-<!-- Add Machine -->
-<div class="card">
-    <h2>➕ Add New Machine</h2>
-    <form onsubmit="event.preventDefault(); addMachine();">
-        <div class="two-column">
-            <div class="form-group">
-                <label>Machine Name</label>
-                <input type="text" id="machineName" placeholder="e.g., Ultimaker S5" required>
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <select id="machineCategory">
-                    <option>Laser</option>
-                    <option>Vinyl</option>
-                    <option>Woodworking</option>
-                    <option>Textiles</option>
-                    <option>Metalworking</option>
-                    <option>3D Printing</option>
-                    <option>Electronics</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Location</label>
-            <select id="machineLocation">
-                <option>Hatch Front (2nd Floor)</option>
-                <option>Hatch Back (2nd Floor)</option>
-                <option>Prototyping Studio (3rd Floor)</option>
-                <option>Prototyping Shop (3rd Floor)</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Description</label>
-            <textarea id="machineDescription" rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
-        </div>
-        <div class="form-group">
-            <label>Required Training Levels</label>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <label style="font-weight: normal;">
-                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
-                    Level 1 Training Required
-                </label>
-                <label style="font-weight: normal;">
-                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
-                    Level 2 Training Required
-                </label>
-                <label style="font-weight: normal;">
-                    <input type="checkbox" style="width: auto; margin-right: 0.5rem;">
-                    Level 3 Training Required
-                </label>
-            </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Add Machine</button>
-    </form>
-
-    <div class="existing-machines">
-        <h3 style="color: var(--maroon); margin-bottom: 1rem;">Existing Machines</h3>
-        <div class="existing-machine-card">
-            <div>
-                <h4>Epilog Laser Fusion Pro</h4>
-                <p style="font-size: 0.9rem; color: #666;">Category: Laser | Location: Hatch Front</p>
-            </div>
-            <button class="btn btn-danger" onclick="removeMachine('Epilog Laser Fusion Pro')">Remove</button>
-        </div>
-        <div class="existing-machine-card">
-            <div>
-                <h4>Prusa i3 MK3S+</h4>
-                <p style="font-size: 0.9rem; color: #666;">Category: 3D Printing | Location: Prototyping Studio</p>
-            </div>
-            <button class="btn btn-danger" onclick="removeMachine('Prusa i3 MK3S+')">Remove</button>
-        </div>
-        <div class="existing-machine-card">
-            <div>
-                <h4>Shapeoko 4 XXL CNC</h4>
-                <p style="font-size: 0.9rem; color: #666;">Category: Woodworking | Location: Prototyping Shop</p>
-            </div>
-            <button class="btn btn-danger" onclick="removeMachine('Shapeoko 4 XXL CNC')">Remove</button>
-        </div>
-    </div>
-</div>
-
-<!-- Classroom Layout -->
-<div class="card">
-    <h2>🏗️ Location & Layout Management</h2>
-    <div style="margin-bottom: 1.5rem;">
-        <button class="btn btn-secondary" onclick="openEditLocationModal()">Add/Edit Location</button>
-    </div>
-=======
     {% include 'staff/machine_management_card.html' %}
     {% include 'staff/location_management_card.html' %}
     {% include 'staff/semester_schedule.html' %}
     {% include 'staff/trainer_review.html' %}
->>>>>>> Stashed changes
     
     <div class="location-grid">
         <div class="floor-section">
@@ -478,147 +388,23 @@
             </div>
         </div>
     </div>
+
+    {% include 'staff/add_machine_form.html' %}
+    {% include 'staff/location_management.html' %}
+    {% include 'staff/semester_schedule.html' %}
+    {% include 'staff/trainer_review.html' %}
     
-    <div style="margin-top: 2rem; padding: 1.5rem; background: var(--light-gold); border-radius: 12px; border: 2px solid var(--gold);">
-        <h3 style="color: var(--maroon); margin-bottom: 1rem;">🚀 Publish Schedule</h3>
-        <p style="margin-bottom: 1rem;">Review all trainer schedules and machine assignments before publishing to students.</p>
-        <button class="btn btn-primary" onclick="publishSchedule()">Publish to Students</button>
-    </div>
-</div>
-
-<!-- Location Details Modal -->
-<div id="locationModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="locationModalTitle" style="color: var(--maroon);">Location Details</h2>
-            <button class="close-btn" onclick="closeLocationModal()">×</button>
-        </div>
-        <div id="locationModalBody">
-            <!-- Content loaded by JavaScript -->
-        </div>
-    </div>
-</div>
-
-<!-- Add/Edit Location Modal -->
-<div id="editLocationModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 style="color: var(--maroon);">Add/Edit Location</h2>
-            <button class="close-btn" onclick="closeEditLocationModal()">×</button>
-        </div>
-        <form onsubmit="event.preventDefault(); saveLocation();">
-            <div class="form-group">
-                <label>Location Name</label>
-                <input type="text" id="locationName" placeholder="e.g., Hatch Front" required>
-            </div>
-            <div class="form-group">
-                <label>Floor</label>
-                <select id="locationFloor">
-                    <option>2nd Floor</option>
-                    <option>3rd Floor</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Number of Tables/Stations</label>
-                <input type="number" id="locationStations" placeholder="8" required>
-            </div>
-            <div class="form-group">
-                <label>Capacity</label>
-                <input type="number" id="locationCapacity" placeholder="24" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Location</button>
-        </form>
-    </div>
-</div>
-
-<!-- Auto-Schedule Modal -->
-<div id="autoScheduleModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 style="color: var(--maroon);">⚡ Auto-Schedule Trainers</h2>
-            <button class="close-btn" onclick="closeAutoScheduleModal()">×</button>
-        </div>
-        <div style="margin-bottom: 1.5rem;">
-            <p style="margin-bottom: 1rem;">The system will automatically assign trainers to 2-hour blocks based on:</p>
-            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
-                <li>Trainer availability (unavailability already recorded)</li>
-                <li>Tool category expertise</li>
-                <li>Ensuring at least one trainer per category per block</li>
-                <li>Balanced distribution of hours</li>
-            </ul>
-        </div>
-        
-        <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-            <h4 style="color: var(--maroon); margin-bottom: 0.5rem;">Current Trainer Pool:</h4>
-            <div style="font-size: 0.9rem; line-height: 1.8;">
-                <strong>Sarah Mitchell:</strong> 3D Printing, Laser<br>
-                <strong>Alex Kim:</strong> Woodworking, Metalworking<br>
-                <strong>Jordan Park:</strong> 3D Printing, Electronics<br>
-                <strong>Emma Lopez:</strong> Laser, Vinyl<br>
-                <strong>Mike Rodriguez:</strong> All Categories
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Schedule Priority</label>
-            <select id="schedulePriority">
-                <option>Balanced hours across all trainers</option>
-                <option>Maximize coverage</option>
-                <option>Minimize individual hours</option>
-            </select>
-        </div>
-
-        <button class="btn btn-primary" style="width: 100%;" onclick="runAutoSchedule()">Generate Schedule</button>
-    </div>
-</div>
-
-<!-- Manage Trainers Modal -->
-<div id="manageTrainersModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 style="color: var(--maroon);">👥 Manage Trainers</h2>
-            <button class="close-btn" onclick="closeManageTrainersModal()">×</button>
-        </div>
-        
-        <div style="margin-bottom: 2rem;">
-            <h3 style="color: var(--maroon); margin-bottom: 1rem;">Current Trainers</h3>
-            
-            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <h4 style="margin-bottom: 0.5rem;">Emma Lopez</h4>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
-                            <strong>Categories:</strong> Laser Cutting, Vinyl
-                        </p>
-                        <p style="font-size: 0.9rem; color: #666;">
-                            <strong>Unavailable:</strong> Sundays, Mondays 9am-11am
-                        </p>
-                    </div>
-                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Emma Lopez')">Edit</button>
-                </div>
-            </div>
-
-            <div style="background: var(--light-gold); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <h4 style="margin-bottom: 0.5rem;">Mike Rodriguez</h4>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
-                            <strong>Categories:</strong> All Equipment (Master Trainer)
-                        </p>
-                        <p style="font-size: 0.9rem; color: #666;">
-                            <strong>Unavailable:</strong> Sundays after 3pm
-                        </p>
-                    </div>
-                    <button class="btn btn-secondary btn-small" onclick="editTrainer('Mike Rodriguez')">Edit</button>
-                </div>
-            </div>
-        </div>
-
-        <button class="btn btn-primary" onclick="addNewTrainer()">+ Add New Trainer</button>
-    </div>
-</div>
+    <!-- Modals -->
+    {% include 'staff/modals/location_modal.html' %}
+    {% include 'staff/modals/edit_location_modal.html' %}
+    {% include 'staff/modals/auto_schedule_modal.html' %}
+    {% include 'staff/modals/manage_trainers_modal.html' %}
+    {% include 'staff/modals/duplicate_warning_modal.html' %}
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/
+             
+             .js' %}"></script>
 {% endblock %}

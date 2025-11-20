@@ -3,8 +3,6 @@ from django.contrib.auth.backends import ModelBackend
 
 
 class EmailBackend(ModelBackend):
-    """Authenticate using email and password for the custom User model."""
-
     def authenticate(self, request, username=None, password=None, **kwargs):
         UserModel = get_user_model()
         # Accept either username argument or email kwarg

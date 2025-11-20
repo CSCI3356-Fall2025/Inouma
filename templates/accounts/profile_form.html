@@ -1,10 +1,243 @@
 {% extends "layout.html" %}
+{% load static %}
 {% block title %}Edit Profile{% endblock %}
 {% block content %}
+
+{% if request.GET.new %}
+<div id="welcome-popup" class="popup-overlay">
+  <div class="popup-content">
+    <h2>Welcome to Inouma</h2>
+    <p>Let's create your profile!</p>
+    <button id="popup-close">Get Started</button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const popup = document.getElementById("welcome-popup");
+    const closeBtn = document.getElementById("popup-close");
+    if (popup) {
+      popup.style.display = "flex";
+      closeBtn.addEventListener("click", () => popup.style.display = "none");
+    }
+  });
+</script>
+
+<style>
+  .popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(44, 44, 44, 0.6);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+  .popup-content {
+    background: var(--white);
+    border: 2px solid rgba(44, 44, 44, 0.1);
+    border-radius: 16px;
+    padding: 2rem 3rem;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    max-width: 500px;
+    width: 90%;
+    animation: popupFade 0.3s ease;
+}
+
+@keyframes popupFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.popup-content h2 {
+    color: var(--maroon);
+    margin-bottom: 0.75rem;
+    font-size: 1.6rem;
+}
+
+.popup-content p {
+    font-size: 1rem;
+    color: var(--dark);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+#popup-close {
+    background: var(--gold);
+    color: var(--dark);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#popup-close:hover {
+    background: rgb(226, 180, 61);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(246, 200, 81, 0.3);
+}
+
+.popup-overlay.active {
+    display: flex;
+}
+</style>
+{% endif %}
+
 <h2>Edit Profile</h2>
-<form method="post" style="max-width:480px">{% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit" class="btn">Save</button>
-  <a href="{% url 'profile_detail' %}" class="btn btn-secondary">Cancel</a>
+<form method="post" style="max-width:600px">{% csrf_token %}
+  {% if user.role == 'User' or user.role == 'Team Member' %}
+  <div class="form-group">
+    <label for="{{ form.school1.id_for_label }}">{{ form.school1.label }}</label>
+    {{ form.school1 }}
+    {% if form.school1.errors %}
+      <div class="error">{{ form.school1.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.major1.id_for_label }}">Major 1</label>
+    {{ form.major1 }}
+    {% if form.major1.errors %}
+      <div class="error">{{ form.major1.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.school2.id_for_label }}">{{ form.school2.label }}</label>
+    {{ form.school2 }}
+    {% if form.school2.errors %}
+      <div class="error">{{ form.school2.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.major2.id_for_label }}">Major 2 (Optional)</label>
+    {{ form.major2 }}
+    {% if form.major2.errors %}
+      <div class="error">{{ form.major2.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.minor1.id_for_label }}">Minor 1 (Optional)</label>
+    {{ form.minor1 }}
+    {% if form.minor1.errors %}
+      <div class="error">{{ form.minor1.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.minor2.id_for_label }}">Minor 2 (Optional)</label>
+    {{ form.minor2 }}
+    {% if form.minor2.errors %}
+      <div class="error">{{ form.minor2.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.graduation_year.id_for_label }}">{{ form.graduation_year.label }}</label>
+    {{ form.graduation_year }}
+    {% if form.graduation_year.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.graduation_year.help_text }}</small>
+    {% endif %}
+    {% if form.graduation_year.errors %}
+      <div class="error">{{ form.graduation_year.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  <div class="form-group">
+    <label for="{{ form.birthday.id_for_label }}">{{ form.birthday.label }}</label>
+    {{ form.birthday }}
+    {% if form.birthday.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.birthday.help_text }}</small>
+    {% endif %}
+    {% if form.birthday.errors %}
+      <div class="error">{{ form.birthday.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label for="{{ form.role_specification.id_for_label }}">{{ form.role_specification.label }}</label>
+    {{ form.role_specification }}
+    {% if form.role_specification.help_text %}
+      <small style="display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem;">{{ form.role_specification.help_text }}</small>
+    {% endif %}
+    {% if form.role_specification.errors %}
+      <div class="error">{{ form.role_specification.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+    <button type="submit" class="btn">Save</button>
+    <a href="{% url 'profile_detail' %}" class="btn btn-secondary">Cancel</a>
+  </div>
 </form>
+
+<style>
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--dark, #2c2c2c);
+  }
+  
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: white;
+  }
+  
+  .form-group select:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  
+  .form-group input[type="date"],
+  .form-group input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: white;
+  }
+  
+  .form-group .error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  
+  .form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/profile_form.js' %}"></script>
 {% endblock %}

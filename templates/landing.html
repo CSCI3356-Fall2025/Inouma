@@ -1,14 +1,159 @@
-<!doctype html>
+{% load static %}
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inouma</title>
-  </head>
-  <body>
-    <main>
-      <h1>Welcome to Inouma</h1>
-      <p>If you want to start Google OAuth, visit <a href="/auth/google/start/">Sign in with Google</a>.</p>
-    </main>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Inouma</title>
+  <style>
+    :root {
+        --gold: rgb(246, 200, 81);
+        --dark: rgb(44, 44, 44);
+        --white: rgb(255, 255, 255);
+        --maroon: rgb(149, 45, 87);
+        --light-gold: rgba(246, 200, 81, 0.1);
+        --light-maroon: rgba(149, 45, 87, 0.1);
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: var(--white);
+        color: var(--dark);
+        text-align: center;
+        padding-top: 10%;
+        line-height: 1.6;
+    }
+
+    .google-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: var(--white);
+        color: var(--dark);
+        border: 2px solid var(--gold);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .google-btn:hover {
+        background: var(--light-gold);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(149, 45, 87, 0.15);
+    }
+
+    .google-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 3px 8px rgba(149, 45, 87, 0.1);
+    }
+
+    .google-btn img {
+        width: 20px;
+        height: 20px;
+        vertical-align: middle;
+    }
+
+    .google-btn:focus {
+        outline: none;
+        border-color: var(--maroon);
+        box-shadow: 0 0 0 3px var(--light-maroon);
+    }
+
+    .landing-logo {
+    position: absolute;
+    top: 1.5rem;
+    left: 2rem;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--gold), var(--maroon));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--white);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.logo h1 {
+    font-size: 1.6rem;
+    color: var(--gold);
+    margin: 0;
+    line-height: 1.1;
+}
+
+.logo p {
+    font-size: 0.85rem;
+    color: rgba(44,44,44,0.7);
+    margin: 0;
+}
+.welcome-box {
+    display: inline-block;
+    background: var(--white);
+    border: 3px solid var(--maroon);
+    border-radius: 16px;
+    padding: 3rem 4rem;
+    box-shadow: 0 8px 24px rgba(149, 45, 87, 0.1);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.welcome-box:hover {
+    box-shadow: 0 10px 30px rgba(149, 45, 87, 0.15);
+    transform: translateY(-3px);
+}
+
+.welcome-box h1 {
+    color: var(--maroon);
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.welcome-box p {
+    color: var(--dark);
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+}
+
+</style>
+
+</head>
+<body>
+    <div class="landing-logo">
+        <div class="logo">
+            <div class="logo-icon">H</div>
+            <div>
+                <h1>The Hatchery</h1>
+                <p>Boston College Makerspace</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="welcome-box">
+        <h1>Welcome to Inouma</h1>
+        <p>Innovate your Makerspace — Classrooms and Machines</p>
+        <a class="google-btn" href="{% url 'login' %}">
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+            Sign in with Google
+        </a>
+    </div>
+</body>
 </html>
