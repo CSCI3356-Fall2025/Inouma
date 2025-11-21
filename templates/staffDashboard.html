@@ -4,20 +4,467 @@
 {% block title %}Staff Dashboard - The Hatchery{% endblock %}
 
 {% block content %}
-    {% include 'staff/add_machine_form.html' %}
-    {% include 'staff/location_management.html' %}
+    {% include 'staff/machine_management_card.html' %}
+    {% include 'staff/location_management_card.html' %}
     {% include 'staff/semester_schedule.html' %}
     {% include 'staff/trainer_review.html' %}
     
-    <!-- Modals -->
-    {% include 'staff/modals/location_modal.html' %}
-    {% include 'staff/modals/edit_location_modal.html' %}
-    {% include 'staff/modals/auto_schedule_modal.html' %}
-    {% include 'staff/modals/manage_trainers_modal.html' %}
-    {% include 'staff/modals/duplicate_warning_modal.html' %}
-{% endblock %}
+    <div class="location-grid">
+        <div class="floor-section">
+            <div class="floor-title">🏢 2nd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Front', 1)">
+                <h4>Hatch Front</h4>
+                <div class="location-info">
+                    <span>📊 8 stations</span>
+                    <span>👥 Capacity: 24</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Hatch Back', 2)">
+                <h4>Hatch Back</h4>
+                <div class="location-info">
+                    <span>📊 6 stations</span>
+                    <span>👥 Capacity: 18</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
 
-{% block extra_scripts %}
-<script src="{% static 'js/main.js' %}"></script>
-<script src="{% static 'js/add_machine.js' %}"></script>
+        <div class="floor-section">
+            <div class="floor-title">🏢 3rd Floor</div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Studio', 3)">
+                <h4>Prototyping Studio</h4>
+                <div class="location-info">
+                    <span>📊 10 stations</span>
+                    <span>👥 Capacity: 30</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+            <div class="location-card" onclick="viewLocationDetails('Prototyping Shop', 4)">
+                <h4>Prototyping Shop</h4>
+                <div class="location-info">
+                    <span>📊 12 stations</span>
+                    <span>👥 Capacity: 36</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Click to view machines</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Semester Schedule -->
+console.log("INLINE TEST: staff dashboard template is running JS");
+
+<div class="card">
+    <h2>📅 Define Semester Schedule</h2>
+    <div class="two-column">
+        <div class="form-group">
+            <label>Semester</label>
+            <select id="semesterSelect">
+                <option value="">Select Semester</option>
+                <option value="fall2025">Fall 2025</option>
+                <option value="spring2026">Spring 2026</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Week</label>
+             <select id="weekSelect">
+                <option value="2025-08-31">Week 1: Aug 31 – Sep 6</option>
+                <option value="2025-09-07">Week 2: Sep 7 – Sep 13</option>
+                <option value="2025-09-14">Week 3: Sep 14 – Sep 20</option>
+                <option value="2025-09-21">Week 4: Sep 21 – Sep 27</option>
+                <option value="2025-09-28">Week 5: Sep 28 – Oct 4</option>
+                <option value="2025-10-05">Week 6: Oct 5 – Oct 11</option>
+                <option value="2025-10-12">Week 7: Oct 12 – Oct 18</option>
+                <option value="2025-10-19">Week 8: Oct 19 – Oct 25</option>
+                <option value="2025-10-26">Week 9: Oct 26 – Nov 1</option>
+                <option value="2025-11-02">Week 10: Nov 2 – Nov 8</option>
+                <option value="2025-11-09">Week 11: Nov 9 – Nov 15</option>
+                <option value="2025-11-16">Week 12: Nov 16 – Nov 22</option>
+                <option value="2025-11-23">Week 13: Nov 23 – Nov 29</option>
+                <option value="2025-11-30">Week 14: Nov 30 – Dec 6</option>
+                <option value="2025-12-07">Week 15: Dec 7 – Dec 13</option>
+                <option value="2026-01-04">Week 16: Jan 4 – Jan 10</option>
+                <option value="2026-01-11">Week 17: Jan 11 – Jan 17</option>
+                <option value="2026-01-18">Week 18: Jan 18 – Jan 24</option>
+                <option value="2026-01-25">Week 19: Jan 25 – Jan 31</option>
+                <option value="2026-02-01">Week 20: Feb 1 – Feb 7</option>
+                <option value="2026-02-08">Week 21: Feb 8 – Feb 14</option>
+                <option value="2026-02-15">Week 22: Feb 15 – Feb 21</option>
+                <option value="2026-02-22">Week 23: Feb 22 – Feb 28</option>
+                <option value="2026-03-01">Week 24: Mar 1 – Mar 7</option>
+                <option value="2026-03-08">Week 25: Mar 8 – Mar 14</option>
+                <option value="2026-03-15">Week 26: Mar 15 – Mar 21</option>
+                <option value="2026-03-22">Week 27: Mar 22 – Mar 28</option>
+                <option value="2026-03-29">Week 28: Mar 29 – Apr 4</option>
+                <option value="2026-04-05">Week 29: Apr 5 – Apr 11</option>
+                <option value="2026-04-12">Week 30: Apr 12 – Apr 18</option>
+                <option value="2026-04-19">Week 31: Apr 19 – Apr 25</option>
+                <option value="2026-04-26">Week 32: Apr 26 – May 2</option>
+                <option value="2026-05-03">Week 33: May 3 – May 9</option>
+                <option value="2026-05-10">Week 34: May 10 – May 16</option>
+                <option value="2026-05-17">Week 35: May 17 – May 23</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="margin: 1.5rem 0;">
+        <button class="btn btn-primary" onclick="loadSelectedWeek()">Load Schedule</button>
+    </div>
+
+    <div style="margin: 1.5rem 0;">
+        <button class="btn btn-primary" onclick="openAutoScheduleModal()">⚡ Auto-Schedule Trainers</button>
+        <button class="btn btn-secondary" style="margin-left: 1rem;" onclick="openManageTrainersModal()">👥 Manage Trainers</button>
+    </div>
+    
+    <h3 style="margin: 1.5rem 0 1rem; color: var(--maroon);">Weekly Schedule - Open Hours & Training Coverage</h3>
+    <p style="margin-bottom: 1rem; color: #666;">Each cell shows: <strong>Open Hours Staff</strong> | <strong>Training Coverage</strong> (by category)</p>
+    
+    <div style="overflow-x: auto;">
+        <div class="schedule-grid-detailed">
+            <div class="schedule-header">Time</div>
+            <div class="schedule-header">Sunday</div>
+            <div class="schedule-header">Monday</div>
+            <div class="schedule-header">Tuesday</div>
+            <div class="schedule-header">Wednesday</div>
+            <div class="schedule-header">Thursday</div>
+            <div class="schedule-header">Friday</div>
+            <div class="schedule-header">Saturday</div>
+            
+            <!-- 9-11 AM -->
+            <div class="schedule-time">9-11am</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 11am-1pm -->
+            <div class="schedule-time">11am-1pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 1-3pm -->
+            <div class="schedule-time">1-3pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 3-5pm -->
+            <div class="schedule-time">3-5pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 5-7pm -->
+            <div class="schedule-time">5-7pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            
+            <!-- 7-9pm -->
+            <div class="schedule-time">7-9pm</div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+            <div class="schedule-cell-detailed"></div>
+        </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top: 1.5rem;">Save Schedule</button>
+</div>
+
+<!-- Review Trainers -->
+<div class="card">
+    <h2>👥 Review Trainer Schedules</h2>
+    <div class="trainer-list">
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Sarah Mitchell</h3>
+                <p style="color: #666; font-size: 0.9rem;">3D Printing, Laser Cutting</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">15 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Sarah Mitchell')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Alex Kim</h3>
+                <p style="color: #666; font-size: 0.9rem;">CNC Milling, Woodworking</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">18 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Alex Kim')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Jordan Park</h3>
+                <p style="color: #666; font-size: 0.9rem;">3D Printing, Electronics</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">12 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Jordan Park')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Emma Lopez</h3>
+                <p style="color: #666; font-size: 0.9rem;">Laser Cutting, Vinyl Cutting</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">16 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Emma Lopez')">View Schedule</button>
+            </div>
+        </div>
+        
+        <div class="trainer-item">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Mike Rodriguez</h3>
+                <p style="color: #666; font-size: 0.9rem;">All Equipment</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="trainer-hours">20 hrs/week</div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem;" onclick="viewTrainerSchedule('Mike Rodriguez')">View Schedule</button>
+            </div>
+        </div>
+    </div>
+
+        <button class="btn btn-primary" onclick="addNewTrainer()">+ Add New Trainer</button>
+    </div>
+</div>
+
+<script>
+  console.log("INLINE schedule script running on staff dashboard");
+
+  const SEMESTERS = {
+        "fall2025": {
+            start: "2025-08-31",
+            end: "2025-12-15"
+        },
+        "spring2026": {
+            start: "2026-01-04",
+            end: "2026-05-23"
+        }
+    };
+
+    const ALL_WEEKS = [];
+    document.querySelectorAll("#weekSelect option").forEach(opt => {
+        ALL_WEEKS.push({
+            label: opt.textContent,
+            value: opt.value,
+            element: opt
+        });
+    });
+
+    function filterWeeksForSemester(semesterKey) {
+        const sem = SEMESTERS[semesterKey];
+        if (!sem) return;
+
+        const start = new Date(sem.start);
+        const end = new Date(sem.end);
+
+        const weekSelect = document.getElementById("weekSelect");
+        weekSelect.innerHTML = "";
+
+        ALL_WEEKS.forEach(week => {
+            const weekDate = new Date(week.value);
+
+            if (weekDate >= start && weekDate <= end) {
+                const opt = document.createElement("option");
+                opt.value = week.value;
+                opt.textContent = week.label;
+                weekSelect.appendChild(opt);
+            }
+        });
+
+        console.log("Weeks updated for semester:", semesterKey);
+    }
+
+    document.getElementById("semesterSelect").addEventListener("change", function () {
+        filterWeeksForSemester(this.value);
+    });
+
+
+
+
+  // ====== CONFIG ======
+  const NUM_SLOTS = 6;   // 9–11, 11–1, 1–3, 3–5, 5–7, 7–9
+  const NUM_DAYS = 7;    // Sun–Sat
+
+  // Matrix of cells: cells[slotIndex][dayIndex]
+  let SCHEDULE_CELLS = [];
+
+  // Map time range → row index
+  function slotIndexFromTimes(startHHMM, endHHMM) {
+      const toMin = t => {
+          const [h, m] = t.split(":").map(Number);
+          return h * 60 + m;
+      };
+      const s = toMin(startHHMM);
+      const e = toMin(endHHMM);
+
+      if (s === 9 * 60 && e === 11 * 60) return 0;    // 9–11
+      if (s === 11 * 60 && e === 13 * 60) return 1;   // 11–1
+      if (s === 13 * 60 && e === 15 * 60) return 2;   // 1–3
+      if (s === 15 * 60 && e === 17 * 60) return 3;   // 3–5
+      if (s === 17 * 60 && e === 19 * 60) return 4;   // 5–7
+      if (s === 19 * 60 && e === 21 * 60) return 5;   // 7–9
+
+      console.warn("Unrecognized time slot:", startHHMM, endHHMM);
+      return -1;
+  }
+
+  // Map ISO date → day index (0=Sun..6=Sat)
+  function dayIndexFromISO(dateStr) {
+    const parts = dateStr.split("-");
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // JS months are 0–11
+    const day = parseInt(parts[2]);
+
+    const d = new Date(year, month, day);
+    return d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  }
+
+  // Build matrix SCHEDULE_CELLS[slot][day]
+  function initGrid() {
+      const grid = document.querySelector(".schedule-grid-detailed");
+      if (!grid) {
+          console.error("No .schedule-grid-detailed found");
+          return;
+      }
+
+      const cells = Array.from(grid.querySelectorAll(".schedule-cell-detailed"));
+      console.log("Found", cells.length, "schedule cells in grid");
+
+      SCHEDULE_CELLS = [];
+      let idx = 0;
+      for (let slot = 0; slot < NUM_SLOTS; slot++) {
+          SCHEDULE_CELLS[slot] = [];
+          for (let day = 0; day < NUM_DAYS; day++) {
+              const cell = cells[idx++];
+              if (cell) {
+                  cell.innerHTML = "";
+                  cell.classList.remove("filled");
+                  SCHEDULE_CELLS[slot][day] = cell;
+              } else {
+                  SCHEDULE_CELLS[slot][day] = null;
+              }
+          }
+      }
+  }
+
+  // Render one shift into the correct cell
+  function renderShift(shift) {
+      const slotIndex = slotIndexFromTimes(shift.start, shift.end);
+      const dayIndex = dayIndexFromISO(shift.date);
+
+      console.log("Placing shift:", shift, "slot:", slotIndex, "day:", dayIndex);
+
+      if (slotIndex < 0 || dayIndex < 0) return;
+      if (!SCHEDULE_CELLS[slotIndex] || !SCHEDULE_CELLS[slotIndex][dayIndex]) {
+          console.warn("No cell for slot", slotIndex, "day", dayIndex);
+          return;
+      }
+
+      const cell = SCHEDULE_CELLS[slotIndex][dayIndex];
+      cell.classList.add("filled");
+      cell.innerHTML += `
+          <div class="shift-open">Trainer: ${shift.trainer}</div>
+          <div class="shift-training">
+              <span class="category-badge">Team</span> ${shift.team || "N/A"}
+          </div>
+      `;
+  }
+
+  // Load shifts from backend, optionally filtered by week
+  async function loadShifts(weekStart = null) {
+      initGrid();  // rebuild matrix each time
+
+      let url = "/schedule/api/shifts/";
+      if (weekStart) {
+          url += "?week=" + encodeURIComponent(weekStart);
+      }
+
+      console.log("Fetching shifts from:", url);
+
+      try {
+          const res = await fetch(url);
+          if (!res.ok) {
+              console.error("Failed to load shifts:", res.status);
+              return;
+          }
+
+          const data = await res.json();
+          console.log("Shifts from API:", data);
+
+          if (Array.isArray(data.shifts)) {
+              data.shifts.forEach(renderShift);
+          } else if (Array.isArray(data)) {
+              data.forEach(renderShift);
+          } else {
+              console.warn("Unexpected shifts payload:", data);
+          }
+      } catch (err) {
+          console.error("Error loading shifts:", err);
+      }
+  }
+
+  // Make this global so onclick="loadSelectedWeek()" can call it
+  window.loadSelectedWeek = async function () {
+      const weekSelect = document.getElementById("weekSelect");
+      if (!weekSelect || !weekSelect.value) {
+          alert("Please select a week.");
+          return;
+      }
+      const weekStart = weekSelect.value;
+      console.log("LoadSelectedWeek called with:", weekStart);
+      await loadShifts(weekStart);
+  };
+
+  // On page load: optionally load the first week
+  document.addEventListener("DOMContentLoaded", () => {
+      console.log("DOMContentLoaded: initializing schedule grid");
+      initGrid();
+      
+      //const weekSelect = document.getElementById("weekSelect");
+      //if (weekSelect && weekSelect.value) {
+        //  loadShifts(weekSelect.value);
+      //} else {
+        //  loadShifts(null);
+      //}
+  });
+</script>
+
+
 {% endblock %}
+<!--
+{% block scripts %}
+    <script src="{% static 'js/staff.js' %}"></script>
+{% endblock %}
+-->
