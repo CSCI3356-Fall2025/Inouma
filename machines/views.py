@@ -1,13 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse
 from .models import Machine, TrainingType
 from collections import defaultdict
+import json
 import os
 from django.conf import settings
 from .utils import convert_heic_to_jpg
-from .models import Machine
+from locations.models import Location
+from django.db import models
+
+
+def is_superuser(user):
+    return user.is_superuser
+
 
 @login_required
 def staff_dashboard(request):
@@ -112,13 +119,15 @@ def add_machine(request):
             name=request.POST.get('name'),
             machine_name=request.POST.get('machine_name'),
             category=request.POST.get('category'),
-            location=request.POST.get('location'),
+            location_id=request.POST.get('location'),  # ✅ Use location_id for ForeignKey
             description=request.POST.get('description', ''),
             mac_address=request.POST.get('mac_address', ''),
             year_bought=request.POST.get('year_bought') or None,
             requires_level_1=request.POST.get('requires_level_1') == 'on',
             requires_level_2=request.POST.get('requires_level_2') == 'on',
             requires_level_3=request.POST.get('requires_level_3') == 'on',
+            map_position_x=request.POST.get('map_position_x') or None,
+            map_position_y=request.POST.get('map_position_y') or None,
         )
         
         # Assign image if provided
@@ -269,4 +278,188 @@ def get_search_suggestions(request):
 
 
 
+@user_passes_test(is_superuser)
+def machine_management(request):
+    """Machine management page - superuser only"""
+    from locations.models import Location
+    
+    # Get all locations with their details
+    locations = Location.objects.all()
+    
+    # For each location, get machines that are already placed there
+    locations_data = []
+    for location in locations:
+        # Get machines at this location with map positions
+        machines_at_location = Machine.objects.filter(
+            location=str(location.id)
+        ).exclude(
+            map_position_x__isnull=True
+        ).exclude(
+            map_position_y__isnull=True
+        )
+        
+        location_machines = [{
+            'id': m.id,
+            'name': m.name,
+            'machine_name': m.machine_name,
+            'category': m.category,
+            'x': float(m.map_position_x),
+            'y': float(m.map_position_y)
+        } for m in machines_at_location]
+        
+        locations_data.append({
+            'id': location.id,
+            'name': location.name,
+            'building': location.building,
+            'floor': location.floor,
+            'machine_types': location.get_machine_types_list(),
+            'num_stations': location.num_stations,
+            'capacity': location.capacity,
+            'has_floorplan': bool(location.floorplan_image),
+            'floorplan_url': location.floorplan_image.url if location.floorplan_image else '',
+            'machines': location_machines
+        })
+    
+    # Get all unique images grouped by category
+    images_by_category = defaultdict(list)
+    seen_images = defaultdict(set)
+    
+    all_machines_with_images = Machine.objects.filter(
+        image__isnull=False
+    ).exclude(
+        image=''
+    ).order_by('category', '-created_at')
+    
+    for machine in all_machines_with_images:
+        if machine.image:
+            image_name = machine.image.name
+            
+            if image_name not in seen_images[machine.category]:
+                images_by_category[machine.category].append({
+                    'url': machine.image.url,
+                    'name': image_name,
+                    'machine_example': f"{machine.name} ({machine.machine_name})"
+                })
+                seen_images[machine.category].add(image_name)
+    
+    category_order = ['Laser', 'Vinyl', 'Woodworking', 'Textile', 'Metalworking', '3D Printing', 'Electronics']
+    
+    context = {
+        'locations': locations,
+        'locations_data_json': json.dumps(locations_data),  # Convert to JSON string for JavaScript
+        'images_by_category': dict(images_by_category),
+        'category_order': category_order,
+    }
+    return render(request, 'machines/add_machine_form.html', context)
 
+@login_required
+def machine_directory(request):
+    """Display category overview - Level 1"""
+    # Get count of machines per category
+    categories = Machine.objects.values('category').annotate(
+        count=models.Count('id')
+    ).order_by('category')
+    
+    category_order = ['Laser', 'Vinyl', 'Woodworking', 'Textile', 'Metalworking', '3D Printing', 'Electronics']
+    
+    # Create structured data
+    category_data = []
+    for cat in category_order:
+        cat_info = next((c for c in categories if c['category'] == cat), None)
+        if cat_info:
+            # Get a sample image from this category
+            sample_machine = Machine.objects.filter(category=cat, image__isnull=False).exclude(image='').first()
+            category_data.append({
+                'name': cat,
+                'count': cat_info['count'],
+                'image': sample_machine.image.url if sample_machine else None
+            })
+    
+    context = {
+        'categories': category_data,
+    }
+    return render(request, 'machines/category_overview.html', context)
+
+
+@login_required
+def category_detail(request, category):
+    """Display machine types within a category - Level 2"""
+    # Get unique machine types in this category
+    machine_types = Machine.objects.filter(category=category).values('machine_name').annotate(
+        count=models.Count('id')
+    ).order_by('machine_name')
+    
+    # Get sample image for each machine type
+    types_data = []
+    for mt in machine_types:
+        sample = Machine.objects.filter(
+            category=category, 
+            machine_name=mt['machine_name'],
+            image__isnull=False
+        ).exclude(image='').first()
+        
+        types_data.append({
+            'name': mt['machine_name'],
+            'count': mt['count'],
+            'image': sample.image.url if sample else None
+        })
+    
+    context = {
+        'category': category,
+        'machine_types': types_data,
+    }
+    return render(request, 'machines/category_detail.html', context)
+
+
+@login_required
+def machine_type_detail(request, machine_type):
+    """Display individual machines of a specific type - Level 3"""
+    machines = Machine.objects.filter(machine_name=machine_type).order_by('name')
+    
+    context = {
+        'machine_type': machine_type,
+        'machines': machines,
+        'category': machines.first().category if machines else None,
+    }
+    return render(request, 'machines/machine_type_detail.html', context)
+
+
+@login_required
+def machine_detail(request, machine_id):
+    """Display full machine details with floorplan - Level 4"""
+    from locations.models import Location
+    from django.contrib.auth import get_user_model
+    from datetime import date
+    
+    User = get_user_model()
+    machine = get_object_or_404(Machine, id=machine_id)
+    
+    # Since we migrated to ForeignKey, location access is now direct
+    location = machine.location
+    has_floorplan = bool(location.floorplan_image) if location else False
+    floorplan_url = location.floorplan_image.url if has_floorplan else None
+    
+    # Get other machines at this location
+    other_machines = []
+    if location:
+        other_machines = location.machines.exclude(id=machine_id).filter(
+            map_position_x__isnull=False,
+            map_position_y__isnull=False
+        )
+    
+    # Get available trainers (staff members who can provide training)
+    trainers = User.objects.filter(
+        is_staff=True, 
+        is_active=True
+    ).order_by('first_name', 'last_name')
+    
+    context = {
+        'machine': machine,
+        'location': location,
+        'has_floorplan': has_floorplan,
+        'floorplan_url': floorplan_url,
+        'other_machines': other_machines,
+        'trainers': trainers,
+        'today': date.today().isoformat(),
+    }
+    return render(request, 'machines/machine_detail.html', context)

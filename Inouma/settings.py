@@ -44,6 +44,9 @@ INSTALLED_APPS = [
 
     # Locations
     'locations',
+
+    # Scheduling
+    'scheduling',
   
 ]
 
