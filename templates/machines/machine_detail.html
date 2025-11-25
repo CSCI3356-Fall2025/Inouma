@@ -166,7 +166,7 @@
                 {% csrf_token %}
                 <div class="form-group">
                     <label>Reservation Date</label>
-                    <input type="date" id="reservationDate" name="date" class="form-control" min="{{ today }}" required>
+                    <input type="date" id="reservationDate" name="reservation_date" class="form-control" min="{{ today }}" required>
                 </div>
                 
                 <div class="two-column">
@@ -205,6 +205,8 @@ window.TRAINING_CONTEXT = {
     machineType: '{{ machine.machine_name }}'
 };
 
+const RESERVATION_URL = "{% url 'reservation_create_api' machine.id %}";
+
 // Training Modal Functions
 function openTrainingModal() {
     document.getElementById('trainingModal').classList.add('active');
@@ -236,41 +238,29 @@ document.getElementById('reservationModal').addEventListener('click', function(e
 document.getElementById('reservationForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = new FormData(e.target);
-    const date = formData.get('date');
-    const startTime = formData.get('start_time');
-    const endTime = formData.get('end_time');
-    const purpose = formData.get('purpose');
-    
-    // Combine date and time
-    const startDateTime = `${date}T${startTime}:00`;
-    const endDateTime = `${date}T${endTime}:00`;
+    const form = e.target;
+    const formData = new FormData(form);
     
     try {
-        const response = await fetch('/reservations/api/create/', {
+        const response = await fetch(RESERVATION_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken(),
             },
             credentials: 'same-origin',
-            body: JSON.stringify({
-                machine_id: {{ machine.id }},
-                start_time: startDateTime,
-                end_time: endDateTime,
-                purpose: purpose
-            })
+            body: formData
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || error.message || 'Reservation failed');
+        const data = await response.json();
+        console.log('Reservation API response:', data);
+        
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || data.message || 'Reservation failed');
         }
         
-        const data = await response.json();
         alert('Reservation created successfully!');
         closeReservationModal();
-        e.target.reset();
+        form.reset();
         
     } catch (error) {
         console.error('Reservation error:', error);
