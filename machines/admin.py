@@ -13,13 +13,16 @@ class TrainingTypeAdmin(admin.ModelAdmin):
 class MachineAdmin(admin.ModelAdmin):
     list_display = [
         'image_thumbnail',
-        'name',
-        'machine_name',
-        'category',
-        'location',
-        'year_bought',
-        'training_levels',   # now prefers explicit trainings but keeps L1/L2/L3 fallback
+        'name', 
+        'machine_name', 
+        'category', 
+        'year_bought', 
+        'training_levels', 
+        'location', 
+        'map_position_x', 
+        'map_position_y'
     ]
+
     list_filter = [
         'category',
         'location',
@@ -29,12 +32,18 @@ class MachineAdmin(admin.ModelAdmin):
         'year_bought',
         'required_trainings',
     ]
+
     search_fields = ['name', 'machine_name', 'description', 'mac_address']
+
     ordering = ['category', 'name']
 
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'machine_name', 'category', 'location')
+        }),
+        ('Map Position', {
+            'fields': ('map_position_x', 'map_position_y'),
+            'description': 'Position on the floorplan (0-100%)'
         }),
         ('Image', {
             'fields': ('image',),

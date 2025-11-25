@@ -31,7 +31,10 @@ urlpatterns = [
     path('reservations/', views.my_reservations, name='my_reservations'),
     path('admin/', admin.site.urls),
     path('auth/', include('accounts.urls')),
-    path("schedule/", include("schedule.urls")),
+    path('', include('machines.urls')),
+    path('staff/locations/', include('locations.urls')),
+    path('', include('machines.urls')),
+    path('', include('scheduling.urls')),
 ]
 
 

@@ -14,11 +14,15 @@ class TrainingType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.name
 
 
 class Machine(models.Model):
+    """
+    Represents a specific machine/equipment in the makerspace.
+    """
+    
     CATEGORY_CHOICES = [
         ('Laser', 'Laser'),
         ('Vinyl', 'Vinyl'),
@@ -29,14 +33,7 @@ class Machine(models.Model):
         ('Electronics', 'Electronics'),
     ]
 
-    LOCATION_CHOICES = [
-        ('Hatch Front (2nd Floor)', 'Hatch Front (2nd Floor)'),
-        ('Hatch Back (2nd Floor)', 'Hatch Back (2nd Floor)'),
-        ('Prototyping Studio (3rd Floor)', 'Prototyping Studio (3rd Floor)'),
-        ('Prototyping Shop (3rd Floor)', 'Prototyping Shop (3rd Floor)'),
-    ]
-
-    # Basic info
+    # Basic identification
     name = models.CharField(
         max_length=100,
         help_text="Unique identifier, for example 'Ultimaker #1', 'Epilog Laser #2'."
@@ -45,10 +42,29 @@ class Machine(models.Model):
         max_length=200,
         help_text="Model or type, for example 'Ultimaker S5', 'Epilog Fusion Pro'."
     )
+
+    # Category and Location
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    location = models.CharField(max_length=100, choices=LOCATION_CHOICES)
+    location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.CASCADE,
+        related_name='machines',
+        help_text="Physical location of this machine"
+    )
+    
     description = models.TextField(blank=True, null=True)
 
+    # Floorplan positioning (stored as percentages 0-100 for responsive positioning)
+    map_position_x = models.FloatField(
+        null=True, 
+        blank=True,
+        help_text="X position on floorplan (0-100%)"
+    )
+    map_position_y = models.FloatField(
+        null=True, 
+        blank=True,
+        help_text="Y position on floorplan (0-100%)"
+    )
 
     # Optional technical details
     mac_address = models.CharField(
@@ -71,12 +87,12 @@ class Machine(models.Model):
         help_text="Upload a photo of the machine."
     )
 
-    # Legacy training level flags used earlier in the project
+    # Legacy training level flags (kept for backwards compatibility)
     requires_level_1 = models.BooleanField(default=False)
     requires_level_2 = models.BooleanField(default=False)
     requires_level_3 = models.BooleanField(default=False)
 
-    # NEW: explicit training credentials (Delivery 6)
+    # Modern training requirements (Delivery 6)
     required_trainings = models.ManyToManyField(
         TrainingType,
         blank=True,
@@ -84,14 +100,15 @@ class Machine(models.Model):
         help_text="Specific training(s) a student must complete to use this machine."
     )
 
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['category', 'name']
+        ordering = ['category', 'machine_name', 'name']
 
     def __str__(self):
-        return f"{self.name} - {self.machine_name} ({self.category})"
+        return f"{self.machine_name} - {self.name}"
 
     def get_image_url(self):
         """
@@ -100,3 +117,9 @@ class Machine(models.Model):
         if self.image:
             return self.image.url
         return '/media/machines/default_machine.jpg'
+    
+    def has_map_position(self):
+        """
+        Check if this machine has been positioned on a floorplan.
+        """
+        return self.map_position_x is not None and self.map_position_y is not None

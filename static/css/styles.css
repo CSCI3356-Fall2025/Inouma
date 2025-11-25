@@ -10,9 +10,6 @@
     box-sizing: border-box;
 }
 
-/* ============================================================================
-   CSS VARIABLES
-   ============================================================================ */
 
 /* ============================================================================
    CSS VARIABLES
@@ -2299,4 +2296,31 @@ input:checked + .slider:before {
         transform: translateY(0);
         opacity: 1;
     }
+}
+
+
+/* ============================================================================
+   BOOKING SLOT BUTTONS
+   ============================================================================ */
+
+.slot-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--gold);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.slot-btn:hover:not(.disabled) {
+    background: var(--light-gold);
+    transform: translateY(-2px);
+}
+
+.slot-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f0f0f0;
+    border-color: #ddd;
 }
