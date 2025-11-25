@@ -1,0 +1,297 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}{{ machine.name }} - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
+    <a href="{% url 'category_detail' machine.category %}" style="color: #666; text-decoration: none;">{{ machine.category }}</a> > 
+    <a href="{% url 'machine_type_detail' machine.machine_name %}" style="color: #666; text-decoration: none;">{{ machine.machine_name }}</a> >
+    {{ machine.name }}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Left Column: Machine Info -->
+        <div>
+            {% if machine.image %}
+            <div style="width: 100%; height: 300px; overflow: hidden; border-radius: 12px; margin-bottom: 1.5rem; background: #f5f5f5;">
+                <img src="{{ machine.image.url }}" alt="{{ machine.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            {% endif %}
+            
+            <h2 style="margin-bottom: 0.5rem;">{{ machine.name }}</h2>
+            <p style="color: #666; font-size: 1.1rem; margin-bottom: 1rem;">{{ machine.machine_name }}</p>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <span style="background: var(--light-gold); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem;">
+                    📁 {{ machine.category }}
+                </span>
+                <span style="background: var(--light-gold); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem;">
+                    📍 {{ location.name }} - {{ location.floor }}
+                </span>
+            </div>
+            
+            {% if machine.description %}
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Description</h3>
+                <p style="color: #666;">{{ machine.description }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Training Requirements -->
+            <div style="background: var(--light-maroon); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--maroon); font-size: 1.1rem; margin-bottom: 0.75rem;">Training Requirements</h3>
+                {% with trainings=machine.required_trainings.all %}
+                    {% if trainings %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            {% for training in trainings %}
+                                <span class="training-badge">{{ training.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="color: #666; font-size: 0.9rem;">No training required</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-primary" onclick="openReservationModal()" style="flex: 1;">
+                    📅 Reserve Machine
+                </button>
+                <button class="btn btn-secondary" onclick="openTrainingModal()" style="flex: 1;">
+                    🎓 Schedule Training
+                </button>
+            </div>
+        </div>
+        
+        <!-- Right Column: Floorplan -->
+        <div>
+            <h3 style="margin-bottom: 1rem;">Location Map</h3>
+            {% if has_floorplan and machine.map_position_x and machine.map_position_y %}
+            <div style="position: relative; border: 2px solid var(--gold); border-radius: 12px; overflow: hidden;">
+                <img src="{{ floorplan_url }}" alt="Floorplan" style="width: 100%; display: block;">
+                
+                <!-- Current machine pin -->
+                <div style="position: absolute; left: {{ machine.map_position_x }}%; top: {{ machine.map_position_y }}%; transform: translate(-50%, -100%);">
+                    <span style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">📍</span>
+                    <div style="position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--dark); padding: 0.25rem 0.5rem; border-radius: 4px; white-space: nowrap; font-size: 0.75rem; font-weight: 600;">
+                        {{ machine.name }}
+                    </div>
+                </div>
+                
+                <!-- Other machines (semi-transparent) -->
+                {% for other in other_machines %}
+                    {% if other.map_position_x and other.map_position_y %}
+                    <div style="position: absolute; left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%; transform: translate(-50%, -100%); opacity: 0.4;" title="{{ other.name }}">
+                        <span style="font-size: 24px;">📍</span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <div style="margin-top: 1rem; padding: 1rem; background: #fafafa; border-radius: 8px;">
+                <p style="font-size: 0.9rem; color: #666;">
+                    <strong>Building:</strong> {{ location.building }}<br>
+                    <strong>Floor:</strong> {{ location.floor }}<br>
+                    <strong>Capacity:</strong> {{ location.capacity }} people
+                </p>
+            </div>
+            {% elif has_floorplan %}
+            <div style="text-align: center; padding: 3rem; background: #fafafa; border-radius: 12px; color: #999;">
+                <p>Floorplan available but machine location not pinned yet</p>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 3rem; background: #fafafa; border-radius: 12px; color: #999;">
+                <p>No floorplan available for this location</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Training Booking Modal -->
+<div id="trainingModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>🎓 Schedule Training</h2>
+            <button class="close-btn" onclick="closeTrainingModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Book a training session for <strong>{{ machine.machine_name }}</strong>
+            </p>
+            
+            <div class="form-group">
+                <label>Select Trainer</label>
+                <select id="trainerSelect" class="form-control">
+                    <option value="">Choose a trainer...</option>
+                    {% for trainer in trainers %}
+                        <option value="{{ trainer.id }}">{{ trainer.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Date</label>
+                <input type="date" id="dateInput" class="form-control" min="{{ today }}">
+            </div>
+            
+            <button id="loadSlotsBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem;">
+                Load Available Time Slots
+            </button>
+            
+            <div id="slotsContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 50px;">
+                <p style="color: #999; font-style: italic;">Select a trainer and date to see available slots</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Machine Reservation Modal -->
+<div id="reservationModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>📅 Reserve Machine</h2>
+            <button class="close-btn" onclick="closeReservationModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Reserve <strong>{{ machine.name }} ({{ machine.machine_name }})</strong> for use
+            </p>
+            
+            <form id="reservationForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Reservation Date</label>
+                    <input type="date" id="reservationDate" name="date" class="form-control" min="{{ today }}" required>
+                </div>
+                
+                <div class="two-column">
+                    <div class="form-group">
+                        <label>Start Time</label>
+                        <input type="time" id="reservationStartTime" name="start_time" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Time</label>
+                        <input type="time" id="reservationEndTime" name="end_time" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Purpose (Optional)</label>
+                    <textarea name="purpose" class="form-control" rows="3" placeholder="What are you working on?"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Confirm Reservation
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/booking.js' %}"></script>
+
+<script>
+// Set up training context for booking.js
+window.TRAINING_CONTEXT = {
+    machineInstanceId: '{{ machine.id }}',
+    machineName: '{{ machine.name }}',
+    machineType: '{{ machine.machine_name }}'
+};
+
+// Training Modal Functions
+function openTrainingModal() {
+    document.getElementById('trainingModal').classList.add('active');
+}
+
+function closeTrainingModal() {
+    document.getElementById('trainingModal').classList.remove('active');
+}
+
+// Reservation Modal Functions
+function openReservationModal() {
+    document.getElementById('reservationModal').classList.add('active');
+}
+
+function closeReservationModal() {
+    document.getElementById('reservationModal').classList.remove('active');
+}
+
+// Close modals when clicking outside
+document.getElementById('trainingModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTrainingModal();
+});
+
+document.getElementById('reservationModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReservationModal();
+});
+
+// Handle machine reservation form submission
+document.getElementById('reservationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const date = formData.get('date');
+    const startTime = formData.get('start_time');
+    const endTime = formData.get('end_time');
+    const purpose = formData.get('purpose');
+    
+    // Combine date and time
+    const startDateTime = `${date}T${startTime}:00`;
+    const endDateTime = `${date}T${endTime}:00`;
+    
+    try {
+        const response = await fetch('/reservations/api/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                machine_id: {{ machine.id }},
+                start_time: startDateTime,
+                end_time: endDateTime,
+                purpose: purpose
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || error.message || 'Reservation failed');
+        }
+        
+        const data = await response.json();
+        alert('Reservation created successfully!');
+        closeReservationModal();
+        e.target.reset();
+        
+    } catch (error) {
+        console.error('Reservation error:', error);
+        alert(error.message || 'Failed to create reservation. Please try again.');
+    }
+});
+
+// Helper function from booking.js
+function getCsrfToken() {
+    const name = 'csrftoken=';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith(name)) return c.substring(name.length);
+    }
+    return '';
+}
+
+// Set minimum date to today
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('dateInput').min = today;
+document.getElementById('reservationDate').min = today;
+</script>
+{% endblock %}

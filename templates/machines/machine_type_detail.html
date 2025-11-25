@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}{{ machine_type }} - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
+    <a href="{% url 'category_detail' category %}" style="color: #666; text-decoration: none;">{{ category }}</a> > 
+    {{ machine_type }}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ machine_type }} Units</h2>
+    <p style="color: #666; margin-bottom: 2rem;">Select a specific machine to view details and make a reservation</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem;">
+        {% for machine in machines %}
+        <a href="{% url 'machine_detail' machine.id %}" style="text-decoration: none; color: inherit;">
+            <div class="location-card-minimal" style="cursor: pointer;">
+                {% if machine.image %}
+                <div style="width: 100%; height: 100px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f5f5f5;">
+                    <img src="{{ machine.image }}" alt="{{ machine.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                {% endif %}
+                
+                <h3 style="color: var(--dark); margin-bottom: 0.5rem; font-size: 1rem;">{{ machine.name }}</h3>
+                <p style="color: #999; font-size: 0.85rem;">📍 {{ machine.location }}</p>
+                
+                {% if machine.required_trainings.all %}
+                <div style="margin-top: 0.5rem;">
+                    <span style="background: var(--light-gold); color: var(--dark); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                        🎓 Training Required
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
