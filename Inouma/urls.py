@@ -36,6 +36,7 @@ urlpatterns = [
     path('staff/locations/', include('locations.urls')),
     path('', include('machines.urls')),
     path('', include('scheduling.urls')),
+    path('schedule/', include('schedule.urls')),
 ]
 
 
