@@ -9,4 +9,7 @@ urlpatterns = [
     path("api/window/set/", views.window_set, name="window_set"),
     path("api/export.ics", views.export_ics, name="export_ics"),
     path("api/shifts/", views.api_shifts, name="api_shifts"),
+    path("api/semesters/", views.get_semesters, name="get_semesters"),
+    path("api/weeks/", views.get_weeks, name="get_weeks"),
+    path("api/trainers/", views.get_trainers, name="get_trainers"),
 ]
