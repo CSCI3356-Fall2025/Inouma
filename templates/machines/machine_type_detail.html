@@ -6,7 +6,7 @@
 {% block breadcrumb %}
     <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
     <a href="{% url 'category_detail' category %}" style="color: #666; text-decoration: none;">{{ category }}</a> > 
-    {{ machine_type }}
+    <span class="breadcrumb-item active">{{ machine_type }}</span>
 {% endblock %}
 
 {% block content %}

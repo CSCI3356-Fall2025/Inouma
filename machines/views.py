@@ -162,16 +162,58 @@ def add_machine(request):
     return redirect('staff_dashboard')
 
 
-@login_required
+@user_passes_test(is_superuser)
 def remove_machine(request, machine_id):
+    """Delete a machine from the database"""
     if request.method == 'POST':
-        machine = get_object_or_404(Machine, id=machine_id)
-        machine_name = machine.name
-        
-        # Note: We DON'T delete the image file since other machines might be using it
-        machine.delete()
-        messages.success(request, f'Machine "{machine_name}" removed successfully!')
-    return redirect('staff_dashboard')
+        try:
+            machine = get_object_or_404(Machine, id=machine_id)
+            machine_name = machine.machine_name
+            
+            # Try to delete - handle potential foreign key issues
+            try:
+                # Clear many-to-many relationships first
+                if hasattr(machine, 'required_trainings'):
+                    machine.required_trainings.clear()
+                
+                # Now delete the machine
+                machine.delete()
+                
+            except Exception as delete_error:
+                print(f"Delete error details: {delete_error}")
+                import traceback
+                print(traceback.format_exc())
+                raise delete_error
+            
+            # Return JSON response for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Machine "{machine_name}" deleted successfully!'
+                })
+            
+            messages.success(request, f'Machine "{machine_name}" deleted successfully!')
+            return redirect('staff_machine_directory')
+            
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            print(f"Error deleting machine: {error_msg}")
+            print(traceback.format_exc())
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error deleting machine: {error_msg}'
+                }, status=500)
+            
+            messages.error(request, f'Error deleting machine: {error_msg}')
+            return redirect('staff_machine_directory')
+    
+    return redirect('staff_machine_directory')
+
+
+
 
 @login_required
 def get_machine_suggestions(request):
@@ -238,43 +280,75 @@ def machine_directory(request):
 
 @login_required
 def get_search_suggestions(request):
-    """API endpoint to get search suggestions for both machine types and identifiers"""
-    query = request.GET.get('q', '').strip()
+    """API endpoint for search autocomplete suggestions"""
+    query = request.GET.get('q', '').strip().lower()
     
-    if len(query) < 1:
+    if len(query) < 2:
         return JsonResponse({'suggestions': []})
     
-    # Get machine types that match (already distinct from the query)
-    machine_types = Machine.objects.filter(
-        machine_name__icontains=query
-    ).values_list('machine_name', flat=True).distinct()
-    
-    # Get machine identifiers that match (already distinct from the query)
-    machine_names = Machine.objects.filter(
-        name__icontains=query
-    ).values_list('name', flat=True).distinct()
-    
-    # Combine with labels - return both display and value
     suggestions = []
-    seen = set()  # Track what we've already added
+    seen = set()
     
-    for mt in machine_types[:5]:
-        if mt.lower() not in seen:
-            suggestions.append({
-                'display': f"{mt} (Machine Type)",
-                'value': mt
-            })
-            seen.add(mt.lower())
+    try:
+        # Search machine types
+        machine_types = Machine.objects.filter(
+            machine_name__icontains=query
+        ).values_list('machine_name', flat=True).distinct()[:5]
+        
+        for machine_type in machine_types:
+            if machine_type and machine_type.lower() not in seen:
+                suggestions.append({
+                    'text': machine_type,
+                    'type': 'Machine Type'
+                })
+                seen.add(machine_type.lower())
+        
+        # Search machine names (IDs)
+        machine_names = Machine.objects.filter(
+            name__icontains=query
+        ).values_list('name', flat=True).distinct()[:5]
+        
+        for name in machine_names:
+            if name and name.lower() not in seen:
+                suggestions.append({
+                    'text': name,
+                    'type': 'Machine ID'
+                })
+                seen.add(name.lower())
+        
+        # Search categories
+        categories = Machine.objects.filter(
+            category__icontains=query
+        ).values_list('category', flat=True).distinct()[:3]
+        
+        for category in categories:
+            if category and category.lower() not in seen:
+                suggestions.append({
+                    'text': category,
+                    'type': 'Category'
+                })
+                seen.add(category.lower())
+        
+        # Search locations - need to go through the Location model
+        from locations.models import Location
+        location_objs = Location.objects.filter(
+            name__icontains=query
+        ).distinct()[:3]
+        
+        for loc in location_objs:
+            loc_text = f"{loc.building} - {loc.name}" if loc.building else loc.name
+            if loc_text.lower() not in seen:
+                suggestions.append({
+                    'text': loc_text,
+                    'type': 'Location'
+                })
+                seen.add(loc_text.lower())
     
-    for mn in machine_names[:5]:
-        if mn.lower() not in seen:
-            suggestions.append({
-                'display': f"{mn} (Machine Name)",
-                'value': mn
-            })
-            seen.add(mn.lower())
+    except Exception as e:
+        print(f"Error in search suggestions: {e}")
+        return JsonResponse({'suggestions': []})
     
-    return JsonResponse({'suggestions': suggestions})
+    return JsonResponse({'suggestions': suggestions[:10]})
 
 
 
@@ -463,3 +537,175 @@ def machine_detail(request, machine_id):
         'today': date.today().isoformat(),
     }
     return render(request, 'machines/machine_detail.html', context)
+
+@login_required
+def machine_management_landing(request):
+    """Landing page for machine management with two options"""
+    # Get quick stats for the overview section
+    total_machines = Machine.objects.count()
+    # Since there's no status field, just count all machines as active
+    active_machines = total_machines
+    categories_count = Machine.objects.values('category').distinct().count()
+    
+    context = {
+        'total_machines': total_machines,
+        'active_machines': active_machines,
+        'categories_count': categories_count,
+    }
+    
+    return render(request, 'staff/machine_management_landing.html', context)
+
+
+
+@user_passes_test(is_superuser)
+def staff_machine_directory(request):
+    """Staff-specific machine directory with all machines and advanced filtering"""
+    from locations.models import Location
+    
+    # Get all machines (staff can see everything)
+    machines = Machine.objects.all().prefetch_related('required_trainings').order_by('-created_at')
+    
+    # Get all locations for filter dropdown
+    locations = Location.objects.all().order_by('building', 'name')
+    
+    context = {
+        'machines': machines,
+        'locations': locations,
+    }
+    
+    return render(request, 'machines/staff_machine_directory.html', context)
+
+
+
+@user_passes_test(is_superuser)
+def edit_machine(request, machine_id):
+    """Edit an existing machine"""
+    from locations.models import Location
+    
+    machine = get_object_or_404(Machine, id=machine_id)
+    
+    if request.method == 'POST':
+        # Handle the form submission
+        machine.name = request.POST.get('name')
+        machine.machine_name = request.POST.get('machine_name')
+        machine.category = request.POST.get('category')
+        machine.description = request.POST.get('description', '')
+        machine.location = request.POST.get('location')
+        machine.year_bought = request.POST.get('year_bought')
+        machine.mac_address = request.POST.get('mac_address', '')
+        
+        # Handle training requirements
+        machine.requires_level_1 = request.POST.get('requires_level_1') == 'on'
+        machine.requires_level_2 = request.POST.get('requires_level_2') == 'on'
+        machine.requires_level_3 = request.POST.get('requires_level_3') == 'on'
+        
+        # Handle image upload if provided
+        if 'image' in request.FILES:
+            machine.image = request.FILES['image']
+        
+        machine.save()
+        
+        messages.success(request, f'Machine "{machine.machine_name}" updated successfully!')
+        return redirect('staff_machine_directory')
+    
+    # GET request - show the edit form
+    locations = Location.objects.all()
+    
+    # Get all unique images grouped by category for image selection
+    images_by_category = defaultdict(list)
+    seen_images = defaultdict(set)
+    
+    all_machines_with_images = Machine.objects.filter(
+        image__isnull=False
+    ).exclude(
+        image=''
+    ).order_by('category', '-created_at')
+    
+    for m in all_machines_with_images:
+        if m.image:
+            image_name = m.image.name
+            if image_name not in seen_images[m.category]:
+                images_by_category[m.category].append({
+                    'url': m.image.url,
+                    'name': image_name,
+                    'machine_example': f"{m.name} ({m.machine_name})"
+                })
+                seen_images[m.category].add(image_name)
+    
+    context = {
+        'machine': machine,
+        'locations': locations,
+        'images_by_category': dict(images_by_category),
+        'category_order': ['Laser', 'Vinyl', 'Woodworking', 'Textile', 'Metalworking', '3D Printing', 'Electronics'],
+        'edit_mode': True,
+    }
+    
+    return render(request, 'machines/edit_machine_form.html', context)
+
+
+@user_passes_test(is_superuser)
+def machine_detail_api(request, machine_id):
+    """API endpoint to get comprehensive machine details for modal"""
+    try:
+        # Prefetch related objects for efficiency
+        machine = Machine.objects.select_related('location').prefetch_related('required_trainings').get(id=machine_id)
+        
+        # Get training details
+        trainings = []
+        try:
+            if machine.required_trainings.exists():
+                trainings = [{'id': t.id, 'name': t.name} for t in machine.required_trainings.all()]
+        except:
+            pass
+            
+        # Add level-based training if no custom trainings
+        if not trainings:
+            if machine.requires_level_1:
+                trainings.append({'name': 'Level 1 Training', 'type': 'level'})
+            if machine.requires_level_2:
+                trainings.append({'name': 'Level 2 Training', 'type': 'level'})
+            if machine.requires_level_3:
+                trainings.append({'name': 'Level 3 Training', 'type': 'level'})
+        
+        # Skip reservations for now since the table doesn't exist
+        reservations_data = []
+        
+        # Get location details
+        location_str = 'Not assigned'
+        if machine.location:
+            location_str = f"{machine.location.name}"
+            if machine.location.building:
+                location_str = f"{machine.location.building} - {machine.location.name}"
+        
+        data = {
+            'id': machine.id,
+            'name': machine.name,
+            'machine_name': machine.machine_name,
+            'category': machine.category,
+            'description': machine.description or 'No description available',
+            'location': location_str,
+            'location_id': machine.location.id if machine.location else None,
+            'year_bought': str(machine.year_bought) if machine.year_bought else 'N/A',
+            'mac_address': machine.mac_address or 'Not connected',
+            'image_url': machine.image.url if machine.image else None,
+            'map_position_x': float(machine.map_position_x) if machine.map_position_x else None,
+            'map_position_y': float(machine.map_position_y) if machine.map_position_y else None,
+            'trainings': trainings,
+            'reservations': reservations_data,
+            'created_at': machine.created_at.strftime('%B %d, %Y at %I:%M %p'),
+            'updated_at': machine.updated_at.strftime('%B %d, %Y at %I:%M %p'),
+        }
+        
+        return JsonResponse(data)
+        
+    except Machine.DoesNotExist:
+        return JsonResponse({'error': 'Machine not found'}, status=404)
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in machine_detail_api: {e}")
+        print(error_details)
+        return JsonResponse({
+            'error': str(e),
+            'details': error_details if request.user.is_superuser else 'Server error'
+        }, status=500)

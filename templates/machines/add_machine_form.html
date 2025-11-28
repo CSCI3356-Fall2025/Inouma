@@ -4,7 +4,9 @@
 {% block title %}Machine Management - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
-    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > Machine Management
+    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > 
+    <a href="{% url 'machine_management' %}" style="color: #666; text-decoration: none;">Machine Management</a> > 
+    <span class="breadcrumb-item active">Add Machine</span>
 {% endblock %}
 
 {% block content %}

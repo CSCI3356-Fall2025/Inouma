@@ -4,7 +4,8 @@
 {% block title %}{{ category }} Machines - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
-    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > {{ category }}
+    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
+    <span class="breadcrumb-item active">{{ category }}</span>
 {% endblock %}
 
 {% block content %}
