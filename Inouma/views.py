@@ -45,7 +45,6 @@ def staff_dashboard(request):
 @login_required
 def user_dashboard(request):
     certifications = Certification.objects.filter(user=request.user)
-
     training_sessions = TrainingReservation.objects.filter(
         student=request.user
     ).order_by('start_time')

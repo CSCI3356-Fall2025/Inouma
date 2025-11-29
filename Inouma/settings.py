@@ -170,7 +170,7 @@ AUTHENTICATION_BACKENDS = [
 
 # Redirect URLS for login/logout
 LOGIN_URL = '/'
-LOGIN_REDIRECT_URL = '/home'
+LOGIN_REDIRECT_URL = '/home/'
 LOGOUT_REDIRECT_URL = '/'
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
