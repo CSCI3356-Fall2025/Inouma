@@ -1,0 +1,1438 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}View Schedule - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">View Schedule</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Filters */
+.filter-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 6px 12px;
+    background: #f0f0f0;
+    color: #666;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.filter-chip:hover {
+    background: #e8e8e8;
+}
+
+.filter-chip.active {
+    background: #e3f2fd;
+    color: var(--gunmetal);
+    border-color: #90caf9;
+}
+
+.filter-chip.user-chip {
+    background: #fff3e0;
+    border-color: #ffcc80;
+}
+
+.filter-chip .remove-btn {
+    cursor: pointer;
+    font-weight: bold;
+    margin-left: 4px;
+    opacity: 0.6;
+}
+
+.filter-chip .remove-btn:hover {
+    opacity: 1;
+}
+
+/* Search */
+.search-container {
+    position: relative;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+.search-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-item:hover {
+    background: #f5f5f5;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    background: #f0f0f0;
+    padding: 3px;
+    border-radius: 6px;
+}
+
+.view-toggle button {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.view-toggle button.active {
+    background: white;
+    color: var(--gunmetal);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Calendar */
+.gcal-wrapper {
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.gcal-header {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    background: #fafafa;
+    border-bottom: 1px solid #dadce0;
+}
+
+.gcal-header-cell {
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gunmetal);
+    border-left: 1px solid #e0e0e0;
+}
+
+.gcal-header-cell:first-child {
+    border-left: none;
+}
+
+.gcal-scroll {
+    height: 600px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.gcal-body {
+    position: relative;
+    min-height: 100%;
+}
+
+.gcal-times {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 60px;
+    z-index: 2;
+    background: #fafafa;
+}
+
+.gcal-time-label {
+    height: 60px;
+    padding: 4px 8px;
+    text-align: right;
+    font-size: 11px;
+    color: #70757a;
+    border-bottom: 1px solid #f0f0f0;
+    box-sizing: border-box;
+}
+
+.gcal-columns {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-left: 60px;
+    position: relative;
+}
+
+.gcal-day-col {
+    position: relative;
+    border-left: 1px solid #e0e0e0;
+}
+
+.gcal-hour-line {
+    height: 60px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Events */
+.gcal-event {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    padding: 4px 6px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    z-index: 1;
+    border-left: 3px solid;
+}
+
+.gcal-event:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.gcal-event.open-hours {
+    background: #4CAF50;
+    border-left-color: #2e7d32;
+    color: white;
+}
+
+.gcal-event.training {
+    background: #2196F3;
+    border-left-color: #1565c0;
+    color: white;
+}
+
+.gcal-event.floater {
+    background: #FF9800;
+    border-left-color: #e65100;
+    color: white;
+}
+
+.gcal-event-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gcal-event-time {
+    font-size: 10px;
+    opacity: 0.9;
+}
+
+/* List View */
+.list-day {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.list-day:last-child {
+    border-bottom: none;
+}
+
+.list-day-header {
+    background: var(--gunmetal);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+}
+
+.list-section {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.list-section:last-child {
+    border-bottom: none;
+}
+
+.list-section-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gunmetal);
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border-left: 3px solid;
+}
+
+.list-item.open-hours { border-left-color: #4CAF50; }
+.list-item.training { border-left-color: #2196F3; }
+.list-item.floater { border-left-color: #FF9800; }
+
+/* Block View */
+.block-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.block-table th {
+    background: #fafafa;
+    padding: 10px 8px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--gunmetal);
+    border: 1px solid #e0e0e0;
+}
+
+.block-table td {
+    border: 1px solid #e0e0e0;
+    padding: 6px;
+    vertical-align: top;
+}
+
+.block-time {
+    background: #fafafa;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.block-cell {
+    min-width: 100px;
+}
+
+.block-cell.empty {
+    color: #ccc;
+    text-align: center;
+}
+
+.block-person {
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.block-person:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.block-person.open-hours {
+    background: #4CAF50;
+}
+
+.block-person.training {
+    background: #2196F3;
+}
+
+.block-person.floater {
+    background: #FF9800;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--cinnabar);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.detail-row {
+    display: flex;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #666;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    color: var(--gunmetal);
+}
+
+.shift-type-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: white;
+}
+
+.shift-type-badge.open-hours {
+    background: #4CAF50;
+}
+
+.shift-type-badge.training {
+    background: #2196F3;
+}
+
+.shift-type-badge.floater {
+    background: #FF9800;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.status-badge.scheduled {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.confirmed {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.status-badge.cancelled {
+    background: #ffebee;
+    color: #c62828;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; color: var(--gunmetal);">📊 Current Schedule</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Model week schedule (repeats throughout semester)</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div class="view-toggle">
+                <button id="btnCalendarView" onclick="switchView('calendar')">📅 Calendar</button>
+                <button id="btnBlockView" class="active" onclick="switchView('blocks')">🧱 Blocks</button>
+                <button id="btnListView" onclick="switchView('list')">📋 List</button>
+            </div>
+            <button class="btn btn-secondary" onclick="exportSchedule()">📥 Export</button>
+            <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:publish_schedule' %}'">🚀 Publish</button>
+        </div>
+    </div>
+    
+    <!-- Semester Selector -->
+    <div style="margin-top: 1.5rem; max-width: 400px;">
+        <label for="semesterSelect" style="font-weight: 600; color: var(--gunmetal);">Semester</label>
+        <select id="semesterSelect" class="form-control" onchange="loadSchedule()">
+            <option value="">-- Choose Semester --</option>
+            {% for semester in semesters %}
+            <option value="{{ semester.id }}" {% if semester.is_active %}selected{% endif %}>
+                {{ semester.name }} {% if semester.is_active %}(Active){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Stats (hidden initially) -->
+<div class="card" id="statsCard" style="display: none;">
+    <h2 style="margin-bottom: 1rem; color: var(--gunmetal);">📈 Weekly Statistics</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Shifts</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statMembers">0</div>
+            <div class="stat-label">Team Members</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statOpenHours">0</div>
+            <div class="stat-label">Open Hours</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statTraining">0</div>
+            <div class="stat-label">Training</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statFloaters">0</div>
+            <div class="stat-label">Floaters</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statHours">0</div>
+            <div class="stat-label">Total Hours</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar" id="filterBar" style="display: none;">
+    <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+        <!-- User Search -->
+        <div class="search-container" style="min-width: 250px;">
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px;">Add Team Member Filter</label>
+            <input type="text" id="userSearch" class="form-control" placeholder="Search by name..." 
+                   oninput="handleSearch(this.value)" onfocus="handleSearch(this.value)">
+            <div id="userDropdown" class="search-dropdown" style="display: none;"></div>
+        </div>
+        
+        <!-- Filter Chips -->
+        <div style="flex: 1;">
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px;">Active Filters</label>
+            <div class="filter-chips" id="filterChips">
+                <div class="filter-chip active" data-filter="open_hours" onclick="toggleTypeFilter('open_hours')">
+                    🟢 Open Hours
+                </div>
+                <div class="filter-chip active" data-filter="training" onclick="toggleTypeFilter('training')">
+                    🔵 Training
+                </div>
+                <div class="filter-chip active" data-filter="floater" onclick="toggleTypeFilter('floater')">
+                    🟠 Floaters
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="clearAllFilters()" style="align-self: flex-end;">
+            Clear All
+        </button>
+    </div>
+</div>
+
+<!-- Calendar View -->
+<div id="calendarView" style="display: none;">
+    <div class="gcal-wrapper">
+        <div class="gcal-header">
+            <div class="gcal-header-cell"></div>
+            <div class="gcal-header-cell">Monday</div>
+            <div class="gcal-header-cell">Tuesday</div>
+            <div class="gcal-header-cell">Wednesday</div>
+            <div class="gcal-header-cell">Thursday</div>
+            <div class="gcal-header-cell">Friday</div>
+            <div class="gcal-header-cell">Saturday</div>
+            <div class="gcal-header-cell">Sunday</div>
+        </div>
+        <div class="gcal-scroll">
+            <div class="gcal-body" id="calendarBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- List View -->
+<div id="listView" style="display: none;">
+    <div class="gcal-wrapper" id="listContent"></div>
+</div>
+
+<!-- Block View -->
+<div id="blockView" style="display: none;">
+    <div class="block-controls" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+        <label style="font-weight: 600; color: var(--gunmetal);">Block Duration:</label>
+        <select id="blockIntervalSelect" class="form-control" style="width: auto;" onchange="changeBlockInterval(this.value)">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60" selected>1 hour</option>
+        </select>
+    </div>
+    <div class="gcal-wrapper" id="blockContent"></div>
+</div>
+
+<!-- Empty State -->
+<div class="card" id="emptyState" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">📅</div>
+    <h2 style="color: var(--gunmetal); margin-bottom: 1rem;">No Schedule Created Yet</h2>
+    <p style="color: #666; margin-bottom: 2rem;">Select a semester above, or create a schedule by running the auto-scheduler.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <button class="btn btn-secondary" onclick="window.location.href='{% url 'scheduling:configure_semester' %}'">
+            ⚙️ Configure Semester
+        </button>
+        <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:auto_schedule' %}'">
+            🤖 Run Auto-Scheduler
+        </button>
+    </div>
+</div>
+
+<!-- Shift Details Modal -->
+<div id="shiftModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Shift Details</h2>
+            <button class="modal-close" onclick="closeShiftModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Populated by JS -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeShiftModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// State
+let allShifts = [];
+let filteredShifts = [];
+let activeTypeFilters = new Set(['open_hours', 'training', 'floater']);
+let activeUserFilters = new Set(); // Just store user IDs as numbers
+let activeUserNames = new Map(); // userId -> userName for display
+let allUsers = [];
+let currentView = 'blocks';
+let blockInterval = 60; // Default 1 hour blocks
+
+const HOUR_HEIGHT = 60;
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Load schedule data
+function loadSchedule() {
+    const semesterId = document.getElementById('semesterSelect').value;
+    if (!semesterId) {
+        showEmptyState();
+        return;
+    }
+    
+    fetch(`/scheduling/api/shifts/?semester_id=${semesterId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.shifts && data.shifts.length > 0) {
+                // Normalize user_id to integers in all shifts
+                allShifts = data.shifts.map(s => ({
+                    ...s,
+                    user_id: parseInt(s.user_id)
+                }));
+                
+                // Extract unique users
+                const userMap = new Map();
+                allShifts.forEach(s => {
+                    if (!userMap.has(s.user_id)) {
+                        userMap.set(s.user_id, s.user);
+                    }
+                });
+                allUsers = Array.from(userMap, ([id, name]) => ({id: id, name: name}));
+                
+                console.log('Loaded users:', allUsers);
+                
+                showSchedule();
+                applyFilters();
+            } else {
+                showEmptyState();
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showEmptyState();
+        });
+}
+
+function showEmptyState() {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('statsCard').style.display = 'none';
+    document.getElementById('filterBar').style.display = 'none';
+    document.getElementById('calendarView').style.display = 'none';
+    document.getElementById('listView').style.display = 'none';
+}
+
+function showSchedule() {
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('statsCard').style.display = 'block';
+    document.getElementById('filterBar').style.display = 'block';
+    
+    document.getElementById('calendarView').style.display = currentView === 'calendar' ? 'block' : 'none';
+    document.getElementById('blockView').style.display = currentView === 'blocks' ? 'block' : 'none';
+    document.getElementById('listView').style.display = currentView === 'list' ? 'block' : 'none';
+}
+
+// Apply filters and re-render
+function applyFilters() {
+    console.log('Applying filters - User filters:', Array.from(activeUserFilters));
+    
+    filteredShifts = allShifts.filter(shift => {
+        const typeMatch = activeTypeFilters.has(shift.shift_type);
+        const userMatch = activeUserFilters.size === 0 || activeUserFilters.has(shift.user_id);
+        
+        return typeMatch && userMatch;
+    });
+    
+    console.log('Filtered shifts:', filteredShifts.length, 'of', allShifts.length);
+    
+    updateStats();
+    
+    if (currentView === 'calendar') {
+        renderCalendar();
+    } else if (currentView === 'list') {
+        renderListView();
+    } else if (currentView === 'blocks') {
+        renderBlockView();
+    }
+}
+
+// Update statistics
+function updateStats() {
+    const openHours = filteredShifts.filter(s => s.shift_type === 'open_hours');
+    const training = filteredShifts.filter(s => s.shift_type === 'training');
+    const floaters = filteredShifts.filter(s => s.shift_type === 'floater');
+    
+    const uniqueMembers = new Set(filteredShifts.map(s => s.user_id));
+    const totalHours = filteredShifts.reduce((sum, s) => sum + (s.duration_hours || 0), 0);
+    
+    document.getElementById('statTotal').textContent = filteredShifts.length;
+    document.getElementById('statMembers').textContent = uniqueMembers.size;
+    document.getElementById('statOpenHours').textContent = openHours.length;
+    document.getElementById('statTraining').textContent = training.length;
+    document.getElementById('statFloaters').textContent = floaters.length;
+    document.getElementById('statHours').textContent = totalHours.toFixed(0);
+}
+
+// Render calendar
+function renderCalendar() {
+    const body = document.getElementById('calendarBody');
+    body.innerHTML = ''; // Clear first
+    
+    if (filteredShifts.length === 0) {
+        body.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
+        return;
+    }
+    
+    // Get time range
+    let minHour = 24, maxHour = 0;
+    filteredShifts.forEach(shift => {
+        const start = parseInt(shift.start.split(':')[0]);
+        const end = parseInt(shift.end.split(':')[0]);
+        minHour = Math.min(minHour, start);
+        maxHour = Math.max(maxHour, end);
+    });
+    
+    // Ensure reasonable range
+    if (minHour > maxHour) {
+        minHour = 9;
+        maxHour = 17;
+    }
+    
+    const totalHours = maxHour - minHour + 1;
+    
+    // Group shifts by day (Mon=0, Sun=6)
+    const shiftsByDay = [[], [], [], [], [], [], []];
+    filteredShifts.forEach(shift => {
+        const date = new Date(shift.date);
+        const jsDay = date.getDay(); // 0=Sun, 6=Sat
+        const dayIndex = jsDay === 0 ? 6 : jsDay - 1; // Convert to Mon=0, Sun=6
+        shiftsByDay[dayIndex].push(shift);
+    });
+    
+    // Create time labels column
+    const timesDiv = document.createElement('div');
+    timesDiv.className = 'gcal-times';
+    for (let h = minHour; h <= maxHour; h++) {
+        const label = document.createElement('div');
+        label.className = 'gcal-time-label';
+        label.textContent = h + ':00';
+        timesDiv.appendChild(label);
+    }
+    body.appendChild(timesDiv);
+    
+    // Create day columns container
+    const columnsDiv = document.createElement('div');
+    columnsDiv.className = 'gcal-columns';
+    
+    // Create each day column
+    for (let d = 0; d < 7; d++) {
+        const dayCol = document.createElement('div');
+        dayCol.className = 'gcal-day-col';
+        dayCol.style.height = (totalHours * HOUR_HEIGHT) + 'px';
+        
+        // Add hour lines
+        for (let h = 0; h < totalHours; h++) {
+            const line = document.createElement('div');
+            line.className = 'gcal-hour-line';
+            dayCol.appendChild(line);
+        }
+        
+        // Layout and add events for this day
+        const dayShifts = shiftsByDay[d];
+        if (dayShifts.length > 0) {
+            const columns = layoutOverlappingEvents(dayShifts);
+            const totalCols = columns.length;
+            
+            columns.forEach((colShifts, colIndex) => {
+                colShifts.forEach(shift => {
+                    const eventEl = createEventElement(shift, colIndex, totalCols, minHour);
+                    dayCol.appendChild(eventEl);
+                });
+            });
+        }
+        
+        columnsDiv.appendChild(dayCol);
+    }
+    
+    body.appendChild(columnsDiv);
+}
+
+// Layout overlapping events into columns
+function layoutOverlappingEvents(shifts) {
+    if (shifts.length === 0) return [];
+    
+    // Sort by start time, then by duration (longer first)
+    const sorted = [...shifts].sort((a, b) => {
+        if (a.start !== b.start) return a.start.localeCompare(b.start);
+        return b.end.localeCompare(a.end);
+    });
+    
+    const columns = [];
+    
+    sorted.forEach(shift => {
+        let placed = false;
+        
+        for (let col of columns) {
+            const overlaps = col.some(s => {
+                return s.start < shift.end && shift.start < s.end;
+            });
+            
+            if (!overlaps) {
+                col.push(shift);
+                placed = true;
+                break;
+            }
+        }
+        
+        if (!placed) {
+            columns.push([shift]);
+        }
+    });
+    
+    return columns;
+}
+
+// Create event DOM element
+function createEventElement(shift, colIndex, totalCols, minHour) {
+    const [startH, startM] = shift.start.split(':').map(Number);
+    const [endH, endM] = shift.end.split(':').map(Number);
+    
+    const top = ((startH - minHour) * 60 + startM);
+    const height = Math.max(20, ((endH * 60 + endM) - (startH * 60 + startM)));
+    
+    const widthPercent = 100 / totalCols;
+    const leftPercent = colIndex * widthPercent;
+    
+    const typeClass = shift.shift_type.replace('_', '-');
+    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
+    
+    // Add team category for training shifts
+    let displayName = name;
+    if (shift.shift_type === 'training' && shift.team) {
+        displayName = name + ' (' + shift.team + ')';
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'gcal-event ' + typeClass;
+    div.style.top = top + 'px';
+    div.style.height = height + 'px';
+    div.style.width = 'calc(' + widthPercent + '% - 4px)';
+    div.style.left = 'calc(' + leftPercent + '% + 2px)';
+    
+    div.innerHTML = '<div class="gcal-event-title">' + displayName + '</div>' +
+                    '<div class="gcal-event-time">' + shift.start + ' – ' + shift.end + '</div>';
+    
+    div.onclick = function() { viewShiftDetails(shift.id); };
+    
+    return div;
+}
+
+// Render list view
+function renderListView() {
+    const content = document.getElementById('listContent');
+    
+    if (filteredShifts.length === 0) {
+        content.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
+        return;
+    }
+    
+    // Group by day
+    const shiftsByDay = [[], [], [], [], [], [], []];
+    filteredShifts.forEach(shift => {
+        const date = new Date(shift.date);
+        const jsDay = date.getDay();
+        const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
+        shiftsByDay[dayIndex].push(shift);
+    });
+    
+    let html = '';
+    
+    shiftsByDay.forEach((dayShifts, dayIndex) => {
+        if (dayShifts.length === 0) return;
+        
+        html += '<div class="list-day">';
+        html += '<div class="list-day-header">';
+        html += '<span>' + DAYS[dayIndex] + '</span>';
+        html += '<span>' + dayShifts.length + ' shift' + (dayShifts.length !== 1 ? 's' : '') + '</span>';
+        html += '</div>';
+        
+        // Group by type
+        const byType = {
+            open_hours: dayShifts.filter(s => s.shift_type === 'open_hours'),
+            training: dayShifts.filter(s => s.shift_type === 'training'),
+            floater: dayShifts.filter(s => s.shift_type === 'floater')
+        };
+        
+        const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
+        const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
+        
+        Object.entries(byType).forEach(([type, shifts]) => {
+            if (shifts.length === 0) return;
+            
+            html += '<div class="list-section">';
+            html += '<div class="list-section-title">' + icons[type] + ' ' + labels[type] + '</div>';
+            
+            shifts.sort((a, b) => a.start.localeCompare(b.start)).forEach(shift => {
+                const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
+                let displayName = name;
+                if (type === 'training' && shift.team) {
+                    displayName = name + ' <span style="opacity:0.8;">(' + shift.team + ')</span>';
+                }
+                html += '<div class="list-item ' + type.replace('_', '-') + '">';
+                html += '<span><strong>' + displayName + '</strong></span>';
+                html += '<span>' + shift.start + ' – ' + shift.end + '</span>';
+                html += '</div>';
+            });
+            
+            html += '</div>';
+        });
+        
+        html += '</div>';
+    });
+    
+    content.innerHTML = html;
+}
+
+// Toggle type filter
+function toggleTypeFilter(type) {
+    const chip = document.querySelector('[data-filter="' + type + '"]');
+    
+    if (activeTypeFilters.has(type)) {
+        activeTypeFilters.delete(type);
+        chip.classList.remove('active');
+    } else {
+        activeTypeFilters.add(type);
+        chip.classList.add('active');
+    }
+    
+    applyFilters();
+}
+
+// User search
+function handleSearch(query) {
+    const dropdown = document.getElementById('userDropdown');
+    
+    if (!query || query.length < 1) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    const matches = allUsers.filter(u => 
+        u.name.toLowerCase().includes(query.toLowerCase()) && 
+        !activeUserFilters.has(u.id)
+    );
+    
+    if (matches.length === 0) {
+        dropdown.innerHTML = '<div class="search-item" style="color: #999;">No matches found</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+    
+    let html = '';
+    matches.forEach(u => {
+        const displayName = u.name.includes('@') ? u.name.split('@')[0] : u.name;
+        const email = u.name.includes('@') ? u.name : '';
+        // Use data attributes and handle click in event listener
+        html += '<div class="search-item user-search-item" data-userid="' + u.id + '" data-username="' + escapeHtml(u.name) + '">';
+        html += displayName;
+        if (email) {
+            html += ' <span style="color: #999; font-size: 0.85rem;">' + email + '</span>';
+        }
+        html += '</div>';
+    });
+    
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
+    
+    // Add click handlers to each search item
+    dropdown.querySelectorAll('.user-search-item').forEach(item => {
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault(); // Prevent blur from firing first
+            const userId = parseInt(this.getAttribute('data-userid'));
+            const userName = this.getAttribute('data-username');
+            console.log('Search item clicked:', userId, userName);
+            addUserFilter(userId, userName);
+        });
+    });
+}
+
+// Helper to escape HTML
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Add user filter
+function addUserFilter(userId, userName) {
+    const intUserId = parseInt(userId);
+    
+    console.log('Adding user filter:', intUserId, userName);
+    
+    if (activeUserFilters.has(intUserId)) {
+        console.log('User already in filter');
+        return;
+    }
+    
+    activeUserFilters.add(intUserId);
+    activeUserNames.set(intUserId, userName);
+    
+    console.log('Active user filters now:', Array.from(activeUserFilters));
+    
+    const displayName = userName.includes('@') ? userName.split('@')[0] : userName;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip active user-chip';
+    chip.id = 'user-chip-' + intUserId;
+    chip.innerHTML = '👤 ' + displayName + ' <span class="remove-btn" data-userid="' + intUserId + '">×</span>';
+    
+    chip.querySelector('.remove-btn').onclick = function(e) {
+        e.stopPropagation();
+        removeUserFilter(parseInt(this.getAttribute('data-userid')));
+    };
+    
+    document.getElementById('filterChips').appendChild(chip);
+    document.getElementById('userSearch').value = '';
+    document.getElementById('userDropdown').style.display = 'none';
+    
+    applyFilters();
+}
+
+// Remove user filter
+function removeUserFilter(userId) {
+    const intUserId = parseInt(userId);
+    console.log('Removing user filter:', intUserId);
+    
+    activeUserFilters.delete(intUserId);
+    activeUserNames.delete(intUserId);
+    const chip = document.getElementById('user-chip-' + intUserId);
+    if (chip) chip.remove();
+    applyFilters();
+}
+
+// Clear all filters
+function clearAllFilters() {
+    // Reset type filters
+    activeTypeFilters = new Set(['open_hours', 'training', 'floater']);
+    document.querySelectorAll('[data-filter]').forEach(chip => chip.classList.add('active'));
+    
+    // Clear user filters
+    activeUserFilters.clear();
+    activeUserNames.clear();
+    document.querySelectorAll('.user-chip').forEach(chip => chip.remove());
+    
+    applyFilters();
+}
+
+// Switch view
+function switchView(view) {
+    currentView = view;
+    
+    document.getElementById('btnCalendarView').classList.toggle('active', view === 'calendar');
+    document.getElementById('btnBlockView').classList.toggle('active', view === 'blocks');
+    document.getElementById('btnListView').classList.toggle('active', view === 'list');
+    
+    document.getElementById('calendarView').style.display = view === 'calendar' ? 'block' : 'none';
+    document.getElementById('blockView').style.display = view === 'blocks' ? 'block' : 'none';
+    document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+    
+    applyFilters();
+}
+
+// Change block interval
+function changeBlockInterval(value) {
+    blockInterval = parseInt(value);
+    if (currentView === 'blocks') {
+        renderBlockView();
+    }
+}
+
+// Render block view
+function renderBlockView() {
+    const content = document.getElementById('blockContent');
+    
+    if (filteredShifts.length === 0) {
+        content.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
+        return;
+    }
+    
+    // Get time range
+    let minHour = 24, maxHour = 0;
+    filteredShifts.forEach(shift => {
+        const start = parseInt(shift.start.split(':')[0]);
+        const end = parseInt(shift.end.split(':')[0]);
+        minHour = Math.min(minHour, start);
+        maxHour = Math.max(maxHour, end);
+    });
+    
+    // Group shifts by day
+    const shiftsByDay = [[], [], [], [], [], [], []];
+    filteredShifts.forEach(shift => {
+        const date = new Date(shift.date);
+        const jsDay = date.getDay();
+        const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
+        shiftsByDay[dayIndex].push(shift);
+    });
+    
+    // Generate time blocks
+    const blocks = [];
+    for (let h = minHour; h < maxHour; h++) {
+        for (let m = 0; m < 60; m += blockInterval) {
+            const startMins = h * 60 + m;
+            const endMins = startMins + blockInterval;
+            if (endMins <= maxHour * 60) {
+                blocks.push({
+                    start: formatTime(h, m),
+                    end: formatTime(Math.floor(endMins / 60), endMins % 60),
+                    startMins: startMins,
+                    endMins: endMins
+                });
+            }
+        }
+    }
+    
+    // Build table
+    let html = '<table class="block-table">';
+    html += '<thead><tr><th>Time Block</th>';
+    DAYS.forEach(day => {
+        html += '<th>' + day + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    
+    blocks.forEach(block => {
+        html += '<tr>';
+        html += '<td class="block-time">' + block.start + ' – ' + block.end + '</td>';
+        
+        for (let d = 0; d < 7; d++) {
+            const dayShifts = shiftsByDay[d];
+            const inBlock = dayShifts.filter(shift => {
+                const [startH, startM] = shift.start.split(':').map(Number);
+                const [endH, endM] = shift.end.split(':').map(Number);
+                const shiftStart = startH * 60 + startM;
+                const shiftEnd = endH * 60 + endM;
+                // Shift overlaps with block if it starts before block ends and ends after block starts
+                return shiftStart < block.endMins && shiftEnd > block.startMins;
+            });
+            
+            if (inBlock.length === 0) {
+                html += '<td class="block-cell empty">-</td>';
+            } else {
+                html += '<td class="block-cell">';
+                inBlock.forEach(shift => {
+                    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
+                    const typeClass = shift.shift_type.replace('_', '-');
+                    let label = name;
+                    if (shift.shift_type === 'training' && shift.team) {
+                        label += ' <span style="opacity:0.7;">(' + shift.team + ')</span>';
+                    }
+                    html += '<div class="block-person ' + typeClass + '" data-shift-id="' + shift.id + '" onclick="viewShiftDetails(' + shift.id + ')">' + label + '</div>';
+                });
+                html += '</td>';
+            }
+        }
+        
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    content.innerHTML = html;
+}
+
+// Format time helper
+function formatTime(h, m) {
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+function viewShiftDetails(shiftId) {
+    // Find the shift in our data
+    const shift = allShifts.find(s => s.id === shiftId);
+    
+    if (!shift) {
+        alert('Shift not found');
+        return;
+    }
+    
+    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
+    const email = shift.user.includes('@') ? shift.user : '';
+    const typeClass = shift.shift_type.replace('_', '-');
+    const typeLabels = {
+        'open_hours': 'Open Hours',
+        'training': 'Training',
+        'floater': 'Floater'
+    };
+    
+    // Format date
+    const shiftDate = new Date(shift.date);
+    const dayName = DAYS[(shiftDate.getDay() + 6) % 7];
+    const dateFormatted = shiftDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    });
+    
+    // Build modal content
+    let html = '';
+    
+    // Name
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Name</div>';
+    html += '<div class="detail-value"><strong>' + name + '</strong></div>';
+    html += '</div>';
+    
+    // Email
+    if (email) {
+        html += '<div class="detail-row">';
+        html += '<div class="detail-label">Email</div>';
+        html += '<div class="detail-value">' + email + '</div>';
+        html += '</div>';
+    }
+    
+    // Shift Type
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Shift Type</div>';
+    html += '<div class="detail-value"><span class="shift-type-badge ' + typeClass + '">' + typeLabels[shift.shift_type] + '</span></div>';
+    html += '</div>';
+    
+    // Team/Category (for training)
+    if (shift.team) {
+        html += '<div class="detail-row">';
+        html += '<div class="detail-label">Team</div>';
+        html += '<div class="detail-value">' + shift.team + '</div>';
+        html += '</div>';
+    }
+    
+    // Location (for open hours)
+    if (shift.location) {
+        html += '<div class="detail-row">';
+        html += '<div class="detail-label">Location</div>';
+        html += '<div class="detail-value">' + shift.location + '</div>';
+        html += '</div>';
+    }
+    
+    // Day
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Day</div>';
+    html += '<div class="detail-value">' + dayName + '</div>';
+    html += '</div>';
+    
+    // Date
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Date</div>';
+    html += '<div class="detail-value">' + dateFormatted + '</div>';
+    html += '</div>';
+    
+    // Time
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Time</div>';
+    html += '<div class="detail-value">' + shift.start + ' – ' + shift.end + '</div>';
+    html += '</div>';
+    
+    // Duration
+    html += '<div class="detail-row">';
+    html += '<div class="detail-label">Duration</div>';
+    html += '<div class="detail-value">' + (shift.duration_hours || 0).toFixed(1) + ' hours</div>';
+    html += '</div>';
+    
+    // Status
+    if (shift.status) {
+        html += '<div class="detail-row">';
+        html += '<div class="detail-label">Status</div>';
+        html += '<div class="detail-value"><span class="status-badge ' + shift.status + '">' + capitalizeFirst(shift.status) + '</span></div>';
+        html += '</div>';
+    }
+    
+    // Update modal
+    document.getElementById('modalTitle').textContent = name + "'s Shift";
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('shiftModal').style.display = 'flex';
+}
+
+function closeShiftModal() {
+    document.getElementById('shiftModal').style.display = 'none';
+}
+
+function capitalizeFirst(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'shiftModal') {
+        closeShiftModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeShiftModal();
+    }
+});
+
+function exportSchedule() {
+    alert('Export functionality coming soon!');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('userDropdown');
+    const search = document.getElementById('userSearch');
+    if (dropdown && search && !search.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('semesterSelect');
+    if (select && select.value) {
+        loadSchedule();
+    }
+});
+</script>
+
+{% endblock %}

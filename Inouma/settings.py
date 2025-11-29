@@ -35,9 +35,8 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
 
-    # Local apps
+    # Accounts
     'accounts',
-    'schedule',
 
     # Machines
     'machines',
@@ -47,6 +46,9 @@ INSTALLED_APPS = [
 
     # Scheduling
     'scheduling',
+
+    # Team Members App
+    'team',
   
 ]
 
@@ -177,3 +179,18 @@ DEFAULT_FROM_EMAIL = "no-reply@inouma.local"
 # Media files (user uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# For development (prints to console):
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# For production with SMTP:
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # or your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'schmidln@bc.edu' ## the email used to send emails
+EMAIL_HOST_PASSWORD = 'ayvw kfhu tvrj ynqs' ## your app password
+## set app password here: https://myaccount.google.com/apppasswords
+DEFAULT_FROM_EMAIL = 'schmidln@bc.edu' ## the email displayed to recipients
+

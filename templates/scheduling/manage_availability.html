@@ -1,0 +1,1772 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Availability & Hours - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Availability & Hours</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+/* Search with autocomplete */
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+    align-self: flex-end;
+}
+
+.search-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    background: white;
+    height: 42px;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--sunglow);
+    box-shadow: 0 0 0 2px rgba(252, 201, 49, 0.2);
+}
+
+.search-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--sunglow);
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.search-tag button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--gunmetal);
+    padding: 0;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 150px;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    padding: 0.25rem;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+}
+
+.search-dropdown.show {
+    display: block;
+}
+
+.search-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.search-dropdown-item:hover {
+    background: #f8f9fa;
+}
+
+.search-dropdown-item.selected {
+    background: #fff8e1;
+}
+
+.search-dropdown-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--timberwolf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.search-dropdown-info {
+    flex: 1;
+}
+
+.search-dropdown-name {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.search-dropdown-email {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Filter row */
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.filter-group label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.filter-group select,
+.filter-group input[type="number"] {
+    height: 42px;
+    padding: 0.5rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.filter-group .btn {
+    height: 42px;
+}
+
+/* Advanced filters */
+.advanced-filters {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: none;
+}
+
+.advanced-filters.show {
+    display: block;
+}
+
+.filter-section {
+    margin-bottom: 1rem;
+}
+
+.filter-section:last-child {
+    margin-bottom: 0;
+}
+
+.filter-section-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.day-time-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.day-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.day-filter:hover {
+    border-color: var(--gunmetal);
+}
+
+.day-filter.active {
+    background: var(--sunglow);
+    border-color: var(--gunmetal);
+}
+
+.day-filter input {
+    display: none;
+}
+
+/* Team grid */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1rem;
+}
+
+.team-card {
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.team-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.team-card-header {
+    padding: 1rem;
+    background: #fafafa;
+    border-bottom: 1px solid var(--timberwolf);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.team-card-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--timberwolf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.team-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.team-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.team-card-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+}
+
+.team-card-email {
+    font-size: 0.85rem;
+    color: #666;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-card-body {
+    padding: 1rem;
+}
+
+.team-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.team-card-row:last-child {
+    border-bottom: none;
+}
+
+.team-card-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.team-card-value {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.hours-bar {
+    width: 100px;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-right: 0.5rem;
+}
+
+.hours-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.hours-display {
+    display: flex;
+    align-items: center;
+}
+
+.avail-mini {
+    display: flex;
+    gap: 2px;
+}
+
+.avail-day {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.avail-day.available {
+    background: var(--keppel);
+    color: white;
+}
+
+.avail-day.partial {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.avail-day.unavailable {
+    background: #e0e0e0;
+    color: #999;
+}
+
+.role-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.role-badge.trainer {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.role-badge.team-lead {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.role-badge.team-member {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.team-tag {
+    background: #f0f0f0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+}
+
+.modal-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--timberwolf);
+    margin-bottom: 1.5rem;
+}
+
+.modal-tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+}
+
+.modal-tab:hover {
+    color: var(--gunmetal);
+}
+
+.modal-tab.active {
+    color: var(--gunmetal);
+    border-bottom-color: var(--sunglow);
+    font-weight: 500;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--timberwolf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info h3 {
+    margin: 0 0 0.25rem 0;
+    color: var(--gunmetal);
+}
+
+.profile-info p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Availability editor */
+.avail-day-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.avail-day-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.avail-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.avail-day-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.avail-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-left: 1rem;
+}
+
+.avail-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.avail-slot-row input[type="time"] {
+    padding: 0.4rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.btn-remove-slot {
+    background: none;
+    border: none;
+    color: var(--cinnabar);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.btn-add-slot {
+    background: none;
+    border: 1px dashed var(--timberwolf);
+    color: #666;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-add-slot:hover {
+    border-color: var(--gunmetal);
+    color: var(--gunmetal);
+}
+
+.no-slots {
+    color: #999;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Stats */
+.stats-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 120px;
+}
+
+.stat-box-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.stat-box-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.results-count {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+/* Availability filter slots */
+.avail-filter-group {
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.avail-filter-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.avail-filter-group-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+    font-size: 0.95rem;
+}
+
+.avail-filter-remove {
+    background: none;
+    border: none;
+    color: var(--cinnabar);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.avail-filter-remove:hover {
+    background: #ffebee;
+    border-radius: 4px;
+}
+
+/* Day selection checkboxes */
+.day-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.day-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.75rem;
+    background: #f5f5f5;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.day-checkbox-label:hover {
+    background: #e8e8e8;
+}
+
+.day-checkbox-label.checked {
+    background: var(--sunglow);
+    border-color: var(--gunmetal);
+}
+
+.day-checkbox-label input {
+    display: none;
+}
+
+/* Time slots within a filter group */
+.time-slots-section {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 1rem;
+}
+
+.time-slots-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.time-slots-title {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.time-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #fafafa;
+    border-radius: 4px;
+}
+
+.time-slot-row input[type="time"] {
+    padding: 0.4rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.time-slot-remove {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.time-slot-remove:hover {
+    color: var(--cinnabar);
+}
+
+.no-filters-msg {
+    color: #999;
+    font-style: italic;
+    font-size: 0.9rem;
+    padding: 1rem;
+    text-align: center;
+    background: #fafafa;
+    border-radius: 8px;
+}
+
+.filter-mode-info {
+    font-size: 0.8rem;
+    color: #666;
+    background: #f0f7ff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; color: var(--gunmetal);">📋 Availability & Hours</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage team member availability, hours, and team assignments</p>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 250px;">
+            <select id="semesterSelect" class="form-control" onchange="loadTeamData()">
+                <option value="">-- Select Semester --</option>
+                {% for semester in semesters %}
+                <option value="{{ semester.id }}" {% if semester.is_active %}selected{% endif %}>
+                    {{ semester.name }} {% if semester.is_active %}(Active){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="statsCard" style="display: none;">
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-box-value" id="statTotalMembers">0</div>
+            <div class="stat-box-label">Team Members</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="statTrainers">0</div>
+            <div class="stat-box-label">Trainers</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="statTeamLeads">0</div>
+            <div class="stat-box-label">Team Leads</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="statTotalHours">0</div>
+            <div class="stat-box-label">Total Hours/Week</div>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="mainContent" style="display: none;">
+    <!-- Filters -->
+    <div class="filter-row">
+        <!-- Search with autocomplete and multi-select -->
+        <div class="search-container">
+            <div class="search-input-wrapper" id="searchWrapper">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search by name or email..." 
+                       oninput="handleSearchInput()" onfocus="showSearchDropdown()" autocomplete="off">
+            </div>
+            <div class="search-dropdown" id="searchDropdown"></div>
+        </div>
+        
+        <div class="filter-group">
+            <label>Role</label>
+            <select id="filterRole" class="form-control" onchange="filterTeam()">
+                <option value="all">All Roles</option>
+                <option value="trainer">Trainers</option>
+                <option value="team_lead">Team Leads</option>
+                <option value="member">Non-Trainers</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Team</label>
+            <select id="filterTeam" class="form-control" onchange="filterTeam()">
+                <option value="all">All Teams</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Min Hrs/Week</label>
+            <input type="number" id="filterMinHours" class="form-control" placeholder="0" min="0" max="40" 
+                   style="width: 90px;" oninput="filterTeam()">
+        </div>
+        
+        <button class="btn btn-secondary" style="height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;" onclick="toggleAdvancedFilters()">
+            🔧 Advanced
+        </button>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="advanced-filters" id="advancedFilters">
+        <div class="filter-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div class="filter-section-title" style="margin: 0;">Filter by Availability</div>
+                <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;" onclick="clearAllAvailabilityFilters()">
+                    Clear All Filters
+                </button>
+            </div>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
+                Find team members available during specific times. Select days, add time slots, or both. Members must match ALL filter groups.
+            </p>
+            
+            <div id="availabilityFilterGroups">
+                <!-- Filter groups added dynamically -->
+            </div>
+            
+            <button class="btn btn-primary" style="margin-top: 1rem;" onclick="addAvailabilityFilterGroup()">
+                + Add Availability Filter
+            </button>
+        </div>
+    </div>
+    
+    <div class="results-count" id="resultsCount"></div>
+    
+    <div id="teamGrid" class="team-grid"></div>
+</div>
+
+<div class="card" id="emptyState" style="display: none;">
+    <div class="empty-state">
+        <div class="empty-state-icon">👥</div>
+        <h2>No Team Members Found</h2>
+        <p>Team members are users with the "Team Member" or "Staff" role.<br>
+        Add them through User Management.</p>
+    </div>
+</div>
+
+<div class="card" id="selectSemesterState">
+    <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <h2>Select a Semester</h2>
+        <p>Choose a semester from the dropdown above to manage team availability.</p>
+    </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div id="memberModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Edit Team Member</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editUserId">
+            
+            <div class="profile-header">
+                <div class="profile-avatar" id="modalAvatar">👤</div>
+                <div class="profile-info">
+                    <h3 id="modalUserName">User Name</h3>
+                    <p id="modalUserEmail">email@example.com</p>
+                </div>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchModalTab('general')">General</button>
+                <button class="modal-tab" onclick="switchModalTab('availability')">Availability</button>
+            </div>
+            
+            <!-- General Tab -->
+            <div id="tab-general" class="tab-panel active">
+                <div class="form-group">
+                    <label>Role Flags</label>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="memberIsTeamLead" onchange="handleTeamLeadChange()">
+                            ⭐ Team Lead <span style="font-size: 0.85rem; color: #666;">(automatically grants trainer status)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="memberIsTrainer">
+                            🎓 Trainer <span style="font-size: 0.85rem; color: #666;">(can conduct training sessions)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Team Assignment (Machine Category)</label>
+                    <select id="memberTeam" class="form-control">
+                        <option value="">-- No Team --</option>
+                    </select>
+                    <p style="font-size: 0.85rem; color: #666; margin: 0.25rem 0 0;">
+                        Trainers specialize in a machine category/team
+                    </p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Weekly Hours (Min)</label>
+                        <input type="number" id="memberMinHours" class="form-control" value="0" min="0" max="40">
+                    </div>
+                    <div class="form-group">
+                        <label>Weekly Hours (Max)</label>
+                        <input type="number" id="memberMaxHours" class="form-control" value="15" min="0" max="40">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Shift Preference</label>
+                    <select id="memberShiftPref" class="form-control">
+                        <option value="no_preference">No Preference</option>
+                        <option value="few_long">Prefer Few Long Shifts</option>
+                        <option value="many_short">Prefer Many Short Shifts</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Availability Tab -->
+            <div id="tab-availability" class="tab-panel">
+                <p style="color: #666; margin-bottom: 1rem;">
+                    Set the time slots this team member is available to work each day.
+                </p>
+                <div id="availabilityEditor"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveMember()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const CATEGORIES = [
+    {id: 1, name: 'Laser'},
+    {id: 2, name: 'Vinyl'},
+    {id: 3, name: 'Woodworking'},
+    {id: 4, name: 'Textile'},
+    {id: 5, name: 'Metalworking'},
+    {id: 6, name: '3D Printing'},
+    {id: 7, name: 'Electronics'}
+];
+
+let currentSemester = null;
+let teamMembers = [];
+let filteredMembers = [];
+let selectedUsers = []; // Multi-select search
+let availabilityFilterGroups = []; // Multiple filter groups, each with days + time slots
+let filterGroupIdCounter = 0;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Populate team filter with categories
+    const teamSelect = document.getElementById('filterTeam');
+    CATEGORIES.forEach(cat => {
+        teamSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('searchDropdown').classList.remove('show');
+        }
+    });
+    
+    // Initialize availability filters display
+    renderAvailabilityFilterGroups();
+    
+    const select = document.getElementById('semesterSelect');
+    if (select && select.value) {
+        loadTeamData();
+    }
+});
+
+function loadTeamData() {
+    const semesterId = document.getElementById('semesterSelect').value;
+    
+    if (!semesterId) {
+        document.getElementById('selectSemesterState').style.display = 'block';
+        document.getElementById('statsCard').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        return;
+    }
+    
+    currentSemester = semesterId;
+    
+    fetch(`/scheduling/api/team-members/?semester_id=${semesterId}`)
+        .then(r => r.ok ? r.json() : { members: [] })
+        .then(data => {
+            teamMembers = data.members || [];
+            
+            document.getElementById('selectSemesterState').style.display = 'none';
+            
+            if (teamMembers.length === 0) {
+                document.getElementById('statsCard').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            } else {
+                updateStats();
+                filterTeam();
+                document.getElementById('statsCard').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'block';
+                document.getElementById('emptyState').style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error loading team data:', err);
+            document.getElementById('selectSemesterState').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        });
+}
+
+function updateStats() {
+    // Team leads are automatically trainers
+    const trainers = teamMembers.filter(m => m.is_trainer || m.is_team_lead);
+    const teamLeads = teamMembers.filter(m => m.is_team_lead);
+    const totalHours = teamMembers.reduce((sum, m) => sum + (m.max_weekly_hours || 0), 0);
+    
+    document.getElementById('statTotalMembers').textContent = teamMembers.length;
+    document.getElementById('statTrainers').textContent = trainers.length;
+    document.getElementById('statTeamLeads').textContent = teamLeads.length;
+    document.getElementById('statTotalHours').textContent = totalHours;
+}
+
+// Search with autocomplete
+function handleSearchInput() {
+    const input = document.getElementById('searchInput');
+    const query = input.value.toLowerCase().trim();
+    const dropdown = document.getElementById('searchDropdown');
+    
+    if (query.length < 1) {
+        dropdown.classList.remove('show');
+        filterTeam();
+        return;
+    }
+    
+    // Filter members matching query
+    const matches = teamMembers.filter(m => 
+        (m.name.toLowerCase().includes(query) || m.email.toLowerCase().includes(query)) &&
+        !selectedUsers.some(s => s.user_id === m.user_id)
+    ).slice(0, 8);
+    
+    if (matches.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 1rem; color: #666;">No matches found</div>';
+    } else {
+        dropdown.innerHTML = matches.map(m => {
+            const initials = m.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            return `
+            <div class="search-dropdown-item" onclick="selectUser('${m.user_id}')">
+                <div class="search-dropdown-avatar">${initials}</div>
+                <div class="search-dropdown-info">
+                    <div class="search-dropdown-name">${m.name}</div>
+                    <div class="search-dropdown-email">${m.email}</div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+    
+    dropdown.classList.add('show');
+}
+
+function showSearchDropdown() {
+    const input = document.getElementById('searchInput');
+    if (input.value.length >= 1) {
+        handleSearchInput();
+    }
+}
+
+function selectUser(userId) {
+    const member = teamMembers.find(m => m.user_id === userId);
+    if (!member || selectedUsers.some(s => s.user_id === userId)) return;
+    
+    selectedUsers.push(member);
+    renderSelectedUsers();
+    
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchDropdown').classList.remove('show');
+    filterTeam();
+}
+
+function removeSelectedUser(userId) {
+    selectedUsers = selectedUsers.filter(s => s.user_id !== userId);
+    renderSelectedUsers();
+    filterTeam();
+}
+
+function renderSelectedUsers() {
+    const wrapper = document.getElementById('searchWrapper');
+    const input = document.getElementById('searchInput');
+    
+    // Remove existing tags
+    wrapper.querySelectorAll('.search-tag').forEach(t => t.remove());
+    
+    // Add tags before input
+    selectedUsers.forEach(user => {
+        const tag = document.createElement('span');
+        tag.className = 'search-tag';
+        tag.innerHTML = `${user.name} <button onclick="removeSelectedUser('${user.user_id}')">&times;</button>`;
+        wrapper.insertBefore(tag, input);
+    });
+}
+
+function toggleAdvancedFilters() {
+    document.getElementById('advancedFilters').classList.toggle('show');
+}
+
+// Availability filter group management
+function addAvailabilityFilterGroup() {
+    const newGroup = {
+        id: filterGroupIdCounter++,
+        days: [], // Array of day indices (0-6)
+        timeSlots: [] // Array of {start, end}
+    };
+    availabilityFilterGroups.push(newGroup);
+    renderAvailabilityFilterGroups();
+}
+
+function removeAvailabilityFilterGroup(groupId) {
+    availabilityFilterGroups = availabilityFilterGroups.filter(g => g.id !== groupId);
+    renderAvailabilityFilterGroups();
+    filterTeam();
+}
+
+function clearAllAvailabilityFilters() {
+    availabilityFilterGroups = [];
+    renderAvailabilityFilterGroups();
+    filterTeam();
+}
+
+function toggleDayInGroup(groupId, dayIndex) {
+    const group = availabilityFilterGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    const idx = group.days.indexOf(dayIndex);
+    if (idx === -1) {
+        group.days.push(dayIndex);
+        group.days.sort((a, b) => a - b);
+    } else {
+        group.days.splice(idx, 1);
+    }
+    
+    renderAvailabilityFilterGroups();
+    filterTeam();
+}
+
+function addTimeSlotToGroup(groupId) {
+    const group = availabilityFilterGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    group.timeSlots.push({ start: '09:00', end: '17:00' });
+    renderAvailabilityFilterGroups();
+    filterTeam();
+}
+
+function removeTimeSlotFromGroup(groupId, slotIndex) {
+    const group = availabilityFilterGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    group.timeSlots.splice(slotIndex, 1);
+    renderAvailabilityFilterGroups();
+    filterTeam();
+}
+
+function updateTimeSlotInGroup(groupId, slotIndex, field, value) {
+    const group = availabilityFilterGroups.find(g => g.id === groupId);
+    if (!group || !group.timeSlots[slotIndex]) return;
+    
+    group.timeSlots[slotIndex][field] = value;
+    filterTeam();
+}
+
+function renderAvailabilityFilterGroups() {
+    const container = document.getElementById('availabilityFilterGroups');
+    
+    if (availabilityFilterGroups.length === 0) {
+        container.innerHTML = `
+            <div class="no-filters-msg">
+                No availability filters set.<br>
+                Click "Add Availability Filter" to find members available at specific times.
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = availabilityFilterGroups.map((group, groupIndex) => {
+        // Day checkboxes - using divs with data attributes
+        const dayCheckboxes = DAYS.map((day, dayIdx) => {
+            const shortDay = day.slice(0, 3);
+            const isChecked = group.days.includes(dayIdx);
+            return `
+                <div class="day-checkbox-label ${isChecked ? 'checked' : ''}" 
+                     data-group-id="${group.id}" data-day-idx="${dayIdx}">
+                    ${shortDay}
+                </div>
+            `;
+        }).join('');
+        
+        // Time slots
+        const timeSlotsHtml = group.timeSlots.length === 0 ? 
+            '<div style="color: #999; font-size: 0.85rem; padding: 0.5rem 0;">No time filters (will match any time on selected days)</div>' :
+            group.timeSlots.map((slot, slotIdx) => `
+                <div class="time-slot-row">
+                    <input type="time" value="${slot.start}" 
+                           onchange="updateTimeSlotInGroup(${group.id}, ${slotIdx}, 'start', this.value)">
+                    <span>to</span>
+                    <input type="time" value="${slot.end}" 
+                           onchange="updateTimeSlotInGroup(${group.id}, ${slotIdx}, 'end', this.value)">
+                    <button type="button" class="time-slot-remove" onclick="removeTimeSlotFromGroup(${group.id}, ${slotIdx})" title="Remove">×</button>
+                </div>
+            `).join('');
+        
+        // Filter mode description
+        let filterMode = '';
+        if (group.days.length > 0 && group.timeSlots.length > 0) {
+            filterMode = `Filtering: Available on <strong>${group.days.map(d => DAYS[d].slice(0,3)).join(', ')}</strong> during <strong>all</strong> specified time slots`;
+        } else if (group.days.length > 0) {
+            filterMode = `Filtering: Available on <strong>${group.days.map(d => DAYS[d].slice(0,3)).join(', ')}</strong> (any time)`;
+        } else if (group.timeSlots.length > 0) {
+            filterMode = `Filtering: Available during specified time slots on <strong>any day</strong>`;
+        } else {
+            filterMode = `<span style="color: #999;">Select days and/or add time slots to filter</span>`;
+        }
+        
+        return `
+            <div class="avail-filter-group">
+                <div class="avail-filter-group-header">
+                    <span class="avail-filter-group-title">Filter ${groupIndex + 1}</span>
+                    <button class="avail-filter-remove" onclick="removeAvailabilityFilterGroup(${group.id})" title="Remove filter">×</button>
+                </div>
+                
+                <div style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #666;">Select days:</div>
+                <div class="day-checkboxes">
+                    ${dayCheckboxes}
+                </div>
+                
+                <div class="time-slots-section">
+                    <div class="time-slots-header">
+                        <span class="time-slots-title">Time slots:</span>
+                        <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" 
+                                onclick="addTimeSlotToGroup(${group.id})">+ Add Time</button>
+                    </div>
+                    ${timeSlotsHtml}
+                </div>
+                
+                <div class="filter-mode-info">
+                    ${filterMode}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click event listeners to day checkboxes using event delegation
+    container.querySelectorAll('.day-checkbox-label').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const groupId = parseInt(this.dataset.groupId);
+            const dayIdx = parseInt(this.dataset.dayIdx);
+            toggleDayInGroup(groupId, dayIdx);
+        });
+    });
+}
+
+function filterTeam() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+    const roleFilter = document.getElementById('filterRole').value;
+    const teamFilter = document.getElementById('filterTeam').value;
+    const minHoursFilter = parseInt(document.getElementById('filterMinHours').value) || 0;
+    
+    filteredMembers = teamMembers.filter(m => {
+        // If specific users selected, only show those
+        if (selectedUsers.length > 0) {
+            if (!selectedUsers.some(s => s.user_id === m.user_id)) return false;
+        } else if (searchText) {
+            // Otherwise filter by search text
+            if (!m.name.toLowerCase().includes(searchText) && !m.email.toLowerCase().includes(searchText)) {
+                return false;
+            }
+        }
+        
+        // Role filter (team leads are automatically trainers)
+        const isTrainer = m.is_trainer || m.is_team_lead;
+        if (roleFilter === 'trainer' && !isTrainer) return false;
+        if (roleFilter === 'team_lead' && !m.is_team_lead) return false;
+        if (roleFilter === 'member' && isTrainer) return false;
+        
+        // Team filter
+        if (teamFilter !== 'all' && m.team !== teamFilter) return false;
+        
+        // Hours filter
+        if (minHoursFilter > 0 && m.max_weekly_hours < minHoursFilter) return false;
+        
+        // Availability filters - must match ALL filter groups
+        if (availabilityFilterGroups.length > 0) {
+            const matchesAllGroups = availabilityFilterGroups.every(group => {
+                // Skip empty groups (no days and no time slots)
+                if (group.days.length === 0 && group.timeSlots.length === 0) return true;
+                
+                // Case 1: Days only (no time slots) - member must have ANY availability on ALL selected days
+                if (group.days.length > 0 && group.timeSlots.length === 0) {
+                    return group.days.every(dayIdx => {
+                        const slots = m.availability ? m.availability[dayIdx] : [];
+                        return slots && slots.length > 0;
+                    });
+                }
+                
+                // Case 2: Time slots only (no days) - member must have availability covering the time slots on ANY day
+                if (group.days.length === 0 && group.timeSlots.length > 0) {
+                    // Check if there's at least one day where all time slots are covered
+                    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                        const memberSlots = m.availability ? m.availability[dayIdx] : [];
+                        if (!memberSlots || memberSlots.length === 0) continue;
+                        
+                        const allSlotsCovered = group.timeSlots.every(filterSlot => {
+                            const filterStart = parseTime(filterSlot.start);
+                            const filterEnd = parseTime(filterSlot.end);
+                            
+                            return memberSlots.some(memberSlot => {
+                                const memberStart = parseTime(memberSlot.start);
+                                const memberEnd = parseTime(memberSlot.end);
+                                return memberStart <= filterStart && memberEnd >= filterEnd;
+                            });
+                        });
+                        
+                        if (allSlotsCovered) return true;
+                    }
+                    return false;
+                }
+                
+                // Case 3: Both days AND time slots - member must cover all time slots on ALL selected days
+                return group.days.every(dayIdx => {
+                    const memberSlots = m.availability ? m.availability[dayIdx] : [];
+                    if (!memberSlots || memberSlots.length === 0) return false;
+                    
+                    return group.timeSlots.every(filterSlot => {
+                        const filterStart = parseTime(filterSlot.start);
+                        const filterEnd = parseTime(filterSlot.end);
+                        
+                        return memberSlots.some(memberSlot => {
+                            const memberStart = parseTime(memberSlot.start);
+                            const memberEnd = parseTime(memberSlot.end);
+                            return memberStart <= filterStart && memberEnd >= filterEnd;
+                        });
+                    });
+                });
+            });
+            
+            if (!matchesAllGroups) return false;
+        }
+        
+        return true;
+    });
+    
+    // Update results count with filter details
+    let filterDetails = [];
+    const activeFilterGroups = availabilityFilterGroups.filter(g => g.days.length > 0 || g.timeSlots.length > 0);
+    if (activeFilterGroups.length > 0) {
+        filterDetails.push(`${activeFilterGroups.length} availability filter${activeFilterGroups.length > 1 ? 's' : ''}`);
+    }
+    if (minHoursFilter > 0) {
+        filterDetails.push(`≥${minHoursFilter}h/wk`);
+    }
+    
+    let countText = `Showing ${filteredMembers.length} of ${teamMembers.length} team members`;
+    if (filterDetails.length > 0) {
+        countText += ` (${filterDetails.join(', ')})`;
+    }
+    document.getElementById('resultsCount').textContent = countText;
+    
+    renderTeamGrid();
+}
+
+function parseTime(timeStr) {
+    if (!timeStr) return 0;
+    const [hours, mins] = timeStr.split(':').map(Number);
+    return hours * 60 + (mins || 0);
+}
+
+function renderTeamGrid() {
+    const container = document.getElementById('teamGrid');
+    
+    if (filteredMembers.length === 0) {
+        container.innerHTML = '<p style="color: #666; grid-column: 1/-1; text-align: center; padding: 2rem;">No team members match your filters</p>';
+        return;
+    }
+    
+    let html = '';
+    filteredMembers.forEach(member => {
+        const hoursPercent = member.max_weekly_hours > 0 ? 
+            Math.min(100, (member.scheduled_hours || 0) / member.max_weekly_hours * 100) : 0;
+        const hoursColor = hoursPercent >= 100 ? 'var(--keppel)' : 
+                          hoursPercent >= 75 ? 'var(--sunglow)' : '#2196F3';
+        
+        const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        
+        // Role badges - team leads are automatically trainers
+        let badges = '';
+        if (member.is_team_lead) {
+            badges += '<span class="role-badge team-lead">⭐ Lead</span>';
+            badges += '<span class="role-badge trainer">🎓 Trainer</span>';
+        } else if (member.is_trainer) {
+            badges += '<span class="role-badge trainer">🎓 Trainer</span>';
+        } else {
+            badges += '<span class="role-badge team-member">👤 Member</span>';
+        }
+        
+        html += `
+        <div class="team-card">
+            <div class="team-card-header">
+                <div class="team-card-avatar">
+                    ${member.profile_picture ? 
+                        `<img src="${member.profile_picture}" alt="${member.name}">` : 
+                        initials}
+                </div>
+                <div class="team-card-info">
+                    <div class="team-card-name">${member.name}</div>
+                    <div class="team-card-email">${member.email}</div>
+                </div>
+                <div class="role-badges">${badges}</div>
+            </div>
+            <div class="team-card-body">
+                ${member.team ? `
+                <div class="team-card-row">
+                    <span class="team-card-label">Team</span>
+                    <span class="team-tag">${member.team}</span>
+                </div>
+                ` : ''}
+                <div class="team-card-row">
+                    <span class="team-card-label">Weekly Hours</span>
+                    <div class="hours-display">
+                        <div class="hours-bar">
+                            <div class="hours-bar-fill" style="width: ${hoursPercent}%; background: ${hoursColor};"></div>
+                        </div>
+                        <span class="team-card-value">${member.min_weekly_hours || 0}-${member.max_weekly_hours || 0}h</span>
+                    </div>
+                </div>
+                <div class="team-card-row">
+                    <span class="team-card-label">Availability</span>
+                    <div class="avail-mini">
+                        ${renderMiniAvailability(member.availability)}
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; text-align: right;">
+                    <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem;" onclick="editMember('${member.user_id}')">
+                        Edit
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderMiniAvailability(availability) {
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    
+    return dayLabels.map((label, index) => {
+        const slots = availability ? availability[index] : [];
+        let status = 'unavailable';
+        
+        if (slots && slots.length > 0) {
+            let totalMinutes = 0;
+            slots.forEach(slot => {
+                const start = parseTime(slot.start);
+                const end = parseTime(slot.end);
+                totalMinutes += (end - start);
+            });
+            status = totalMinutes >= 360 ? 'available' : 'partial';
+        }
+        
+        return `<div class="avail-day ${status}">${label}</div>`;
+    }).join('');
+}
+
+function editMember(userId) {
+    const member = teamMembers.find(m => m.user_id === userId);
+    if (!member) return;
+    
+    document.getElementById('modalTitle').textContent = 'Edit Team Member';
+    document.getElementById('editUserId').value = member.user_id;
+    
+    const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('modalAvatar').innerHTML = member.profile_picture ? 
+        `<img src="${member.profile_picture}" alt="${member.name}">` : initials;
+    document.getElementById('modalUserName').textContent = member.name;
+    document.getElementById('modalUserEmail').textContent = member.email;
+    
+    // Team lead automatically means trainer
+    document.getElementById('memberIsTeamLead').checked = member.is_team_lead;
+    document.getElementById('memberIsTrainer').checked = member.is_trainer || member.is_team_lead;
+    if (member.is_team_lead) {
+        document.getElementById('memberIsTrainer').disabled = true;
+    } else {
+        document.getElementById('memberIsTrainer').disabled = false;
+    }
+    
+    document.getElementById('memberMinHours').value = member.min_weekly_hours || 0;
+    document.getElementById('memberMaxHours').value = member.max_weekly_hours || 15;
+    document.getElementById('memberShiftPref').value = member.shift_preference || 'no_preference';
+    
+    // Populate team dropdown
+    const teamSelect = document.getElementById('memberTeam');
+    teamSelect.innerHTML = '<option value="">-- No Team --</option>';
+    CATEGORIES.forEach(cat => {
+        teamSelect.innerHTML += `<option value="${cat.name}" ${member.team === cat.name ? 'selected' : ''}>${cat.name}</option>`;
+    });
+    
+    renderAvailabilityEditor(member.availability);
+    switchModalTab('general');
+    
+    document.getElementById('memberModal').style.display = 'flex';
+}
+
+function handleTeamLeadChange() {
+    const isTeamLead = document.getElementById('memberIsTeamLead').checked;
+    const trainerCheckbox = document.getElementById('memberIsTrainer');
+    
+    if (isTeamLead) {
+        trainerCheckbox.checked = true;
+        trainerCheckbox.disabled = true;
+    } else {
+        trainerCheckbox.disabled = false;
+    }
+}
+
+function closeModal() {
+    document.getElementById('memberModal').style.display = 'none';
+}
+
+function switchModalTab(tabId) {
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    
+    document.querySelector(`[onclick="switchModalTab('${tabId}')"]`).classList.add('active');
+    document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+function renderAvailabilityEditor(availability) {
+    const container = document.getElementById('availabilityEditor');
+    
+    let html = '';
+    DAYS.forEach((day, index) => {
+        const slots = availability && availability[index] ? availability[index] : [];
+        
+        html += `
+        <div class="avail-day-section" data-day="${index}">
+            <div class="avail-day-header">
+                <span class="avail-day-name">${day}</span>
+                <button type="button" class="btn-add-slot" onclick="addSlot(${index})">+ Add Slot</button>
+            </div>
+            <div class="avail-slots" id="slots-${index}">
+                ${slots.length === 0 ? 
+                    '<div class="no-slots">No availability set</div>' :
+                    slots.map((slot, slotIdx) => renderSlotRow(index, slotIdx, slot)).join('')
+                }
+            </div>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderSlotRow(dayIndex, slotIndex, slot) {
+    return `
+    <div class="avail-slot-row" data-slot="${slotIndex}">
+        <input type="time" class="slot-start" value="${slot.start || '09:00'}">
+        <span>to</span>
+        <input type="time" class="slot-end" value="${slot.end || '17:00'}">
+        <button type="button" class="btn-remove-slot" onclick="removeSlot(${dayIndex}, this)">×</button>
+    </div>
+    `;
+}
+
+function addSlot(dayIndex) {
+    const container = document.getElementById(`slots-${dayIndex}`);
+    const noSlots = container.querySelector('.no-slots');
+    if (noSlots) noSlots.remove();
+    
+    const slotCount = container.querySelectorAll('.avail-slot-row').length;
+    const newSlot = document.createElement('div');
+    newSlot.innerHTML = renderSlotRow(dayIndex, slotCount, { start: '09:00', end: '17:00' });
+    container.appendChild(newSlot.firstElementChild);
+}
+
+function removeSlot(dayIndex, button) {
+    const row = button.closest('.avail-slot-row');
+    const container = document.getElementById(`slots-${dayIndex}`);
+    row.remove();
+    
+    if (container.querySelectorAll('.avail-slot-row').length === 0) {
+        container.innerHTML = '<div class="no-slots">No availability set</div>';
+    }
+}
+
+function saveMember() {
+    const userId = document.getElementById('editUserId').value;
+    
+    const availability = {};
+    DAYS.forEach((day, index) => {
+        const container = document.getElementById(`slots-${index}`);
+        const slots = [];
+        
+        container.querySelectorAll('.avail-slot-row').forEach(row => {
+            const start = row.querySelector('.slot-start').value;
+            const end = row.querySelector('.slot-end').value;
+            if (start && end) {
+                slots.push({ start, end });
+            }
+        });
+        
+        availability[index] = slots;
+    });
+    
+    // Team lead automatically means trainer
+    const isTeamLead = document.getElementById('memberIsTeamLead').checked;
+    const isTrainer = isTeamLead || document.getElementById('memberIsTrainer').checked;
+    
+    const payload = {
+        user_id: userId,
+        semester_id: currentSemester,
+        is_trainer: isTrainer,
+        is_team_lead: isTeamLead,
+        team: document.getElementById('memberTeam').value,
+        min_weekly_hours: parseInt(document.getElementById('memberMinHours').value) || 0,
+        max_weekly_hours: parseInt(document.getElementById('memberMaxHours').value) || 0,
+        shift_preference: document.getElementById('memberShiftPref').value,
+        availability: availability
+    };
+    
+    fetch('/scheduling/api/team-members/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeModal();
+            loadTeamData();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to save team member');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+{% endblock %}

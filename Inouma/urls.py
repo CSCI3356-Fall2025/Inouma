@@ -35,8 +35,10 @@ urlpatterns = [
     path('', include('machines.urls')),
     path('staff/locations/', include('locations.urls')),
     path('', include('machines.urls')),
-    path('', include('scheduling.urls')),
-    path('schedule/', include('schedule.urls')),
+    path('scheduling/', include('scheduling.urls')),
+    # path('', include('scheduling.urls')),
+    # path('schedule/', include('schedule.urls')),
+    path('team/', include('team.urls')),
 ]
 
 
