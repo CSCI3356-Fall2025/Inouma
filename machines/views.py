@@ -535,6 +535,8 @@ def machine_detail(request, machine_id):
         'other_machines': other_machines,
         'trainers': trainers,
         'today': date.today().isoformat(),
+        'reservation_api_url': f'/reservations/api/machines/{machine_id}/reserve/',
+        'availability_api_url': f'/reservations/api/machines/{machine_id}/availability/',
     }
     return render(request, 'machines/machine_detail.html', context)
 
@@ -553,7 +555,7 @@ def machine_management_landing(request):
         'categories_count': categories_count,
     }
     
-    return render(request, 'staff/machine_management_landing.html', context)
+    return render(request, 'machines/machine_management_landing.html', context)
 
 
 
@@ -709,3 +711,776 @@ def machine_detail_api(request, machine_id):
             'error': str(e),
             'details': error_details if request.user.is_superuser else 'Server error'
         }, status=500)
+    
+
+
+    
+"""
+Training Management Views - Add these to your existing machines/views.py
+
+These views handle training management for the makerspace.
+"""
+
+# ============================================================================
+# TRAINING MANAGEMENT PAGE
+# ============================================================================
+
+@login_required
+@user_passes_test(is_superuser)
+def training_management(request):
+    """Training management page"""
+    return render(request, 'machines/training_management.html')
+
+
+# ============================================================================
+# TRAINING API ENDPOINTS
+# ============================================================================
+
+@login_required
+@user_passes_test(is_superuser)
+def api_get_trainings(request):
+    """Get all trainings with their machine type assignments"""
+    from .models import Training
+    
+    status_filter = request.GET.get('status', 'active')
+    category_filter = request.GET.get('category', '')
+    
+    trainings = Training.objects.all()
+    
+    if status_filter and status_filter != 'all':
+        trainings = trainings.filter(status=status_filter)
+    
+    if category_filter:
+        trainings = trainings.filter(category=category_filter)
+    
+    trainings = trainings.prefetch_related('prerequisites')
+    
+    data = []
+    for t in trainings:
+        # Count user records if UserTrainingRecord model exists
+        user_count = 0
+        try:
+            user_count = t.user_records.filter(status='completed').count()
+        except:
+            pass
+        
+        data.append({
+            'id': t.id,
+            'name': t.name,
+            'description': t.description,
+            'level': t.level,
+            'level_display': t.level_display,
+            'category': t.category,
+            'machine_type_names': t.machine_type_names or [],
+            'prerequisites': [
+                {'id': p.id, 'name': p.name, 'level': p.level}
+                for p in t.prerequisites.all()
+            ],
+            'duration_minutes': t.duration_minutes,
+            'max_participants': t.max_participants,
+            'materials_url': t.materials_url,
+            'video_url': t.video_url,
+            'status': t.status,
+            'user_count': user_count,
+            'created_at': t.created_at.isoformat(),
+            'updated_at': t.updated_at.isoformat(),
+        })
+    
+    return JsonResponse({'trainings': data})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_create_training(request):
+    """Create a new training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        name = data.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Training name is required'})
+        
+        category = data.get('category', '').strip()
+        if not category:
+            return JsonResponse({'success': False, 'error': 'Category is required'})
+        
+        level = data.get('level', 1)
+        if level not in [1, 2, 3]:
+            return JsonResponse({'success': False, 'error': 'Level must be 1, 2, or 3'})
+        
+        # Create training
+        training = Training.objects.create(
+            name=name,
+            description=data.get('description', ''),
+            level=level,
+            category=category,
+            duration_minutes=data.get('duration_minutes', 60),
+            max_participants=data.get('max_participants', 4),
+            materials_url=data.get('materials_url', ''),
+            video_url=data.get('video_url', ''),
+            status=data.get('status', 'active'),
+            machine_type_names=data.get('machine_type_names', []),
+            created_by=request.user,
+        )
+        
+        # Assign prerequisites
+        prerequisite_ids = data.get('prerequisite_ids', [])
+        if prerequisite_ids:
+            prerequisites = Training.objects.filter(id__in=prerequisite_ids)
+            training.prerequisites.set(prerequisites)
+        
+        return JsonResponse({
+            'success': True, 
+            'training_id': training.id,
+            'message': f'Training "{name}" created successfully'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_update_training(request, training_id):
+    """Update an existing training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        training = get_object_or_404(Training, id=training_id)
+        
+        # Update fields
+        if 'name' in data:
+            training.name = data['name'].strip()
+        if 'description' in data:
+            training.description = data['description']
+        if 'level' in data:
+            if data['level'] in [1, 2, 3]:
+                training.level = data['level']
+        if 'category' in data:
+            training.category = data['category'].strip()
+        if 'duration_minutes' in data:
+            training.duration_minutes = data['duration_minutes']
+        if 'max_participants' in data:
+            training.max_participants = data['max_participants']
+        if 'materials_url' in data:
+            training.materials_url = data['materials_url']
+        if 'video_url' in data:
+            training.video_url = data['video_url']
+        if 'status' in data:
+            training.status = data['status']
+        if 'machine_type_names' in data:
+            training.machine_type_names = data['machine_type_names']
+        
+        training.save()
+        
+        # Update prerequisites
+        if 'prerequisite_ids' in data:
+            # Prevent self-reference
+            prereq_ids = [pid for pid in data['prerequisite_ids'] if pid != training_id]
+            prerequisites = Training.objects.filter(id__in=prereq_ids)
+            training.prerequisites.set(prerequisites)
+        
+        return JsonResponse({'success': True, 'message': 'Training updated successfully'})
+        
+    except Training.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Training not found'})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_archive_training(request, training_id):
+    """Archive a training (soft delete)"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        training = get_object_or_404(Training, id=training_id)
+        training.status = 'archived'
+        training.save()
+        
+        return JsonResponse({'success': True, 'message': 'Training archived successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_delete_training(request, training_id):
+    """Permanently delete a training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        training = get_object_or_404(Training, id=training_id)
+        name = training.name
+        training.delete()
+        
+        return JsonResponse({'success': True, 'message': f'Training "{name}" deleted permanently'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_bulk_training_action(request):
+    """Bulk archive, restore, or delete trainings"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        training_ids = data.get('training_ids', [])
+        action = data.get('action', '')
+        
+        if not training_ids:
+            return JsonResponse({'success': False, 'error': 'No trainings selected'})
+        
+        trainings = Training.objects.filter(id__in=training_ids)
+        count = trainings.count()
+        
+        if action == 'archive':
+            trainings.update(status='archived')
+            return JsonResponse({'success': True, 'message': f'Archived {count} training(s)'})
+        elif action == 'restore':
+            trainings.update(status='active')
+            return JsonResponse({'success': True, 'message': f'Restored {count} training(s)'})
+        elif action == 'delete':
+            trainings.delete()
+            return JsonResponse({'success': True, 'message': f'Deleted {count} training(s)'})
+        elif action == 'activate':
+            trainings.update(status='active')
+            return JsonResponse({'success': True, 'message': f'Activated {count} training(s)'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid action'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================================================
+# EXISTING MACHINE TYPES API (reads from Machine.machine_name)
+# ============================================================================
+
+@login_required
+def api_get_existing_machine_types(request):
+    """Get unique machine types (machine_name) from existing machines, grouped by category"""
+    from .models import Machine, MachineCategory
+    from django.db.models import Count
+    
+    # Get unique machine_name values grouped by category with counts
+    machine_types = Machine.objects.values('category', 'machine_name').annotate(
+        count=Count('id')
+    ).order_by('category', 'machine_name')
+    
+    # Get category info for icons/colors
+    categories = MachineCategory.objects.filter(is_active=True)
+    category_info = {c.name: {'icon': c.icon, 'color': c.color} for c in categories}
+    
+    # Group by category
+    by_category = {}
+    all_types = []
+    
+    for mt in machine_types:
+        cat = mt['category']
+        name = mt['machine_name']
+        count = mt['count']
+        
+        if cat not in by_category:
+            by_category[cat] = []
+        
+        type_data = {'name': name, 'category': cat, 'count': count}
+        by_category[cat].append(type_data)
+        all_types.append(type_data)
+    
+    return JsonResponse({
+        'machine_types': all_types,
+        'by_category': by_category,
+        'category_info': category_info,
+    })
+
+
+
+# ============================================================================
+# CATEGORY MANAGEMENT PAGE
+# ============================================================================
+
+@login_required
+@user_passes_test(is_superuser)
+def manage_categories(request):
+    """Category management page"""
+    return render(request, 'machines/manage_categories.html')
+
+
+# ============================================================================
+# CATEGORY API ENDPOINTS
+# ============================================================================
+
+@login_required
+def api_get_categories(request):
+    """Get all categories"""
+    from .models import MachineCategory
+    
+    include_inactive = request.GET.get('include_inactive', 'false') == 'true'
+    
+    categories = MachineCategory.objects.all().order_by('display_order', 'name')
+    
+    data = []
+    for cat in categories:
+        if not include_inactive and not cat.is_active:
+            continue
+        data.append({
+            'id': cat.id,
+            'name': cat.name,
+            'description': cat.description,
+            'icon': cat.icon,
+            'color': cat.color,
+            'display_order': cat.display_order,
+            'is_active': cat.is_active,
+            'machine_count': cat.machine_count,
+            'created_at': cat.created_at.isoformat() if cat.created_at else None,
+        })
+    
+    return JsonResponse({'categories': data})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_create_category(request):
+    """Create a new category"""
+    from .models import MachineCategory
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        name = data.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Category name is required'})
+        
+        # Check for duplicates
+        if MachineCategory.objects.filter(name__iexact=name).exists():
+            return JsonResponse({'success': False, 'error': f'Category "{name}" already exists'})
+        
+        category = MachineCategory.objects.create(
+            name=name,
+            description=data.get('description', ''),
+            icon=data.get('icon', '🔧'),
+            color=data.get('color', '#293242'),
+            display_order=data.get('display_order', 0),
+            is_active=data.get('is_active', True),
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'category_id': category.id,
+            'message': f'Category "{name}" created successfully'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_update_category(request, category_id):
+    """Update an existing category"""
+    from .models import MachineCategory
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        category = get_object_or_404(MachineCategory, id=category_id)
+        
+        # Check for duplicate name
+        new_name = data.get('name', '').strip()
+        if new_name and new_name.lower() != category.name.lower():
+            if MachineCategory.objects.filter(name__iexact=new_name).exclude(id=category_id).exists():
+                return JsonResponse({'success': False, 'error': f'Category "{new_name}" already exists'})
+        
+        # Update fields
+        if 'name' in data:
+            category.name = data['name'].strip()
+        if 'description' in data:
+            category.description = data['description']
+        if 'icon' in data:
+            category.icon = data['icon']
+        if 'color' in data:
+            category.color = data['color']
+        if 'display_order' in data:
+            category.display_order = data['display_order']
+        if 'is_active' in data:
+            category.is_active = data['is_active']
+        
+        category.save()
+        
+        return JsonResponse({'success': True, 'message': 'Category updated successfully'})
+        
+    except MachineCategory.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_delete_category(request, category_id):
+    """Delete a category"""
+    from .models import MachineCategory, Machine
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        category = get_object_or_404(MachineCategory, id=category_id)
+        
+        # Check if any machines are using this category (via category_fk)
+        machine_count = Machine.objects.filter(category_fk=category).count()
+        if machine_count > 0:
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot delete: {machine_count} machine(s) are using this category. Reassign them first.'
+            })
+        
+        name = category.name
+        category.delete()
+        
+        return JsonResponse({'success': True, 'message': f'Category "{name}" deleted successfully'})
+        
+    except MachineCategory.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================================================
+# TRAINING MANAGEMENT PAGE
+# ============================================================================
+
+@login_required
+@user_passes_test(is_superuser)
+def training_management(request):
+    """Training management page"""
+    return render(request, 'machines/training_management.html')
+
+
+# ============================================================================
+# TRAINING API ENDPOINTS
+# ============================================================================
+
+@login_required
+@user_passes_test(is_superuser)
+def api_get_trainings(request):
+    """Get all trainings with their machine type assignments"""
+    from .models import Training
+    
+    status_filter = request.GET.get('status', 'active')
+    category_filter = request.GET.get('category', '')
+    
+    trainings = Training.objects.all()
+    
+    if status_filter and status_filter != 'all':
+        trainings = trainings.filter(status=status_filter)
+    
+    if category_filter:
+        trainings = trainings.filter(category=category_filter)
+    
+    trainings = trainings.prefetch_related('prerequisites')
+    
+    data = []
+    for t in trainings:
+        # Count user records if UserTrainingRecord model exists
+        user_count = 0
+        try:
+            user_count = t.user_records.filter(status='completed').count()
+        except:
+            pass
+        
+        data.append({
+            'id': t.id,
+            'name': t.name,
+            'description': t.description,
+            'level': t.level,
+            'level_display': t.level_display,
+            'category': t.category,
+            'machine_type_names': t.machine_type_names or [],
+            'prerequisites': [
+                {'id': p.id, 'name': p.name, 'level': p.level}
+                for p in t.prerequisites.all()
+            ],
+            'duration_minutes': t.duration_minutes,
+            'max_participants': t.max_participants,
+            'materials_url': t.materials_url,
+            'video_url': t.video_url,
+            'status': t.status,
+            'user_count': user_count,
+            'created_at': t.created_at.isoformat(),
+            'updated_at': t.updated_at.isoformat(),
+        })
+    
+    return JsonResponse({'trainings': data})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_create_training(request):
+    """Create a new training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        name = data.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Training name is required'})
+        
+        category = data.get('category', '').strip()
+        if not category:
+            return JsonResponse({'success': False, 'error': 'Category is required'})
+        
+        level = data.get('level', 1)
+        if level not in [1, 2, 3]:
+            return JsonResponse({'success': False, 'error': 'Level must be 1, 2, or 3'})
+        
+        # Create training
+        training = Training.objects.create(
+            name=name,
+            description=data.get('description', ''),
+            level=level,
+            category=category,
+            duration_minutes=data.get('duration_minutes', 60),
+            max_participants=data.get('max_participants', 4),
+            materials_url=data.get('materials_url', ''),
+            video_url=data.get('video_url', ''),
+            status=data.get('status', 'active'),
+            machine_type_names=data.get('machine_type_names', []),
+            created_by=request.user,
+        )
+        
+        # Assign prerequisites
+        prerequisite_ids = data.get('prerequisite_ids', [])
+        if prerequisite_ids:
+            prerequisites = Training.objects.filter(id__in=prerequisite_ids)
+            training.prerequisites.set(prerequisites)
+        
+        return JsonResponse({
+            'success': True, 
+            'training_id': training.id,
+            'message': f'Training "{name}" created successfully'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_update_training(request, training_id):
+    """Update an existing training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        training = get_object_or_404(Training, id=training_id)
+        
+        # Update fields
+        if 'name' in data:
+            training.name = data['name'].strip()
+        if 'description' in data:
+            training.description = data['description']
+        if 'level' in data:
+            if data['level'] in [1, 2, 3]:
+                training.level = data['level']
+        if 'category' in data:
+            training.category = data['category'].strip()
+        if 'duration_minutes' in data:
+            training.duration_minutes = data['duration_minutes']
+        if 'max_participants' in data:
+            training.max_participants = data['max_participants']
+        if 'materials_url' in data:
+            training.materials_url = data['materials_url']
+        if 'video_url' in data:
+            training.video_url = data['video_url']
+        if 'status' in data:
+            training.status = data['status']
+        if 'machine_type_names' in data:
+            training.machine_type_names = data['machine_type_names']
+        
+        training.save()
+        
+        # Update prerequisites
+        if 'prerequisite_ids' in data:
+            # Prevent self-reference
+            prereq_ids = [pid for pid in data['prerequisite_ids'] if pid != training_id]
+            prerequisites = Training.objects.filter(id__in=prereq_ids)
+            training.prerequisites.set(prerequisites)
+        
+        return JsonResponse({'success': True, 'message': 'Training updated successfully'})
+        
+    except Training.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Training not found'})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_archive_training(request, training_id):
+    """Archive a training (soft delete)"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        training = get_object_or_404(Training, id=training_id)
+        training.status = 'archived'
+        training.save()
+        
+        return JsonResponse({'success': True, 'message': 'Training archived successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_delete_training(request, training_id):
+    """Permanently delete a training"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        training = get_object_or_404(Training, id=training_id)
+        name = training.name
+        training.delete()
+        
+        return JsonResponse({'success': True, 'message': f'Training "{name}" deleted permanently'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_superuser)
+def api_bulk_training_action(request):
+    """Bulk archive, restore, or delete trainings"""
+    from .models import Training
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        training_ids = data.get('training_ids', [])
+        action = data.get('action', '')
+        
+        if not training_ids:
+            return JsonResponse({'success': False, 'error': 'No trainings selected'})
+        
+        trainings = Training.objects.filter(id__in=training_ids)
+        count = trainings.count()
+        
+        if action == 'archive':
+            trainings.update(status='archived')
+            return JsonResponse({'success': True, 'message': f'Archived {count} training(s)'})
+        elif action == 'restore':
+            trainings.update(status='active')
+            return JsonResponse({'success': True, 'message': f'Restored {count} training(s)'})
+        elif action == 'delete':
+            trainings.delete()
+            return JsonResponse({'success': True, 'message': f'Deleted {count} training(s)'})
+        elif action == 'activate':
+            trainings.update(status='active')
+            return JsonResponse({'success': True, 'message': f'Activated {count} training(s)'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid action'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================================================
+# EXISTING MACHINE TYPES API (reads from Machine.machine_name)
+# ============================================================================
+
+@login_required
+def api_get_existing_machine_types(request):
+    """Get unique machine types (machine_name) from existing machines, grouped by category"""
+    from .models import Machine, MachineCategory
+    from django.db.models import Count
+    
+    # Get unique machine_name values grouped by category with counts
+    machine_types = Machine.objects.values('category', 'machine_name').annotate(
+        count=Count('id')
+    ).order_by('category', 'machine_name')
+    
+    # Get category info for icons/colors
+    categories = MachineCategory.objects.filter(is_active=True)
+    category_info = {c.name: {'icon': c.icon, 'color': c.color} for c in categories}
+    
+    # Group by category
+    by_category = {}
+    all_types = []
+    
+    for mt in machine_types:
+        cat = mt['category']
+        name = mt['machine_name']
+        count = mt['count']
+        
+        if cat not in by_category:
+            by_category[cat] = []
+        
+        type_data = {'name': name, 'category': cat, 'count': count}
+        by_category[cat].append(type_data)
+        all_types.append(type_data)
+    
+    return JsonResponse({
+        'machine_types': all_types,
+        'by_category': by_category,
+        'category_info': category_info,
+    })

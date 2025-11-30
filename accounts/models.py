@@ -60,21 +60,55 @@ class User(AbstractUser):
     department = models.CharField(max_length=100, blank=True, help_text="Department")
     profile_picture = models.ImageField(upload_to='users/profile_pictures/', blank=True, null=True, help_text="Profile picture")
     
-    # Team Lead flag - only applies to Team Member role
-    is_team_lead = models.BooleanField(default=False, help_text="Designated to lead other team members (only applies to Team Member role)")
+    # Team Member specific fields (only apply when role is 'Team Member')
+    is_team_lead = models.BooleanField(
+        default=False, 
+        help_text="Is this team member a team lead? (Team leads are automatically trainers)"
+    )
+    is_trainer = models.BooleanField(
+        default=False, 
+        help_text="Can this team member conduct training sessions?"
+    )
+    team_assignment = models.CharField(
+        max_length=100, 
+        blank=True, 
+        help_text="Machine category/team this member belongs to (required for team leads)"
+    )
     
     def clean(self):
-        """Validate that is_team_lead can only be True for Team Member role"""
+        """Validate team member fields"""
         from django.core.exceptions import ValidationError
-        if self.is_team_lead and self.role != 'Team Member':
+        # Team lead and trainer flags only apply to Team Member role
+        if self.role != 'Team Member':
+            if self.is_team_lead:
+                raise ValidationError({
+                    'is_team_lead': 'Team Lead flag can only be set for users with Team Member role.'
+                })
+            if self.is_trainer:
+                raise ValidationError({
+                    'is_trainer': 'Trainer flag can only be set for users with Team Member role.'
+                })
+            if self.team_assignment:
+                raise ValidationError({
+                    'team_assignment': 'Team assignment can only be set for users with Team Member role.'
+                })
+        
+        # Team leads must have a team assignment
+        if self.is_team_lead and not self.team_assignment:
             raise ValidationError({
-                'is_team_lead': 'Team Lead flag can only be set for users with Team Member role.'
+                'team_assignment': 'Team assignment is required for team leads.'
             })
     
     def save(self, *args, **kwargs):
-        """Automatically clear is_team_lead if role is not Team Member"""
+        """Automatically clear team member fields if role is not Team Member, and set trainer if team lead"""
         if self.role != 'Team Member':
             self.is_team_lead = False
+            self.is_trainer = False
+            self.team_assignment = ''
+        else:
+            # Team leads are automatically trainers
+            if self.is_team_lead:
+                self.is_trainer = True
         super().save(*args, **kwargs)
 
     USERNAME_FIELD = 'email'
@@ -127,11 +161,12 @@ class TrainerProfile(models.Model):
     def __str__(self):
         return f"Trainer Profile for {self.user.email}"
 
+
 class Certification(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="certifications"   # THIS IS REQUIRED
+        related_name="certifications"
     )
     name = models.CharField(max_length=150)
     issued_at = models.DateField()
@@ -140,7 +175,8 @@ class Certification(models.Model):
     def __str__(self):
         return f"{self.name} for {self.user.email}"
 
-# Auto Create Profiles
+
+# Auto Create Profiles and Sync with Scheduling
 @receiver(post_save, sender=User)
 def create_role_profile(sender, instance, created, **kwargs):
     if created:
@@ -148,22 +184,43 @@ def create_role_profile(sender, instance, created, **kwargs):
             StudentProfile.objects.create(user=instance)
         elif instance.role in ['Team Member', 'Staff']:
             TrainerProfile.objects.create(user=instance)
+    
+    # Sync Team Member data with scheduling TeamMemberProfile
+    if instance.role == 'Team Member':
+        try:
+            from scheduling.models import TeamMemberProfile
+            profile, _ = TeamMemberProfile.objects.get_or_create(user=instance)
+            
+            # Sync the flags from User model
+            profile.is_trainer = instance.is_trainer
+            profile.is_team_lead = instance.is_team_lead
+            profile.team = instance.team_assignment
+            profile.save()
+        except Exception as e:
+            # Scheduling app might not be installed or migrated yet
+            print(f"Could not sync TeamMemberProfile: {e}")
+
 
 class Machine(models.Model):
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=50, blank=True)
     location = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
-    required_training_level = models.PositiveSmallIntegerField(default=1)  # aligns with Level 1/2/3 in prototypes
+    required_training_level = models.PositiveSmallIntegerField(default=1)
 
     def __str__(self):
         return self.name
+    
+    @classmethod
+    def get_categories(cls):
+        """Get all unique machine categories for team assignment"""
+        return list(cls.objects.values_list('category', flat=True).distinct().exclude(category='').order_by('category'))
 
 
 class MachineInstance(models.Model):
     machine = models.ForeignKey(Machine, on_delete=models.CASCADE, related_name="instances")
     nickname = models.CharField(max_length=100, blank=True)
-    status = models.CharField(max_length=30, default="available")  # e.g., available / maintenance / down
+    status = models.CharField(max_length=30, default="available")
 
     def __str__(self):
         return f"{self.machine.name} ({self.nickname or self.id})"
@@ -172,7 +229,6 @@ class MachineInstance(models.Model):
 class TrainingReservation(models.Model):
     """
     Student books a training session with a trainer on a specific machine instance and time span.
-    Overlap for the same trainer is disallowed (Delivery 4 requirement).
     """
     STATUS_CHOICES = (
         ("CONFIRMED", "Confirmed"),
@@ -198,12 +254,10 @@ class TrainingReservation(models.Model):
     def overlaps(self, other_start, other_end):
         return not (self.end_time <= other_start or self.start_time >= other_end)
 
+
 class TrainerAvailability(models.Model):
     """
     Weekly recurring availability blocks for each trainer.
-    Example:
-      Monday 09:00–12:00
-      Wednesday 13:00–17:00
     """
     WEEKDAYS = [
         (0, "Monday"),

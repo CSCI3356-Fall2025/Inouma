@@ -49,6 +49,9 @@ INSTALLED_APPS = [
 
     # Team Members App
     'team',
+
+    # Reservations
+    'reservations',
   
 ]
 

@@ -52,10 +52,82 @@
 /* Filters */
 .filter-bar {
     background: white;
-    padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    cursor: pointer;
+    border-bottom: 1px solid #e9ecef;
+    transition: background 0.2s;
+}
+
+.filter-header:hover {
+    background: #f0f0f0;
+}
+
+.filter-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.filter-toggle-icon {
+    font-size: 0.8rem;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.filter-bar.collapsed .filter-toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.filter-header-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.filter-summary {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.filter-content {
+    padding: 1rem;
+}
+
+.filter-bar.collapsed .filter-content {
+    display: none;
+}
+
+.filter-bar.collapsed .filter-header {
+    border-bottom: none;
+}
+
+.filter-section {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.filter-section-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
 }
 
 .filter-chips {
@@ -92,6 +164,16 @@
 .filter-chip.user-chip {
     background: #fff3e0;
     border-color: #ffcc80;
+}
+
+.filter-chip.day-chip.active {
+    background: #e8f5e9;
+    border-color: #a5d6a7;
+}
+
+.filter-chip.team-chip.active {
+    background: #f3e5f5;
+    border-color: #ce93d8;
 }
 
 .filter-chip .remove-btn {
@@ -139,6 +221,27 @@
     border-bottom: none;
 }
 
+/* Time Range Filter */
+.time-range-inputs {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.time-range-inputs input[type="time"] {
+    padding: 6px 10px;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    width: auto;
+}
+
+.time-range-inputs .separator {
+    color: #666;
+    white-space: nowrap;
+}
+
 /* View Toggle */
 .view-toggle {
     display: flex;
@@ -172,13 +275,13 @@
 }
 
 .gcal-header {
-    display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
+    display: flex;
     background: #fafafa;
     border-bottom: 1px solid #dadce0;
 }
 
 .gcal-header-cell {
+    flex: 1;
     padding: 12px 8px;
     text-align: center;
     font-weight: 600;
@@ -188,6 +291,7 @@
 }
 
 .gcal-header-cell:first-child {
+    flex: 0 0 60px;
     border-left: none;
 }
 
@@ -200,14 +304,11 @@
 .gcal-body {
     position: relative;
     min-height: 100%;
+    display: flex;
 }
 
 .gcal-times {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 60px;
-    z-index: 2;
+    flex: 0 0 60px;
     background: #fafafa;
 }
 
@@ -222,15 +323,15 @@
 }
 
 .gcal-columns {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    margin-left: 60px;
-    position: relative;
+    display: flex;
+    flex: 1;
 }
 
 .gcal-day-col {
+    flex: 1;
     position: relative;
     border-left: 1px solid #e0e0e0;
+    min-width: 0;
 }
 
 .gcal-hour-line {
@@ -370,7 +471,7 @@
 }
 
 .block-cell {
-    min-width: 100px;
+    min-width: 80px;
 }
 
 .block-cell.empty {
@@ -393,17 +494,9 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
-.block-person.open-hours {
-    background: #4CAF50;
-}
-
-.block-person.training {
-    background: #2196F3;
-}
-
-.block-person.floater {
-    background: #FF9800;
-}
+.block-person.open-hours { background: #4CAF50; }
+.block-person.training { background: #2196F3; }
+.block-person.floater { background: #FF9800; }
 
 /* Modal */
 .modal-overlay {
@@ -460,6 +553,8 @@
 
 .modal-body {
     padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .modal-footer {
@@ -500,17 +595,9 @@
     color: white;
 }
 
-.shift-type-badge.open-hours {
-    background: #4CAF50;
-}
-
-.shift-type-badge.training {
-    background: #2196F3;
-}
-
-.shift-type-badge.floater {
-    background: #FF9800;
-}
+.shift-type-badge.open-hours { background: #4CAF50; }
+.shift-type-badge.training { background: #2196F3; }
+.shift-type-badge.floater { background: #FF9800; }
 
 .status-badge {
     display: inline-block;
@@ -520,19 +607,46 @@
     font-weight: 500;
 }
 
-.status-badge.scheduled {
-    background: #e8f5e9;
-    color: #2e7d32;
+.status-badge.scheduled { background: #e8f5e9; color: #2e7d32; }
+.status-badge.confirmed { background: #e3f2fd; color: #1565c0; }
+.status-badge.cancelled { background: #ffebee; color: #c62828; }
+
+/* Export Modal */
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.status-badge.confirmed {
-    background: #e3f2fd;
-    color: #1565c0;
+.export-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.status-badge.cancelled {
-    background: #ffebee;
-    color: #c62828;
+.export-option:hover {
+    background: #f8f9fa;
+    border-color: #90caf9;
+}
+
+.export-option-icon {
+    font-size: 2rem;
+}
+
+.export-option-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--gunmetal);
+}
+
+.export-option-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
 }
 </style>
 {% endblock %}
@@ -552,7 +666,7 @@
                 <button id="btnBlockView" class="active" onclick="switchView('blocks')">🧱 Blocks</button>
                 <button id="btnListView" onclick="switchView('list')">📋 List</button>
             </div>
-            <button class="btn btn-secondary" onclick="exportSchedule()">📥 Export</button>
+            <button class="btn btn-secondary" onclick="openExportModal()">📥 Export</button>
             <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:publish_schedule' %}'">🚀 Publish</button>
         </div>
     </div>
@@ -571,7 +685,7 @@
     </div>
 </div>
 
-<!-- Stats (hidden initially) -->
+<!-- Stats -->
 <div class="card" id="statsCard" style="display: none;">
     <h2 style="margin-bottom: 1rem; color: var(--gunmetal);">📈 Weekly Statistics</h2>
     <div class="stats-grid">
@@ -603,50 +717,93 @@
 </div>
 
 <!-- Filters -->
-<div class="filter-bar" id="filterBar" style="display: none;">
-    <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-        <!-- User Search -->
-        <div class="search-container" style="min-width: 250px;">
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px;">Add Team Member Filter</label>
-            <input type="text" id="userSearch" class="form-control" placeholder="Search by name..." 
-                   oninput="handleSearch(this.value)" onfocus="handleSearch(this.value)">
-            <div id="userDropdown" class="search-dropdown" style="display: none;"></div>
+<div class="filter-bar collapsed" id="filterBar" style="display: none;">
+    <!-- Filter Header -->
+    <div class="filter-header" onclick="toggleFilterBar()">
+        <div class="filter-header-left">
+            <span class="filter-toggle-icon" id="filterToggleIcon">▼</span>
+            <span class="filter-header-title">🔍 Filters</span>
+            <span class="filter-summary" id="filterSummary"></span>
         </div>
-        
-        <!-- Filter Chips -->
-        <div style="flex: 1;">
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px;">Active Filters</label>
-            <div class="filter-chips" id="filterChips">
-                <div class="filter-chip active" data-filter="open_hours" onclick="toggleTypeFilter('open_hours')">
-                    🟢 Open Hours
-                </div>
-                <div class="filter-chip active" data-filter="training" onclick="toggleTypeFilter('training')">
-                    🔵 Training
-                </div>
-                <div class="filter-chip active" data-filter="floater" onclick="toggleTypeFilter('floater')">
-                    🟠 Floaters
-                </div>
+        <button class="btn btn-sm" onclick="event.stopPropagation(); clearAllFilters()">Clear All</button>
+    </div>
+    
+    <!-- Collapsible Filter Content -->
+    <div class="filter-content" id="filterContent">
+        <!-- Shift Type Filters -->
+        <div class="filter-section">
+            <div class="filter-section-title">🏷️ Shift Types</div>
+            <div class="filter-chips">
+                <div class="filter-chip active" data-filter="open_hours" onclick="toggleTypeFilter('open_hours')">🟢 Open Hours</div>
+                <div class="filter-chip active" data-filter="training" onclick="toggleTypeFilter('training')">🔵 Training</div>
+                <div class="filter-chip active" data-filter="floater" onclick="toggleTypeFilter('floater')">🟠 Floaters</div>
             </div>
         </div>
         
-        <button class="btn btn-secondary" onclick="clearAllFilters()" style="align-self: flex-end;">
-            Clear All
-        </button>
+        <!-- Day Filters -->
+        <div class="filter-section">
+            <div class="filter-section-title">📅 Days of Week</div>
+            <div class="filter-chips" id="dayFilterChips">
+                <div class="filter-chip day-chip active" data-day="0" onclick="toggleDayFilter(0)">Mon</div>
+                <div class="filter-chip day-chip active" data-day="1" onclick="toggleDayFilter(1)">Tue</div>
+                <div class="filter-chip day-chip active" data-day="2" onclick="toggleDayFilter(2)">Wed</div>
+                <div class="filter-chip day-chip active" data-day="3" onclick="toggleDayFilter(3)">Thu</div>
+                <div class="filter-chip day-chip active" data-day="4" onclick="toggleDayFilter(4)">Fri</div>
+                <div class="filter-chip day-chip active" data-day="5" onclick="toggleDayFilter(5)">Sat</div>
+                <div class="filter-chip day-chip active" data-day="6" onclick="toggleDayFilter(6)">Sun</div>
+                <span style="color: #999; margin-left: 0.5rem;">|</span>
+                <button class="btn btn-sm" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectWeekdays()">Weekdays</button>
+                <button class="btn btn-sm" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectWeekends()">Weekends</button>
+                <button class="btn btn-sm" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllDays()">All</button>
+            </div>
+        </div>
+        
+        <!-- Team/Category Filters -->
+        <div class="filter-section">
+            <div class="filter-section-title">👥 Teams / Categories</div>
+            <div class="filter-chips" id="teamFilterChips"><!-- Populated dynamically --></div>
+        </div>
+        
+        <!-- Time Range Filter -->
+        <div class="filter-section" style="border-bottom: none;">
+            <div class="filter-section-title">🕐 Time Range</div>
+            <div class="time-range-inputs">
+                <input type="time" id="filterTimeStart" value="00:00" onchange="applyFilters()">
+                <span class="separator">to</span>
+                <input type="time" id="filterTimeEnd" value="23:59" onchange="applyFilters()">
+                <button class="btn btn-sm" style="margin-left: 0.5rem;" onclick="resetTimeFilter()">Reset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Team Member Search - Separate Section -->
+<div class="filter-bar collapsed" id="memberSearchBar" style="display: none;">
+    <div class="filter-header" onclick="toggleMemberSearch()">
+        <div class="filter-header-left">
+            <span class="filter-toggle-icon" id="memberSearchToggleIcon">▼</span>
+            <span class="filter-header-title">👤 Team Member Search</span>
+            <span class="filter-summary" id="memberSearchSummary"></span>
+        </div>
+        <button class="btn btn-sm" onclick="event.stopPropagation(); clearUserFilters()">Clear</button>
+    </div>
+    <div class="filter-content" id="memberSearchContent">
+        <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+            <div class="search-container" style="min-width: 280px; flex: 0 0 280px;">
+                <input type="text" id="userSearch" class="form-control" placeholder="Search by name..." 
+                       oninput="handleSearch(this.value)" onfocus="handleSearch(this.value)">
+                <div id="userDropdown" class="search-dropdown" style="display: none;"></div>
+            </div>
+            <div class="filter-chips" id="userFilterChips" style="flex: 1;"></div>
+        </div>
     </div>
 </div>
 
 <!-- Calendar View -->
 <div id="calendarView" style="display: none;">
     <div class="gcal-wrapper">
-        <div class="gcal-header">
-            <div class="gcal-header-cell"></div>
-            <div class="gcal-header-cell">Monday</div>
-            <div class="gcal-header-cell">Tuesday</div>
-            <div class="gcal-header-cell">Wednesday</div>
-            <div class="gcal-header-cell">Thursday</div>
-            <div class="gcal-header-cell">Friday</div>
-            <div class="gcal-header-cell">Saturday</div>
-            <div class="gcal-header-cell">Sunday</div>
+        <div class="gcal-header" id="calendarHeader">
+            <!-- Dynamically populated -->
         </div>
         <div class="gcal-scroll">
             <div class="gcal-body" id="calendarBody"></div>
@@ -679,12 +836,8 @@
     <h2 style="color: var(--gunmetal); margin-bottom: 1rem;">No Schedule Created Yet</h2>
     <p style="color: #666; margin-bottom: 2rem;">Select a semester above, or create a schedule by running the auto-scheduler.</p>
     <div style="display: flex; gap: 1rem; justify-content: center;">
-        <button class="btn btn-secondary" onclick="window.location.href='{% url 'scheduling:configure_semester' %}'">
-            ⚙️ Configure Semester
-        </button>
-        <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:auto_schedule' %}'">
-            🤖 Run Auto-Scheduler
-        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='{% url 'scheduling:configure_semester' %}'">⚙️ Configure Semester</button>
+        <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:auto_schedule' %}'">🤖 Run Auto-Scheduler</button>
     </div>
 </div>
 
@@ -695,118 +848,222 @@
             <h2 id="modalTitle">Shift Details</h2>
             <button class="modal-close" onclick="closeShiftModal()">&times;</button>
         </div>
-        <div class="modal-body" id="modalBody">
-            <!-- Populated by JS -->
-        </div>
+        <div class="modal-body" id="modalBody"></div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeShiftModal()">Close</button>
         </div>
     </div>
 </div>
 
+<!-- Export Modal -->
+<div id="exportModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>📥 Export Schedule</h2>
+            <button class="modal-close" onclick="closeExportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: #666; margin-bottom: 1rem;">Choose an export format. Exports will include currently filtered shifts only.</p>
+            <div class="export-options">
+                <div class="export-option" onclick="exportSchedule('csv')">
+                    <div class="export-option-icon">📄</div>
+                    <div class="export-option-info">
+                        <h4>CSV Spreadsheet</h4>
+                        <p>Export to CSV file for Excel, Google Sheets, etc.</p>
+                    </div>
+                </div>
+                <div class="export-option" onclick="exportSchedule('json')">
+                    <div class="export-option-icon">📋</div>
+                    <div class="export-option-info">
+                        <h4>JSON Data</h4>
+                        <p>Export raw data for integrations or backup</p>
+                    </div>
+                </div>
+                <div class="export-option" onclick="exportSchedule('print')">
+                    <div class="export-option-icon">🖨️</div>
+                    <div class="export-option-info">
+                        <h4>Print View</h4>
+                        <p>Open a printer-friendly version of the schedule</p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; font-size: 0.85rem; color: #666;">
+                <strong>Note:</strong> <span id="exportCount">0</span> shifts will be exported based on current filters.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeExportModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // State
-let allShifts = [];
-let filteredShifts = [];
+let allShifts = [], filteredShifts = [];
 let activeTypeFilters = new Set(['open_hours', 'training', 'floater']);
-let activeUserFilters = new Set(); // Just store user IDs as numbers
-let activeUserNames = new Map(); // userId -> userName for display
+let activeDayFilters = new Set([0, 1, 2, 3, 4, 5, 6]);
+let activeTeamFilters = new Set();
+let activeUserFilters = new Set();
+let activeUserNames = new Map();
 let allUsers = [];
 let currentView = 'blocks';
-let blockInterval = 60; // Default 1 hour blocks
+let blockInterval = 60;
+let categories = [];
+let filterBarCollapsed = true; // Start collapsed
+let memberSearchCollapsed = true; // Start collapsed
 
 const HOUR_HEIGHT = 60;
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// Load schedule data
+// Filter bar UI functions
+function toggleFilterBar() {
+    filterBarCollapsed = !filterBarCollapsed;
+    document.getElementById('filterBar').classList.toggle('collapsed', filterBarCollapsed);
+    updateFilterSummary();
+}
+
+function toggleMemberSearch() {
+    memberSearchCollapsed = !memberSearchCollapsed;
+    document.getElementById('memberSearchBar').classList.toggle('collapsed', memberSearchCollapsed);
+    updateMemberSearchSummary();
+}
+
+function updateFilterSummary() {
+    const parts = [];
+    if (activeTypeFilters.size < 3) parts.push(`${activeTypeFilters.size} types`);
+    if (activeDayFilters.size < 7) parts.push(`${activeDayFilters.size} days`);
+    if (activeTeamFilters.size > 0) parts.push(`${activeTeamFilters.size} teams`);
+    
+    const timeStart = document.getElementById('filterTimeStart')?.value || '00:00';
+    const timeEnd = document.getElementById('filterTimeEnd')?.value || '23:59';
+    if (timeStart !== '00:00' || timeEnd !== '23:59') parts.push('time filtered');
+    
+    const summary = document.getElementById('filterSummary');
+    if (summary) {
+        summary.textContent = parts.length > 0 ? `(${parts.join(', ')})` : '';
+    }
+}
+
+function updateMemberSearchSummary() {
+    const summary = document.getElementById('memberSearchSummary');
+    if (summary) {
+        summary.textContent = activeUserFilters.size > 0 ? `(${activeUserFilters.size} selected)` : '';
+    }
+}
+
+function clearUserFilters() {
+    activeUserFilters.clear();
+    activeUserNames.clear();
+    document.querySelectorAll('.user-chip').forEach(c => c.remove());
+    updateMemberSearchSummary();
+    applyFilters();
+}
+
+// Load categories from API
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories/');
+        const data = await response.json();
+        if (data.categories && data.categories.length > 0) {
+            categories = data.categories.map(cat => ({
+                id: cat.id, name: cat.name, icon: cat.icon || '', color: cat.color || '#293242'
+            }));
+        }
+    } catch (err) {
+        categories = [
+            {id: 1, name: 'Laser', icon: '⚡', color: '#dc2626'},
+            {id: 2, name: 'Vinyl', icon: '✂️', color: '#ea580c'},
+            {id: 3, name: 'Woodworking', icon: '🪚', color: '#ca8a04'},
+            {id: 4, name: 'Textile', icon: '🧵', color: '#c026d3'},
+            {id: 5, name: 'Metalworking', icon: '🔩', color: '#64748b'},
+            {id: 6, name: '3D Printing', icon: '🖨️', color: '#2563eb'},
+            {id: 7, name: 'Electronics', icon: '💡', color: '#16a34a'}
+        ];
+    }
+    populateTeamFilterChips();
+}
+
+function getCategoryDisplay(name) {
+    const cat = categories.find(c => c.name === name);
+    return cat?.icon ? `${cat.icon} ${name}` : name;
+}
+
+function populateTeamFilterChips() {
+    const container = document.getElementById('teamFilterChips');
+    let html = '<div class="filter-chip team-chip active" data-team="__all__" onclick="toggleTeamFilter(\'__all__\')">All</div>';
+    categories.forEach(cat => {
+        const display = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
+        html += `<div class="filter-chip team-chip" data-team="${cat.name}" onclick="toggleTeamFilter('${cat.name}')">${display}</div>`;
+    });
+    container.innerHTML = html;
+}
+
 function loadSchedule() {
     const semesterId = document.getElementById('semesterSelect').value;
-    if (!semesterId) {
-        showEmptyState();
-        return;
-    }
+    if (!semesterId) { showEmptyState(); return; }
     
     fetch(`/scheduling/api/shifts/?semester_id=${semesterId}`)
         .then(res => res.json())
         .then(data => {
             if (data.shifts && data.shifts.length > 0) {
-                // Normalize user_id to integers in all shifts
-                allShifts = data.shifts.map(s => ({
-                    ...s,
-                    user_id: parseInt(s.user_id)
-                }));
-                
-                // Extract unique users
+                allShifts = data.shifts.map(s => ({...s, user_id: parseInt(s.user_id)}));
                 const userMap = new Map();
-                allShifts.forEach(s => {
-                    if (!userMap.has(s.user_id)) {
-                        userMap.set(s.user_id, s.user);
-                    }
-                });
-                allUsers = Array.from(userMap, ([id, name]) => ({id: id, name: name}));
-                
-                console.log('Loaded users:', allUsers);
-                
+                allShifts.forEach(s => { if (!userMap.has(s.user_id)) userMap.set(s.user_id, s.user); });
+                allUsers = Array.from(userMap, ([id, name]) => ({id, name}));
                 showSchedule();
                 applyFilters();
-            } else {
-                showEmptyState();
-            }
+            } else { showEmptyState(); }
         })
-        .catch(err => {
-            console.error('Error:', err);
-            showEmptyState();
-        });
+        .catch(() => showEmptyState());
 }
 
 function showEmptyState() {
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('statsCard').style.display = 'none';
     document.getElementById('filterBar').style.display = 'none';
+    document.getElementById('memberSearchBar').style.display = 'none';
     document.getElementById('calendarView').style.display = 'none';
     document.getElementById('listView').style.display = 'none';
+    document.getElementById('blockView').style.display = 'none';
 }
 
 function showSchedule() {
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('statsCard').style.display = 'block';
     document.getElementById('filterBar').style.display = 'block';
-    
+    document.getElementById('memberSearchBar').style.display = 'block';
     document.getElementById('calendarView').style.display = currentView === 'calendar' ? 'block' : 'none';
     document.getElementById('blockView').style.display = currentView === 'blocks' ? 'block' : 'none';
     document.getElementById('listView').style.display = currentView === 'list' ? 'block' : 'none';
 }
 
-// Apply filters and re-render
 function applyFilters() {
-    console.log('Applying filters - User filters:', Array.from(activeUserFilters));
+    const timeStart = document.getElementById('filterTimeStart').value || '00:00';
+    const timeEnd = document.getElementById('filterTimeEnd').value || '23:59';
     
     filteredShifts = allShifts.filter(shift => {
-        const typeMatch = activeTypeFilters.has(shift.shift_type);
-        const userMatch = activeUserFilters.size === 0 || activeUserFilters.has(shift.user_id);
-        
-        return typeMatch && userMatch;
+        if (!activeTypeFilters.has(shift.shift_type)) return false;
+        const date = new Date(shift.date);
+        const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        if (!activeDayFilters.has(dayIndex)) return false;
+        if (activeTeamFilters.size > 0 && shift.shift_type === 'training' && !activeTeamFilters.has(shift.team)) return false;
+        if (activeUserFilters.size > 0 && !activeUserFilters.has(shift.user_id)) return false;
+        if (shift.start < timeStart || shift.end > timeEnd) return false;
+        return true;
     });
     
-    console.log('Filtered shifts:', filteredShifts.length, 'of', allShifts.length);
-    
     updateStats();
-    
-    if (currentView === 'calendar') {
-        renderCalendar();
-    } else if (currentView === 'list') {
-        renderListView();
-    } else if (currentView === 'blocks') {
-        renderBlockView();
-    }
+    updateFilterSummary();
+    if (currentView === 'calendar') renderCalendar();
+    else if (currentView === 'list') renderListView();
+    else if (currentView === 'blocks') renderBlockView();
 }
 
-// Update statistics
 function updateStats() {
     const openHours = filteredShifts.filter(s => s.shift_type === 'open_hours');
     const training = filteredShifts.filter(s => s.shift_type === 'training');
     const floaters = filteredShifts.filter(s => s.shift_type === 'floater');
-    
     const uniqueMembers = new Set(filteredShifts.map(s => s.user_id));
     const totalHours = filteredShifts.reduce((sum, s) => sum + (s.duration_hours || 0), 0);
     
@@ -818,621 +1075,429 @@ function updateStats() {
     document.getElementById('statHours').textContent = totalHours.toFixed(0);
 }
 
-// Render calendar
-function renderCalendar() {
-    const body = document.getElementById('calendarBody');
-    body.innerHTML = ''; // Clear first
-    
-    if (filteredShifts.length === 0) {
-        body.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
-        return;
-    }
-    
-    // Get time range
-    let minHour = 24, maxHour = 0;
-    filteredShifts.forEach(shift => {
-        const start = parseInt(shift.start.split(':')[0]);
-        const end = parseInt(shift.end.split(':')[0]);
-        minHour = Math.min(minHour, start);
-        maxHour = Math.max(maxHour, end);
-    });
-    
-    // Ensure reasonable range
-    if (minHour > maxHour) {
-        minHour = 9;
-        maxHour = 17;
-    }
-    
-    const totalHours = maxHour - minHour + 1;
-    
-    // Group shifts by day (Mon=0, Sun=6)
-    const shiftsByDay = [[], [], [], [], [], [], []];
-    filteredShifts.forEach(shift => {
-        const date = new Date(shift.date);
-        const jsDay = date.getDay(); // 0=Sun, 6=Sat
-        const dayIndex = jsDay === 0 ? 6 : jsDay - 1; // Convert to Mon=0, Sun=6
-        shiftsByDay[dayIndex].push(shift);
-    });
-    
-    // Create time labels column
-    const timesDiv = document.createElement('div');
-    timesDiv.className = 'gcal-times';
-    for (let h = minHour; h <= maxHour; h++) {
-        const label = document.createElement('div');
-        label.className = 'gcal-time-label';
-        label.textContent = h + ':00';
-        timesDiv.appendChild(label);
-    }
-    body.appendChild(timesDiv);
-    
-    // Create day columns container
-    const columnsDiv = document.createElement('div');
-    columnsDiv.className = 'gcal-columns';
-    
-    // Create each day column
-    for (let d = 0; d < 7; d++) {
-        const dayCol = document.createElement('div');
-        dayCol.className = 'gcal-day-col';
-        dayCol.style.height = (totalHours * HOUR_HEIGHT) + 'px';
-        
-        // Add hour lines
-        for (let h = 0; h < totalHours; h++) {
-            const line = document.createElement('div');
-            line.className = 'gcal-hour-line';
-            dayCol.appendChild(line);
-        }
-        
-        // Layout and add events for this day
-        const dayShifts = shiftsByDay[d];
-        if (dayShifts.length > 0) {
-            const columns = layoutOverlappingEvents(dayShifts);
-            const totalCols = columns.length;
-            
-            columns.forEach((colShifts, colIndex) => {
-                colShifts.forEach(shift => {
-                    const eventEl = createEventElement(shift, colIndex, totalCols, minHour);
-                    dayCol.appendChild(eventEl);
-                });
-            });
-        }
-        
-        columnsDiv.appendChild(dayCol);
-    }
-    
-    body.appendChild(columnsDiv);
+// Day filters
+function toggleDayFilter(day) {
+    const chip = document.querySelector(`[data-day="${day}"]`);
+    if (activeDayFilters.has(day)) {
+        if (activeDayFilters.size > 1) { activeDayFilters.delete(day); chip.classList.remove('active'); }
+    } else { activeDayFilters.add(day); chip.classList.add('active'); }
+    applyFilters();
 }
 
-// Layout overlapping events into columns
-function layoutOverlappingEvents(shifts) {
-    if (shifts.length === 0) return [];
-    
-    // Sort by start time, then by duration (longer first)
-    const sorted = [...shifts].sort((a, b) => {
-        if (a.start !== b.start) return a.start.localeCompare(b.start);
-        return b.end.localeCompare(a.end);
-    });
-    
-    const columns = [];
-    
-    sorted.forEach(shift => {
-        let placed = false;
-        
-        for (let col of columns) {
-            const overlaps = col.some(s => {
-                return s.start < shift.end && shift.start < s.end;
-            });
-            
-            if (!overlaps) {
-                col.push(shift);
-                placed = true;
-                break;
-            }
-        }
-        
-        if (!placed) {
-            columns.push([shift]);
-        }
-    });
-    
-    return columns;
-}
+function selectWeekdays() { activeDayFilters = new Set([0,1,2,3,4]); updateDayChips(); applyFilters(); }
+function selectWeekends() { activeDayFilters = new Set([5,6]); updateDayChips(); applyFilters(); }
+function selectAllDays() { activeDayFilters = new Set([0,1,2,3,4,5,6]); updateDayChips(); applyFilters(); }
+function updateDayChips() { document.querySelectorAll('.day-chip').forEach(c => c.classList.toggle('active', activeDayFilters.has(parseInt(c.getAttribute('data-day'))))); }
 
-// Create event DOM element
-function createEventElement(shift, colIndex, totalCols, minHour) {
-    const [startH, startM] = shift.start.split(':').map(Number);
-    const [endH, endM] = shift.end.split(':').map(Number);
-    
-    const top = ((startH - minHour) * 60 + startM);
-    const height = Math.max(20, ((endH * 60 + endM) - (startH * 60 + startM)));
-    
-    const widthPercent = 100 / totalCols;
-    const leftPercent = colIndex * widthPercent;
-    
-    const typeClass = shift.shift_type.replace('_', '-');
-    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
-    
-    // Add team category for training shifts
-    let displayName = name;
-    if (shift.shift_type === 'training' && shift.team) {
-        displayName = name + ' (' + shift.team + ')';
-    }
-    
-    const div = document.createElement('div');
-    div.className = 'gcal-event ' + typeClass;
-    div.style.top = top + 'px';
-    div.style.height = height + 'px';
-    div.style.width = 'calc(' + widthPercent + '% - 4px)';
-    div.style.left = 'calc(' + leftPercent + '% + 2px)';
-    
-    div.innerHTML = '<div class="gcal-event-title">' + displayName + '</div>' +
-                    '<div class="gcal-event-time">' + shift.start + ' – ' + shift.end + '</div>';
-    
-    div.onclick = function() { viewShiftDetails(shift.id); };
-    
-    return div;
-}
-
-// Render list view
-function renderListView() {
-    const content = document.getElementById('listContent');
-    
-    if (filteredShifts.length === 0) {
-        content.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
-        return;
-    }
-    
-    // Group by day
-    const shiftsByDay = [[], [], [], [], [], [], []];
-    filteredShifts.forEach(shift => {
-        const date = new Date(shift.date);
-        const jsDay = date.getDay();
-        const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
-        shiftsByDay[dayIndex].push(shift);
-    });
-    
-    let html = '';
-    
-    shiftsByDay.forEach((dayShifts, dayIndex) => {
-        if (dayShifts.length === 0) return;
-        
-        html += '<div class="list-day">';
-        html += '<div class="list-day-header">';
-        html += '<span>' + DAYS[dayIndex] + '</span>';
-        html += '<span>' + dayShifts.length + ' shift' + (dayShifts.length !== 1 ? 's' : '') + '</span>';
-        html += '</div>';
-        
-        // Group by type
-        const byType = {
-            open_hours: dayShifts.filter(s => s.shift_type === 'open_hours'),
-            training: dayShifts.filter(s => s.shift_type === 'training'),
-            floater: dayShifts.filter(s => s.shift_type === 'floater')
-        };
-        
-        const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
-        const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
-        
-        Object.entries(byType).forEach(([type, shifts]) => {
-            if (shifts.length === 0) return;
-            
-            html += '<div class="list-section">';
-            html += '<div class="list-section-title">' + icons[type] + ' ' + labels[type] + '</div>';
-            
-            shifts.sort((a, b) => a.start.localeCompare(b.start)).forEach(shift => {
-                const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
-                let displayName = name;
-                if (type === 'training' && shift.team) {
-                    displayName = name + ' <span style="opacity:0.8;">(' + shift.team + ')</span>';
-                }
-                html += '<div class="list-item ' + type.replace('_', '-') + '">';
-                html += '<span><strong>' + displayName + '</strong></span>';
-                html += '<span>' + shift.start + ' – ' + shift.end + '</span>';
-                html += '</div>';
-            });
-            
-            html += '</div>';
-        });
-        
-        html += '</div>';
-    });
-    
-    content.innerHTML = html;
-}
-
-// Toggle type filter
-function toggleTypeFilter(type) {
-    const chip = document.querySelector('[data-filter="' + type + '"]');
-    
-    if (activeTypeFilters.has(type)) {
-        activeTypeFilters.delete(type);
-        chip.classList.remove('active');
+// Team filters
+function toggleTeamFilter(team) {
+    if (team === '__all__') {
+        activeTeamFilters.clear();
+        document.querySelectorAll('.team-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-team') === '__all__'));
     } else {
-        activeTypeFilters.add(type);
-        chip.classList.add('active');
+        const allChip = document.querySelector('[data-team="__all__"]');
+        const chip = document.querySelector(`[data-team="${team}"]`);
+        if (activeTeamFilters.has(team)) {
+            activeTeamFilters.delete(team); chip.classList.remove('active');
+            if (activeTeamFilters.size === 0) allChip.classList.add('active');
+        } else {
+            activeTeamFilters.add(team); chip.classList.add('active'); allChip.classList.remove('active');
+        }
     }
-    
+    applyFilters();
+}
+
+function resetTimeFilter() {
+    document.getElementById('filterTimeStart').value = '00:00';
+    document.getElementById('filterTimeEnd').value = '23:59';
+    applyFilters();
+}
+
+function toggleTypeFilter(type) {
+    const chip = document.querySelector(`[data-filter="${type}"]`);
+    if (activeTypeFilters.has(type)) { activeTypeFilters.delete(type); chip.classList.remove('active'); }
+    else { activeTypeFilters.add(type); chip.classList.add('active'); }
     applyFilters();
 }
 
 // User search
 function handleSearch(query) {
     const dropdown = document.getElementById('userDropdown');
-    
-    if (!query || query.length < 1) {
-        dropdown.style.display = 'none';
-        return;
-    }
-    
-    const matches = allUsers.filter(u => 
-        u.name.toLowerCase().includes(query.toLowerCase()) && 
-        !activeUserFilters.has(u.id)
-    );
-    
-    if (matches.length === 0) {
-        dropdown.innerHTML = '<div class="search-item" style="color: #999;">No matches found</div>';
-        dropdown.style.display = 'block';
-        return;
-    }
-    
-    let html = '';
-    matches.forEach(u => {
-        const displayName = u.name.includes('@') ? u.name.split('@')[0] : u.name;
-        const email = u.name.includes('@') ? u.name : '';
-        // Use data attributes and handle click in event listener
-        html += '<div class="search-item user-search-item" data-userid="' + u.id + '" data-username="' + escapeHtml(u.name) + '">';
-        html += displayName;
-        if (email) {
-            html += ' <span style="color: #999; font-size: 0.85rem;">' + email + '</span>';
-        }
-        html += '</div>';
-    });
-    
-    dropdown.innerHTML = html;
+    if (!query) { dropdown.style.display = 'none'; return; }
+    const matches = allUsers.filter(u => u.name.toLowerCase().includes(query.toLowerCase()) && !activeUserFilters.has(u.id));
+    if (!matches.length) { dropdown.innerHTML = '<div class="search-item" style="color:#999;">No matches</div>'; dropdown.style.display = 'block'; return; }
+    dropdown.innerHTML = matches.map(u => {
+        const name = u.name.includes('@') ? u.name.split('@')[0] : u.name;
+        return `<div class="search-item user-search-item" data-userid="${u.id}" data-username="${escapeHtml(u.name)}">${name}</div>`;
+    }).join('');
     dropdown.style.display = 'block';
-    
-    // Add click handlers to each search item
     dropdown.querySelectorAll('.user-search-item').forEach(item => {
         item.addEventListener('mousedown', function(e) {
-            e.preventDefault(); // Prevent blur from firing first
-            const userId = parseInt(this.getAttribute('data-userid'));
-            const userName = this.getAttribute('data-username');
-            console.log('Search item clicked:', userId, userName);
-            addUserFilter(userId, userName);
+            e.preventDefault();
+            addUserFilter(parseInt(this.getAttribute('data-userid')), this.getAttribute('data-username'));
         });
     });
 }
 
-// Helper to escape HTML
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-// Add user filter
 function addUserFilter(userId, userName) {
-    const intUserId = parseInt(userId);
-    
-    console.log('Adding user filter:', intUserId, userName);
-    
-    if (activeUserFilters.has(intUserId)) {
-        console.log('User already in filter');
-        return;
-    }
-    
-    activeUserFilters.add(intUserId);
-    activeUserNames.set(intUserId, userName);
-    
-    console.log('Active user filters now:', Array.from(activeUserFilters));
-    
-    const displayName = userName.includes('@') ? userName.split('@')[0] : userName;
+    if (activeUserFilters.has(userId)) return;
+    activeUserFilters.add(userId);
+    activeUserNames.set(userId, userName);
+    const name = userName.includes('@') ? userName.split('@')[0] : userName;
     const chip = document.createElement('div');
     chip.className = 'filter-chip active user-chip';
-    chip.id = 'user-chip-' + intUserId;
-    chip.innerHTML = '👤 ' + displayName + ' <span class="remove-btn" data-userid="' + intUserId + '">×</span>';
-    
-    chip.querySelector('.remove-btn').onclick = function(e) {
-        e.stopPropagation();
-        removeUserFilter(parseInt(this.getAttribute('data-userid')));
-    };
-    
-    document.getElementById('filterChips').appendChild(chip);
+    chip.id = `user-chip-${userId}`;
+    chip.innerHTML = `👤 ${name} <span class="remove-btn" data-userid="${userId}">×</span>`;
+    chip.querySelector('.remove-btn').onclick = e => { e.stopPropagation(); removeUserFilter(parseInt(e.target.getAttribute('data-userid'))); };
+    document.getElementById('userFilterChips').appendChild(chip);
     document.getElementById('userSearch').value = '';
     document.getElementById('userDropdown').style.display = 'none';
-    
+    updateMemberSearchSummary();
     applyFilters();
 }
 
-// Remove user filter
 function removeUserFilter(userId) {
-    const intUserId = parseInt(userId);
-    console.log('Removing user filter:', intUserId);
-    
-    activeUserFilters.delete(intUserId);
-    activeUserNames.delete(intUserId);
-    const chip = document.getElementById('user-chip-' + intUserId);
-    if (chip) chip.remove();
+    activeUserFilters.delete(userId);
+    activeUserNames.delete(userId);
+    document.getElementById(`user-chip-${userId}`)?.remove();
+    updateMemberSearchSummary();
     applyFilters();
 }
 
-// Clear all filters
 function clearAllFilters() {
-    // Reset type filters
     activeTypeFilters = new Set(['open_hours', 'training', 'floater']);
-    document.querySelectorAll('[data-filter]').forEach(chip => chip.classList.add('active'));
-    
-    // Clear user filters
-    activeUserFilters.clear();
-    activeUserNames.clear();
-    document.querySelectorAll('.user-chip').forEach(chip => chip.remove());
-    
+    document.querySelectorAll('[data-filter]').forEach(c => c.classList.add('active'));
+    activeDayFilters = new Set([0,1,2,3,4,5,6]); updateDayChips();
+    activeTeamFilters.clear();
+    document.querySelectorAll('.team-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-team') === '__all__'));
+    document.getElementById('filterTimeStart').value = '00:00';
+    document.getElementById('filterTimeEnd').value = '23:59';
     applyFilters();
 }
 
-// Switch view
 function switchView(view) {
     currentView = view;
-    
     document.getElementById('btnCalendarView').classList.toggle('active', view === 'calendar');
     document.getElementById('btnBlockView').classList.toggle('active', view === 'blocks');
     document.getElementById('btnListView').classList.toggle('active', view === 'list');
-    
     document.getElementById('calendarView').style.display = view === 'calendar' ? 'block' : 'none';
     document.getElementById('blockView').style.display = view === 'blocks' ? 'block' : 'none';
     document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-    
     applyFilters();
 }
 
-// Change block interval
-function changeBlockInterval(value) {
-    blockInterval = parseInt(value);
-    if (currentView === 'blocks') {
-        renderBlockView();
-    }
-}
+function changeBlockInterval(value) { blockInterval = parseInt(value); if (currentView === 'blocks') renderBlockView(); }
 
-// Render block view
-function renderBlockView() {
-    const content = document.getElementById('blockContent');
+// Render views
+function renderCalendar() {
+    const header = document.getElementById('calendarHeader');
+    const body = document.getElementById('calendarBody');
     
-    if (filteredShifts.length === 0) {
-        content.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">No shifts to display</p>';
-        return;
+    // Get selected days in order
+    const selectedDays = Array.from(activeDayFilters).sort((a, b) => a - b);
+    
+    // Build header dynamically
+    header.innerHTML = '<div class="gcal-header-cell"></div>' + 
+        selectedDays.map(d => `<div class="gcal-header-cell">${DAYS[d]}</div>`).join('');
+    
+    body.innerHTML = '';
+    if (!filteredShifts.length) { 
+        body.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; 
+        return; 
     }
     
-    // Get time range
     let minHour = 24, maxHour = 0;
-    filteredShifts.forEach(shift => {
-        const start = parseInt(shift.start.split(':')[0]);
-        const end = parseInt(shift.end.split(':')[0]);
-        minHour = Math.min(minHour, start);
-        maxHour = Math.max(maxHour, end);
+    filteredShifts.forEach(s => { 
+        minHour = Math.min(minHour, parseInt(s.start.split(':')[0])); 
+        maxHour = Math.max(maxHour, parseInt(s.end.split(':')[0])); 
     });
+    if (minHour > maxHour) { minHour = 9; maxHour = 17; }
+    const totalHours = maxHour - minHour + 1;
     
     // Group shifts by day
-    const shiftsByDay = [[], [], [], [], [], [], []];
-    filteredShifts.forEach(shift => {
-        const date = new Date(shift.date);
-        const jsDay = date.getDay();
-        const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
-        shiftsByDay[dayIndex].push(shift);
+    const shiftsByDay = [[],[],[],[],[],[],[]];
+    filteredShifts.forEach(s => { 
+        const d = new Date(s.date); 
+        shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); 
     });
     
-    // Generate time blocks
+    // Time labels
+    const timesDiv = document.createElement('div'); 
+    timesDiv.className = 'gcal-times';
+    for (let h = minHour; h <= maxHour; h++) { 
+        const l = document.createElement('div'); 
+        l.className = 'gcal-time-label'; 
+        l.textContent = h + ':00'; 
+        timesDiv.appendChild(l); 
+    }
+    body.appendChild(timesDiv);
+    
+    // Day columns - only for selected days
+    const columnsDiv = document.createElement('div'); 
+    columnsDiv.className = 'gcal-columns';
+    
+    selectedDays.forEach(d => {
+        const dayCol = document.createElement('div');
+        dayCol.className = 'gcal-day-col';
+        dayCol.style.height = (totalHours * HOUR_HEIGHT) + 'px';
+        
+        for (let h = 0; h < totalHours; h++) { 
+            const l = document.createElement('div'); 
+            l.className = 'gcal-hour-line'; 
+            dayCol.appendChild(l); 
+        }
+        
+        const dayShifts = shiftsByDay[d];
+        if (dayShifts.length) {
+            const columns = layoutOverlappingEvents(dayShifts);
+            columns.forEach((colShifts, colIndex) => 
+                colShifts.forEach(shift => dayCol.appendChild(createEventElement(shift, colIndex, columns.length, minHour)))
+            );
+        }
+        columnsDiv.appendChild(dayCol);
+    });
+    body.appendChild(columnsDiv);
+}
+
+function layoutOverlappingEvents(shifts) {
+    if (!shifts.length) return [];
+    const sorted = [...shifts].sort((a, b) => a.start !== b.start ? a.start.localeCompare(b.start) : b.end.localeCompare(a.end));
+    const columns = [];
+    sorted.forEach(shift => {
+        let placed = false;
+        for (let col of columns) { if (!col.some(s => s.start < shift.end && shift.start < s.end)) { col.push(shift); placed = true; break; } }
+        if (!placed) columns.push([shift]);
+    });
+    return columns;
+}
+
+function createEventElement(shift, colIndex, totalCols, minHour) {
+    const [sH, sM] = shift.start.split(':').map(Number);
+    const [eH, eM] = shift.end.split(':').map(Number);
+    const top = (sH - minHour) * 60 + sM;
+    const height = Math.max(20, (eH * 60 + eM) - (sH * 60 + sM));
+    const widthPct = 100 / totalCols, leftPct = colIndex * widthPct;
+    const typeClass = shift.shift_type.replace('_', '-');
+    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
+    let displayName = shift.shift_type === 'training' && shift.team ? `${name} (${getCategoryDisplay(shift.team)})` : name;
+    
+    const div = document.createElement('div');
+    div.className = `gcal-event ${typeClass}`;
+    div.style.cssText = `top:${top}px;height:${height}px;width:calc(${widthPct}% - 4px);left:calc(${leftPct}% + 2px)`;
+    div.innerHTML = `<div class="gcal-event-title">${displayName}</div><div class="gcal-event-time">${shift.start} – ${shift.end}</div>`;
+    div.onclick = () => viewShiftDetails(shift.id);
+    return div;
+}
+
+function renderListView() {
+    const content = document.getElementById('listContent');
+    if (!filteredShifts.length) { content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; return; }
+    
+    const shiftsByDay = [[],[],[],[],[],[],[]];
+    filteredShifts.forEach(s => { const d = new Date(s.date); shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); });
+    
+    const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
+    const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
+    
+    let html = '';
+    shiftsByDay.forEach((dayShifts, dayIndex) => {
+        if (!dayShifts.length || !activeDayFilters.has(dayIndex)) return;
+        html += `<div class="list-day"><div class="list-day-header"><span>${DAYS[dayIndex]}</span><span>${dayShifts.length} shift${dayShifts.length !== 1 ? 's' : ''}</span></div>`;
+        const byType = {open_hours: dayShifts.filter(s => s.shift_type === 'open_hours'), training: dayShifts.filter(s => s.shift_type === 'training'), floater: dayShifts.filter(s => s.shift_type === 'floater')};
+        Object.entries(byType).forEach(([type, shifts]) => {
+            if (!shifts.length) return;
+            html += `<div class="list-section"><div class="list-section-title">${icons[type]} ${labels[type]}</div>`;
+            shifts.sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
+                const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
+                const displayName = type === 'training' && s.team ? `${name} <span style="opacity:0.8;">(${getCategoryDisplay(s.team)})</span>` : name;
+                html += `<div class="list-item ${type.replace('_','-')}"><span><strong>${displayName}</strong></span><span>${s.start} – ${s.end}</span></div>`;
+            });
+            html += '</div>';
+        });
+        html += '</div>';
+    });
+    content.innerHTML = html || '<p style="padding:2rem;text-align:center;color:#666;">No shifts for selected days</p>';
+}
+
+function renderBlockView() {
+    const content = document.getElementById('blockContent');
+    if (!filteredShifts.length) { 
+        content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; 
+        return; 
+    }
+    
+    // Get selected days in order
+    const selectedDays = Array.from(activeDayFilters).sort((a, b) => a - b);
+    
+    let minHour = 24, maxHour = 0;
+    filteredShifts.forEach(s => { 
+        minHour = Math.min(minHour, parseInt(s.start.split(':')[0])); 
+        maxHour = Math.max(maxHour, parseInt(s.end.split(':')[0])); 
+    });
+    
+    const shiftsByDay = [[],[],[],[],[],[],[]];
+    filteredShifts.forEach(s => { 
+        const d = new Date(s.date); 
+        shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); 
+    });
+    
     const blocks = [];
     for (let h = minHour; h < maxHour; h++) {
         for (let m = 0; m < 60; m += blockInterval) {
-            const startMins = h * 60 + m;
-            const endMins = startMins + blockInterval;
+            const startMins = h * 60 + m, endMins = startMins + blockInterval;
             if (endMins <= maxHour * 60) {
                 blocks.push({
-                    start: formatTime(h, m),
-                    end: formatTime(Math.floor(endMins / 60), endMins % 60),
-                    startMins: startMins,
-                    endMins: endMins
+                    start: formatTime(h, m), 
+                    end: formatTime(Math.floor(endMins/60), endMins%60), 
+                    startMins, 
+                    endMins
                 });
             }
         }
     }
     
-    // Build table
-    let html = '<table class="block-table">';
-    html += '<thead><tr><th>Time Block</th>';
-    DAYS.forEach(day => {
-        html += '<th>' + day + '</th>';
-    });
+    // Build table with only selected days
+    let html = '<table class="block-table"><thead><tr><th>Time Block</th>';
+    selectedDays.forEach(d => html += `<th>${DAYS[d]}</th>`);
     html += '</tr></thead><tbody>';
     
     blocks.forEach(block => {
-        html += '<tr>';
-        html += '<td class="block-time">' + block.start + ' – ' + block.end + '</td>';
-        
-        for (let d = 0; d < 7; d++) {
-            const dayShifts = shiftsByDay[d];
-            const inBlock = dayShifts.filter(shift => {
-                const [startH, startM] = shift.start.split(':').map(Number);
-                const [endH, endM] = shift.end.split(':').map(Number);
-                const shiftStart = startH * 60 + startM;
-                const shiftEnd = endH * 60 + endM;
-                // Shift overlaps with block if it starts before block ends and ends after block starts
-                return shiftStart < block.endMins && shiftEnd > block.startMins;
+        html += `<tr><td class="block-time">${block.start} – ${block.end}</td>`;
+        selectedDays.forEach(d => {
+            const inBlock = shiftsByDay[d].filter(s => {
+                const [sH, sM] = s.start.split(':').map(Number);
+                const [eH, eM] = s.end.split(':').map(Number);
+                return sH * 60 + sM < block.endMins && eH * 60 + eM > block.startMins;
             });
-            
-            if (inBlock.length === 0) {
-                html += '<td class="block-cell empty">-</td>';
+            if (!inBlock.length) { 
+                html += '<td class="block-cell empty">-</td>'; 
             } else {
                 html += '<td class="block-cell">';
-                inBlock.forEach(shift => {
-                    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
-                    const typeClass = shift.shift_type.replace('_', '-');
-                    let label = name;
-                    if (shift.shift_type === 'training' && shift.team) {
-                        label += ' <span style="opacity:0.7;">(' + shift.team + ')</span>';
-                    }
-                    html += '<div class="block-person ' + typeClass + '" data-shift-id="' + shift.id + '" onclick="viewShiftDetails(' + shift.id + ')">' + label + '</div>';
+                inBlock.forEach(s => {
+                    const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
+                    const label = s.shift_type === 'training' && s.team 
+                        ? `${name} <span style="opacity:0.7;">(${getCategoryDisplay(s.team)})</span>` 
+                        : name;
+                    html += `<div class="block-person ${s.shift_type.replace('_','-')}" onclick="viewShiftDetails(${s.id})">${label}</div>`;
                 });
                 html += '</td>';
             }
-        }
-        
+        });
         html += '</tr>';
     });
-    
     html += '</tbody></table>';
     content.innerHTML = html;
 }
 
-// Format time helper
-function formatTime(h, m) {
-    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-}
+function formatTime(h, m) { return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
 
 function viewShiftDetails(shiftId) {
-    // Find the shift in our data
     const shift = allShifts.find(s => s.id === shiftId);
-    
-    if (!shift) {
-        alert('Shift not found');
-        return;
-    }
+    if (!shift) { alert('Shift not found'); return; }
     
     const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
     const email = shift.user.includes('@') ? shift.user : '';
     const typeClass = shift.shift_type.replace('_', '-');
-    const typeLabels = {
-        'open_hours': 'Open Hours',
-        'training': 'Training',
-        'floater': 'Floater'
-    };
+    const typeLabels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floater'};
+    const date = new Date(shift.date);
+    const dayName = DAYS[(date.getDay() + 6) % 7];
+    const dateFmt = date.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
     
-    // Format date
-    const shiftDate = new Date(shift.date);
-    const dayName = DAYS[(shiftDate.getDay() + 6) % 7];
-    const dateFormatted = shiftDate.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-    });
+    let html = `<div class="detail-row"><div class="detail-label">Name</div><div class="detail-value"><strong>${name}</strong></div></div>`;
+    if (email) html += `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${email}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Shift Type</div><div class="detail-value"><span class="shift-type-badge ${typeClass}">${typeLabels[shift.shift_type]}</span></div></div>`;
+    if (shift.team) html += `<div class="detail-row"><div class="detail-label">Team</div><div class="detail-value">${getCategoryDisplay(shift.team)}</div></div>`;
+    if (shift.location) html += `<div class="detail-row"><div class="detail-label">Location</div><div class="detail-value">${shift.location}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Day</div><div class="detail-value">${dayName}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Date</div><div class="detail-value">${dateFmt}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Time</div><div class="detail-value">${shift.start} – ${shift.end}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Duration</div><div class="detail-value">${(shift.duration_hours || 0).toFixed(1)} hours</div></div>`;
+    if (shift.status) html += `<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge ${shift.status}">${shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}</span></div></div>`;
     
-    // Build modal content
-    let html = '';
-    
-    // Name
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Name</div>';
-    html += '<div class="detail-value"><strong>' + name + '</strong></div>';
-    html += '</div>';
-    
-    // Email
-    if (email) {
-        html += '<div class="detail-row">';
-        html += '<div class="detail-label">Email</div>';
-        html += '<div class="detail-value">' + email + '</div>';
-        html += '</div>';
-    }
-    
-    // Shift Type
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Shift Type</div>';
-    html += '<div class="detail-value"><span class="shift-type-badge ' + typeClass + '">' + typeLabels[shift.shift_type] + '</span></div>';
-    html += '</div>';
-    
-    // Team/Category (for training)
-    if (shift.team) {
-        html += '<div class="detail-row">';
-        html += '<div class="detail-label">Team</div>';
-        html += '<div class="detail-value">' + shift.team + '</div>';
-        html += '</div>';
-    }
-    
-    // Location (for open hours)
-    if (shift.location) {
-        html += '<div class="detail-row">';
-        html += '<div class="detail-label">Location</div>';
-        html += '<div class="detail-value">' + shift.location + '</div>';
-        html += '</div>';
-    }
-    
-    // Day
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Day</div>';
-    html += '<div class="detail-value">' + dayName + '</div>';
-    html += '</div>';
-    
-    // Date
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Date</div>';
-    html += '<div class="detail-value">' + dateFormatted + '</div>';
-    html += '</div>';
-    
-    // Time
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Time</div>';
-    html += '<div class="detail-value">' + shift.start + ' – ' + shift.end + '</div>';
-    html += '</div>';
-    
-    // Duration
-    html += '<div class="detail-row">';
-    html += '<div class="detail-label">Duration</div>';
-    html += '<div class="detail-value">' + (shift.duration_hours || 0).toFixed(1) + ' hours</div>';
-    html += '</div>';
-    
-    // Status
-    if (shift.status) {
-        html += '<div class="detail-row">';
-        html += '<div class="detail-label">Status</div>';
-        html += '<div class="detail-value"><span class="status-badge ' + shift.status + '">' + capitalizeFirst(shift.status) + '</span></div>';
-        html += '</div>';
-    }
-    
-    // Update modal
-    document.getElementById('modalTitle').textContent = name + "'s Shift";
+    document.getElementById('modalTitle').textContent = `${name}'s Shift`;
     document.getElementById('modalBody').innerHTML = html;
     document.getElementById('shiftModal').style.display = 'flex';
 }
 
-function closeShiftModal() {
-    document.getElementById('shiftModal').style.display = 'none';
+function closeShiftModal() { document.getElementById('shiftModal').style.display = 'none'; }
+
+// Export
+function openExportModal() { document.getElementById('exportCount').textContent = filteredShifts.length; document.getElementById('exportModal').style.display = 'flex'; }
+function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
+
+function exportSchedule(format) {
+    if (!filteredShifts.length) { alert('No shifts to export.'); return; }
+    closeExportModal();
+    if (format === 'csv') exportCSV();
+    else if (format === 'json') exportJSON();
+    else if (format === 'print') exportPrint();
 }
 
-function capitalizeFirst(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
+function exportCSV() {
+    const headers = ['Day','Date','Start Time','End Time','Duration (hrs)','Shift Type','Team Member','Email','Team/Category','Location','Status'];
+    const rows = filteredShifts.map(s => {
+        const d = new Date(s.date);
+        const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
+        return [DAYS[(d.getDay()+6)%7], d.toISOString().split('T')[0], s.start, s.end, (s.duration_hours||0).toFixed(1), s.shift_type.replace('_',' '), name, s.user.includes('@') ? s.user : '', s.team||'', s.location||'', s.status||'scheduled'].map(v => `"${v}"`).join(',');
+    });
+    const blob = new Blob([[headers.join(','), ...rows].join('\n')], {type: 'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `schedule_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
 }
 
-// Close modal on overlay click
+function exportJSON() {
+    const data = {
+        exported_at: new Date().toISOString(),
+        semester: document.getElementById('semesterSelect').options[document.getElementById('semesterSelect').selectedIndex].text,
+        total_shifts: filteredShifts.length,
+        filters: {types: Array.from(activeTypeFilters), days: Array.from(activeDayFilters).map(d => DAYS[d]), teams: Array.from(activeTeamFilters), users: Array.from(activeUserNames.values()), time_range: {start: document.getElementById('filterTimeStart').value, end: document.getElementById('filterTimeEnd').value}},
+        shifts: filteredShifts.map(s => ({id: s.id, user: s.user, user_id: s.user_id, date: s.date, day: DAYS[(new Date(s.date).getDay()+6)%7], start_time: s.start, end_time: s.end, duration_hours: s.duration_hours, shift_type: s.shift_type, team: s.team, location: s.location, status: s.status}))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `schedule_export_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+function exportPrint() {
+    const shiftsByDay = [[],[],[],[],[],[],[]];
+    filteredShifts.forEach(s => { const d = new Date(s.date); shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); });
+    
+    let html = `<!DOCTYPE html><html><head><title>Schedule - Print View</title><style>body{font-family:Arial,sans-serif;margin:20px}h1{color:#293242;border-bottom:2px solid #293242;padding-bottom:10px}h2{color:#293242;margin-top:30px}.meta{color:#666;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}.shift-type{display:inline-block;padding:2px 8px;border-radius:4px;color:white;font-size:12px}.open-hours{background:#4CAF50}.training{background:#2196F3}.floater{background:#FF9800}@media print{.no-print{display:none}}</style></head><body>`;
+    html += `<h1>📊 Schedule Export</h1><div class="meta"><p><strong>Semester:</strong> ${document.getElementById('semesterSelect').options[document.getElementById('semesterSelect').selectedIndex].text}</p><p><strong>Exported:</strong> ${new Date().toLocaleString()}</p><p><strong>Total Shifts:</strong> ${filteredShifts.length}</p></div><button class="no-print" onclick="window.print()">🖨️ Print</button>`;
+    
+    shiftsByDay.forEach((dayShifts, dayIndex) => {
+        if (!dayShifts.length || !activeDayFilters.has(dayIndex)) return;
+        html += `<h2>${DAYS[dayIndex]} (${dayShifts.length} shifts)</h2><table><thead><tr><th>Time</th><th>Type</th><th>Team Member</th><th>Team/Category</th><th>Location</th></tr></thead><tbody>`;
+        dayShifts.sort((a,b) => a.start.localeCompare(b.start)).forEach(s => {
+            const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
+            html += `<tr><td>${s.start} – ${s.end}</td><td><span class="shift-type ${s.shift_type.replace('_','-')}">${s.shift_type.replace('_',' ')}</span></td><td>${name}</td><td>${s.team||'-'}</td><td>${s.location||'-'}</td></tr>`;
+        });
+        html += '</tbody></table>';
+    });
+    html += '</body></html>';
+    const w = window.open('', '_blank'); w.document.write(html); w.document.close();
+}
+
+// Event listeners
 document.addEventListener('click', function(e) {
-    if (e.target.id === 'shiftModal') {
-        closeShiftModal();
-    }
+    if (e.target.id === 'shiftModal') closeShiftModal();
+    if (e.target.id === 'exportModal') closeExportModal();
+    const dd = document.getElementById('userDropdown'), s = document.getElementById('userSearch');
+    if (dd && s && !s.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
 });
-
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeShiftModal();
-    }
-});
-
-function exportSchedule() {
-    alert('Export functionality coming soon!');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    const dropdown = document.getElementById('userDropdown');
-    const search = document.getElementById('userSearch');
-    if (dropdown && search && !search.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.style.display = 'none';
-    }
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeShiftModal(); closeExportModal(); } });
 
 // Init
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadCategories();
     const select = document.getElementById('semesterSelect');
-    if (select && select.value) {
-        loadSchedule();
-    }
+    if (select?.value) loadSchedule();
 });
 </script>
-
 {% endblock %}

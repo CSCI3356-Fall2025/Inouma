@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% load static %}
 
-{% block title %}Machine Management - The Hatchery{% endblock %}
+{% block title %}Add Machine - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
     <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > 
@@ -10,6 +10,127 @@
 {% endblock %}
 
 {% block content %}
+<style>
+:root { --gold: #FFC933; --gunmetal: #293242; --timberwolf: #D5D0CD; }
+
+/* Machine Type Selector Styles */
+.machine-type-selector {
+    border: 1px solid #D5D0CD;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+}
+.machine-type-selector.show { display: block; }
+
+.mt-category-group { border-bottom: 1px solid #e9ecef; }
+.mt-category-group:last-child { border-bottom: none; }
+
+.mt-category-header {
+    padding: 0.6rem 0.75rem;
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #293242;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.mt-category-header:hover { background: #f0f1f2; }
+
+.mt-category-items { padding: 0.5rem 0.75rem; display: none; }
+.mt-category-items.show { display: block; }
+
+.mt-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.mt-item:hover { background: #f8f9fa; }
+.mt-item.selected { background: rgba(255, 201, 51, 0.15); border: 1px solid var(--gold); }
+
+.mt-item-name { font-weight: 500; }
+.mt-item-count { font-size: 0.8rem; color: #888; }
+
+/* Toggle buttons for input mode */
+.input-mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.toggle-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #D5D0CD;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+}
+.toggle-btn:hover { border-color: #aaa; }
+.toggle-btn.active { 
+    background: var(--gold); 
+    border-color: var(--gold); 
+    color: #293242;
+    font-weight: 500;
+}
+
+/* Additional fields section */
+.optional-fields-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+}
+.optional-fields-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+.optional-fields-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #293242;
+}
+.optional-fields-toggle {
+    color: #888;
+    font-size: 0.9rem;
+}
+.optional-fields-content {
+    display: none;
+}
+.optional-fields-content.show { display: block; }
+
+/* Selected machine type display */
+.selected-type-display {
+    display: none;
+    padding: 0.75rem;
+    background: rgba(255, 201, 51, 0.1);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+.selected-type-display.show { display: flex; justify-content: space-between; align-items: center; }
+.selected-type-info { display: flex; flex-direction: column; }
+.selected-type-name { font-weight: 600; color: #293242; }
+.selected-type-category { font-size: 0.85rem; color: #666; }
+.clear-selection-btn {
+    background: none;
+    border: none;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.clear-selection-btn:hover { text-decoration: underline; }
+</style>
+
 <div class="card">
     <h2>➕ Add New Machine</h2>
     
@@ -20,10 +141,42 @@
         <div class="two-column">
             <div class="form-group">
                 <label>Machine Type/Model <span style="color: red;">*</span></label>
-                <input type="text" name="machine_name" id="machineTypeInput" placeholder="e.g., Ultimaker S5" required autocomplete="off">
-                <div id="suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; width: calc(50% - 1rem); z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
-                <small style="color: #666;">Start typing to see existing machine types</small>
+                
+                <!-- Toggle between existing and new -->
+                <div class="input-mode-toggle">
+                    <button type="button" class="toggle-btn active" onclick="setInputMode('existing')">Select Existing</button>
+                    <button type="button" class="toggle-btn" onclick="setInputMode('new')">Enter New</button>
+                </div>
+                
+                <!-- Existing machine type selector -->
+                <div id="existingTypeSection">
+                    <input type="text" id="machineTypeSearch" placeholder="Search existing machine types..." autocomplete="off" oninput="filterMachineTypes()">
+                    
+                    <!-- Selected type display -->
+                    <div class="selected-type-display" id="selectedTypeDisplay">
+                        <div class="selected-type-info">
+                            <span class="selected-type-name" id="selectedTypeName"></span>
+                            <span class="selected-type-category" id="selectedTypeCategory"></span>
+                        </div>
+                        <button type="button" class="clear-selection-btn" onclick="clearTypeSelection()">✕ Clear</button>
+                    </div>
+                    
+                    <div class="machine-type-selector show" id="machineTypeSelector">
+                        <p style="padding: 1rem; color: #888; text-align: center;">Loading machine types...</p>
+                    </div>
+                </div>
+                
+                <!-- New machine type input (hidden by default) -->
+                <div id="newTypeSection" style="display: none;">
+                    <input type="text" id="machineTypeInput" placeholder="e.g., Ultimaker S5" autocomplete="off">
+                    <div id="suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; width: calc(50% - 1rem); z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    <small style="color: #666;">Start typing to see existing machine types or enter a new one</small>
+                </div>
+                
+                <!-- Hidden field to store the selected machine type -->
+                <input type="hidden" name="machine_name" id="selectedMachineType" value="">
             </div>
+            
             <div class="form-group">
                 <label>Machine Name/Identifier <span style="color: red;">*</span></label>
                 <input type="text" name="name" id="machineNameInput" placeholder="e.g., Ultimaker #1" required>
@@ -41,15 +194,9 @@
         <div class="two-column">
             <div class="form-group">
                 <label>Category <span style="color: red;">*</span></label>
-                <select name="category" required>
+                <select name="category" id="categorySelect" required>
                     <option value="">Select Category</option>
-                    <option value="Laser">Laser</option>
-                    <option value="Vinyl">Vinyl</option>
-                    <option value="Woodworking">Woodworking</option>
-                    <option value="Textile">Textile</option>
-                    <option value="Metalworking">Metalworking</option>
-                    <option value="3D Printing">3D Printing</option>
-                    <option value="Electronics">Electronics</option>
+                    <!-- Categories loaded dynamically from API -->
                 </select>
             </div>
             <div class="form-group">
@@ -59,6 +206,7 @@
                     {% for location in locations %}
                         <option value="{{ location.id }}" 
                                 data-location-id="{{ location.id }}"
+                                data-building="{{ location.building }}"
                                 data-machine-types="{{ location.get_machine_types_list|join:', ' }}"
                                 data-stations="{{ location.num_stations }}"
                                 data-capacity="{{ location.capacity }}">
@@ -90,27 +238,49 @@
             </div>
         </div>
         
-        <!-- Rest of your existing form fields ... -->
-        <!-- Optional Technical Details -->
-        <div class="two-column">
-            <div class="form-group">
-                <label>MAC Address <span style="color: #999;">(Optional)</span></label>
-                <input type="text" name="mac_address" placeholder="e.g., 00:1B:44:11:3A:B7" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$">
-                <small style="color: #666;">Format: XX:XX:XX:XX:XX:XX</small>
-            </div>
-            <div class="form-group">
-                <label>Year Bought <span style="color: #999;">(Optional)</span></label>
-                <input type="number" name="year_bought" placeholder="e.g., 2023" min="1900" max="2100">
-            </div>
-        </div>
-        
         <div class="form-group">
             <label>Description <span style="color: #999;">(Optional)</span></label>
             <textarea name="description" rows="3" placeholder="Describe the machine capabilities and materials..."></textarea>
         </div>
         
+        <!-- Additional Machine Details (Collapsible) -->
+        <div class="optional-fields-section">
+            <div class="optional-fields-header" onclick="toggleOptionalFields()">
+                <h3>📋 Additional Details</h3>
+                <span class="optional-fields-toggle" id="optionalFieldsToggle">▼ Show</span>
+            </div>
+            <div class="optional-fields-content" id="optionalFieldsContent">
+                <div class="two-column">
+                    <div class="form-group">
+                        <label>Manufacturer <span style="color: #999;">(Optional)</span></label>
+                        <input type="text" name="manufacturer" id="manufacturerInput" placeholder="e.g., Ultimaker, Prusa Research">
+                    </div>
+                    <div class="form-group">
+                        <label>Model Number <span style="color: #999;">(Optional)</span></label>
+                        <input type="text" name="model_number" id="modelNumberInput" placeholder="e.g., S5, MK3S+">
+                    </div>
+                </div>
+                <div class="two-column">
+                    <div class="form-group">
+                        <label>Documentation URL <span style="color: #999;">(Optional)</span></label>
+                        <input type="url" name="documentation_url" id="documentationUrlInput" placeholder="https://docs.example.com/machine-manual">
+                        <small style="color: #666;">Link to user manual or documentation</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Year Bought <span style="color: #999;">(Optional)</span></label>
+                        <input type="number" name="year_bought" placeholder="e.g., 2023" min="1900" max="2100">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>MAC Address <span style="color: #999;">(Optional)</span></label>
+                    <input type="text" name="mac_address" placeholder="e.g., 00:1B:44:11:3A:B7" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$" style="max-width: 300px;">
+                    <small style="color: #666;">Format: XX:XX:XX:XX:XX:XX</small>
+                </div>
+            </div>
+        </div>
+        
         <!-- Image Selection -->
-        <div class="form-group">
+        <div class="form-group" style="margin-top: 1.5rem;">
             <label>Machine Image</label>
             <select id="imageChoice" onchange="handleImageChoice()">
                 <option value="none">No Image (Use Default)</option>
@@ -121,19 +291,17 @@
             <input type="hidden" name="image_choice" id="imageChoiceHidden" value="default">
             
             <div id="existingImageSection" style="display: none; margin-top: 1rem; padding: 1rem; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px;">
-                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block; color: var(--dark);">Filter by Category:</label>
-                <select id="categoryFilter" onchange="filterImagesByCategory()" style="margin-bottom: 1rem;">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block; color: var(--gunmetal);">Filter by Category:</label>
+                <select id="imageCategoryFilter" onchange="filterImagesByCategory()" style="margin-bottom: 1rem;">
                     <option value="all">All Categories</option>
-                    {% for category in category_order %}
-                        <option value="{{ category }}">{{ category }}</option>
-                    {% endfor %}
+                    <!-- Categories loaded dynamically -->
                 </select>
                 
                 {% if images_by_category %}
                     <div id="imageGallery" style="max-height: 300px; overflow-y: auto;">
                         {% for category, images in images_by_category.items %}
                             <div class="category-images" data-category="{{ category }}" style="margin-bottom: 1.5rem;">
-                                <h5 style="color: var(--dark); margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600;">{{ category }}</h5>
+                                <h5 style="color: var(--gunmetal); margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600;">{{ category }}</h5>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;">
                                     {% for img in images %}
                                         <label style="cursor: pointer; text-align: center;">
@@ -179,7 +347,7 @@
         
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
             <button type="submit" class="btn btn-primary">Add Machine</button>
-            <a href="{% url 'staff_dashboard' %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'machine_management' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
@@ -208,10 +376,207 @@
 // Store locations data from Django
 const locationsData = JSON.parse('{{ locations_data_json|escapejs }}');
 
-// Debug: Check if data loaded correctly
-console.log('Locations data loaded:', locationsData);
+// Machine types data (loaded from API)
+let machineTypesData = {};
+let allMachineTypes = [];
+let categoriesData = [];
+let selectedMachineType = null;
+let inputMode = 'existing'; // 'existing' or 'new'
 
-// Handle location selection change
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+    loadMachineTypes();
+});
+
+// === LOAD CATEGORIES ===
+
+async function loadCategories() {
+    try {
+        const res = await fetch('/api/categories/');
+        const data = await res.json();
+        categoriesData = data.categories || [];
+        
+        // Populate category dropdown
+        const categorySelect = document.getElementById('categorySelect');
+        const imageCategoryFilter = document.getElementById('imageCategoryFilter');
+        
+        categoriesData.forEach(cat => {
+            if (cat.is_active) {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
+                categorySelect.appendChild(option);
+                
+                // Also add to image filter
+                const filterOption = document.createElement('option');
+                filterOption.value = cat.name;
+                filterOption.textContent = cat.name;
+                imageCategoryFilter.appendChild(filterOption);
+            }
+        });
+    } catch (e) {
+        console.error('Error loading categories:', e);
+    }
+}
+
+// === MACHINE TYPE SELECTION ===
+
+async function loadMachineTypes() {
+    try {
+        const res = await fetch('/api/existing-machine-types/');
+        const data = await res.json();
+        machineTypesData = data.by_category || {};
+        allMachineTypes = data.machine_types || [];
+        renderMachineTypeSelector();
+    } catch (e) {
+        console.error('Error loading machine types:', e);
+        document.getElementById('machineTypeSelector').innerHTML = 
+            '<p style="padding: 1rem; color: #dc2626; text-align: center;">Error loading machine types</p>';
+    }
+}
+
+function renderMachineTypeSelector(filterText = '') {
+    const container = document.getElementById('machineTypeSelector');
+    const filter = filterText.toLowerCase();
+    
+    if (Object.keys(machineTypesData).length === 0) {
+        container.innerHTML = '<p style="padding: 1rem; color: #888; text-align: center;">No existing machine types. Enter a new one above.</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    // Use category names from the data
+    const categoryNames = Object.keys(machineTypesData).sort();
+    
+    categoryNames.forEach(cat => {
+        if (!machineTypesData[cat]) return;
+        
+        // Filter items
+        const items = machineTypesData[cat].filter(mt => 
+            !filter || mt.name.toLowerCase().includes(filter)
+        );
+        
+        if (items.length === 0) return;
+        
+        const isExpanded = filter.length > 0; // Auto-expand when filtering
+        
+        html += `
+            <div class="mt-category-group" data-category="${cat}">
+                <div class="mt-category-header" onclick="toggleCategory(this)">
+                    ${cat}
+                    <span>${isExpanded ? '▲' : '▼'}</span>
+                </div>
+                <div class="mt-category-items ${isExpanded ? 'show' : ''}">
+                    ${items.map(mt => `
+                        <div class="mt-item" onclick="selectMachineType('${mt.name.replace(/'/g, "\\'")}', '${cat}', ${mt.category_id || 0})" data-name="${mt.name}">
+                            <span class="mt-item-name">${mt.name}</span>
+                            <span class="mt-item-count">${mt.count} machine${mt.count !== 1 ? 's' : ''}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    if (!html) {
+        html = '<p style="padding: 1rem; color: #888; text-align: center;">No matching machine types found</p>';
+    }
+    
+    container.innerHTML = html;
+}
+
+function toggleCategory(header) {
+    const items = header.nextElementSibling;
+    const arrow = header.querySelector('span');
+    items.classList.toggle('show');
+    arrow.textContent = items.classList.contains('show') ? '▲' : '▼';
+}
+
+function filterMachineTypes() {
+    const searchText = document.getElementById('machineTypeSearch').value;
+    renderMachineTypeSelector(searchText);
+    
+    // Show/hide the selector
+    const selector = document.getElementById('machineTypeSelector');
+    if (searchText.length > 0 || !selectedMachineType) {
+        selector.classList.add('show');
+    }
+}
+
+function selectMachineType(name, categoryName, categoryId) {
+    selectedMachineType = { name, categoryName, categoryId };
+    
+    // Update hidden field
+    document.getElementById('selectedMachineType').value = name;
+    
+    // Update display
+    document.getElementById('selectedTypeName').textContent = name;
+    document.getElementById('selectedTypeCategory').textContent = categoryName;
+    document.getElementById('selectedTypeDisplay').classList.add('show');
+    
+    // Hide selector and clear search
+    document.getElementById('machineTypeSelector').classList.remove('show');
+    document.getElementById('machineTypeSearch').value = '';
+    
+    // Auto-select the category if we have the ID
+    if (categoryId) {
+        document.getElementById('categorySelect').value = categoryId;
+    } else {
+        // Try to find category by name
+        const cat = categoriesData.find(c => c.name === categoryName);
+        if (cat) {
+            document.getElementById('categorySelect').value = cat.id;
+        }
+    }
+    
+    // Highlight the selected item
+    document.querySelectorAll('.mt-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.name === name);
+    });
+}
+
+function clearTypeSelection() {
+    selectedMachineType = null;
+    document.getElementById('selectedMachineType').value = '';
+    document.getElementById('selectedTypeDisplay').classList.remove('show');
+    document.getElementById('machineTypeSelector').classList.add('show');
+    document.querySelectorAll('.mt-item').forEach(item => item.classList.remove('selected'));
+}
+
+function setInputMode(mode) {
+    inputMode = mode;
+    
+    // Update toggle buttons
+    document.querySelectorAll('.input-mode-toggle .toggle-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (mode === 'existing' && i === 0) || (mode === 'new' && i === 1));
+    });
+    
+    // Show/hide sections
+    document.getElementById('existingTypeSection').style.display = mode === 'existing' ? 'block' : 'none';
+    document.getElementById('newTypeSection').style.display = mode === 'new' ? 'block' : 'none';
+    
+    // Handle hidden field for form submission
+    if (mode === 'new') {
+        // When entering new, sync the input to the hidden field
+        document.getElementById('machineTypeInput').addEventListener('input', function() {
+            document.getElementById('selectedMachineType').value = this.value;
+        });
+    }
+}
+
+// === OPTIONAL FIELDS ===
+
+function toggleOptionalFields() {
+    const content = document.getElementById('optionalFieldsContent');
+    const toggle = document.getElementById('optionalFieldsToggle');
+    content.classList.toggle('show');
+    toggle.textContent = content.classList.contains('show') ? '▲ Hide' : '▼ Show';
+}
+
+// === LOCATION HANDLING ===
+
 function handleLocationChange() {
     const select = document.getElementById('locationSelect');
     const selectedOption = select.options[select.selectedIndex];
@@ -231,11 +596,16 @@ function handleLocationChange() {
     // Find location data
     const locationData = locationsData.find(loc => loc.id == locationId);
     
+    if (!locationData) {
+        detailsDiv.style.display = 'none';
+        return;
+    }
+    
     // Show location details
-    document.getElementById('detailBuilding').textContent = locationData.building;
-    document.getElementById('detailStations').textContent = locationData.num_stations;
-    document.getElementById('detailCapacity').textContent = locationData.capacity;
-    document.getElementById('detailTypes').textContent = locationData.machine_types.join(', ');
+    document.getElementById('detailBuilding').textContent = locationData.building || 'N/A';
+    document.getElementById('detailStations').textContent = locationData.num_stations || 'N/A';
+    document.getElementById('detailCapacity').textContent = locationData.capacity || 'N/A';
+    document.getElementById('detailTypes').textContent = (locationData.machine_types || []).join(', ') || 'N/A';
     detailsDiv.style.display = 'block';
     
     // Show pin button only if location has floorplan
@@ -251,7 +621,8 @@ function handleLocationChange() {
     document.getElementById('mapPositionY').value = '';
 }
 
-// Open floorplan modal
+// === FLOORPLAN MODAL ===
+
 function openFloorplanModal() {
     const select = document.getElementById('locationSelect');
     const locationId = select.value;
@@ -266,7 +637,7 @@ function openFloorplanModal() {
     const pinsContainer = document.getElementById('existingPins');
     pinsContainer.innerHTML = '';
     
-    locationData.machines.forEach(machine => {
+    (locationData.machines || []).forEach(machine => {
         const pin = document.createElement('div');
         pin.style.position = 'absolute';
         pin.style.left = machine.x + '%';
@@ -284,7 +655,6 @@ function openFloorplanModal() {
     document.getElementById('floorplanModal').classList.add('active');
 }
 
-// Close floorplan modal
 function closeFloorplanModal() {
     document.getElementById('floorplanModal').classList.remove('active');
 }
@@ -314,7 +684,8 @@ document.getElementById('floorplanImage').addEventListener('click', function(e) 
     }, 500);
 });
 
-// Image choice handler
+// === IMAGE HANDLING ===
+
 function handleImageChoice() {
     const choice = document.getElementById('imageChoice').value;
     const existingSection = document.getElementById('existingImageSection');
@@ -335,7 +706,6 @@ function handleImageChoice() {
     }
 }
 
-// Select existing image
 function selectExistingImage(radio) {
     document.querySelectorAll('.image-option').forEach(opt => {
         opt.style.borderColor = '#e0e0e0';
@@ -347,9 +717,8 @@ function selectExistingImage(radio) {
     imageOption.style.background = 'rgba(246, 200, 81, 0.1)';
 }
 
-// Filter images by category
 function filterImagesByCategory() {
-    const selectedCategory = document.getElementById('categoryFilter').value;
+    const selectedCategory = document.getElementById('imageCategoryFilter').value;
     const categoryDivs = document.querySelectorAll('.category-images');
     
     categoryDivs.forEach(div => {
@@ -360,5 +729,56 @@ function filterImagesByCategory() {
         }
     });
 }
+
+// === AUTOCOMPLETE FOR NEW TYPE INPUT ===
+
+const machineTypeInput = document.getElementById('machineTypeInput');
+const suggestionsDiv = document.getElementById('suggestions');
+
+if (machineTypeInput) {
+    machineTypeInput.addEventListener('input', async function() {
+        const query = this.value.trim();
+        
+        // Also update hidden field
+        document.getElementById('selectedMachineType').value = query;
+        
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/machine-suggestions/?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.suggestions && data.suggestions.length > 0) {
+                suggestionsDiv.innerHTML = data.suggestions.map(s => 
+                    `<div style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #eee;" 
+                          onmouseover="this.style.background='#f5f5f5'" 
+                          onmouseout="this.style.background='white'"
+                          onclick="selectSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`
+                ).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error fetching suggestions:', e);
+        }
+    });
+}
+
+function selectSuggestion(value) {
+    document.getElementById('machineTypeInput').value = value;
+    document.getElementById('selectedMachineType').value = value;
+    document.getElementById('suggestions').style.display = 'none';
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#machineTypeInput') && !e.target.closest('#suggestions')) {
+        suggestionsDiv.style.display = 'none';
+    }
+});
 </script>
 {% endblock %}

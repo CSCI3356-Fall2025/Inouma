@@ -1,9 +1,50 @@
 from django.contrib import admin
+from django import forms
 from .models import (
     Semester, DailyOperatingHours, LocationGroup, ShiftRequirement,
     TeamGroup, TeamMemberProfile, Unavailability, Shift, SchedulePublication,
     ShiftChangeRequest
 )
+
+
+def get_category_choices(include_blank=True):
+    """Get category choices from MachineCategory model"""
+    choices = [('', '-- Select --')] if include_blank else []
+    try:
+        from machines.models import MachineCategory
+        categories = MachineCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+        for cat in categories:
+            display = f"{cat.icon} {cat.name}" if cat.icon else cat.name
+            choices.append((cat.name, display))
+    except:
+        # Fallback
+        fallback = ['Laser', 'Vinyl', 'Woodworking', 'Textile', 'Metalworking', '3D Printing', 'Electronics']
+        choices.extend([(c, c) for c in fallback])
+    return choices
+
+
+class TeamMemberProfileAdminForm(forms.ModelForm):
+    """Custom form with dynamic team choices"""
+    class Meta:
+        model = TeamMemberProfile
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'team' in self.fields:
+            self.fields['team'].widget = forms.Select(choices=get_category_choices())
+
+
+class ShiftAdminForm(forms.ModelForm):
+    """Custom form with dynamic team_category choices"""
+    class Meta:
+        model = Shift
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'team_category' in self.fields:
+            self.fields['team_category'].widget = forms.Select(choices=get_category_choices())
 
 
 @admin.register(Semester)
@@ -70,6 +111,7 @@ class ShiftRequirementAdmin(admin.ModelAdmin):
 
 @admin.register(TeamMemberProfile)
 class TeamMemberProfileAdmin(admin.ModelAdmin):
+    form = TeamMemberProfileAdminForm
     list_display = ('user', 'team_group', 'role', 'is_trainer', 'is_team_lead', 
                     'graduation_year', 'birthday', 'max_weekly_hours')
     list_filter = ('role', 'team_group', 'is_trainer', 'is_team_lead', 'graduation_year')
@@ -106,6 +148,7 @@ class UnavailabilityAdmin(admin.ModelAdmin):
 
 @admin.register(Shift)
 class ShiftAdmin(admin.ModelAdmin):
+    form = ShiftAdminForm
     list_display = ('user', 'date', 'start_time', 'end_time', 'shift_type', 
                     'get_location_info', 'status', 'duration_hours')
     list_filter = ('semester', 'shift_type', 'status', 'date')
@@ -188,3 +231,4 @@ class ShiftChangeRequestAdmin(admin.ModelAdmin):
             'fields': ('status', 'reviewed_by', 'reviewed_at', 'admin_notes')
         }),
     )
+    

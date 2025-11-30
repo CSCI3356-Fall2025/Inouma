@@ -583,7 +583,7 @@ def api_get_shifts(request):
 def api_get_team_members(request):
     """Get list of team members (users with Team Member or Staff role)"""
     from django.contrib.auth import get_user_model
-    from accounts.models import TrainerAvailability, TrainerProfile
+    from accounts.models import TrainerAvailability, TrainerProfile, StudentProfile
     
     User = get_user_model()
     semester_id = request.GET.get('semester_id')
@@ -598,6 +598,13 @@ def api_get_team_members(request):
     for user in team_users:
         # Get trainer profile if exists
         trainer_profile = getattr(user, 'trainer_profile', None)
+        
+        # Get student profile for birthday/grad year
+        student_profile = None
+        try:
+            student_profile = user.student_profile
+        except:
+            pass
         
         # Get availability from TrainerAvailability model
         availability = {}
@@ -625,19 +632,31 @@ def api_get_team_members(request):
         except TeamMemberProfile.DoesNotExist:
             pass
         
+        # Get team assignment - prefer User.team_assignment, fallback to team_profile.team
+        team = user.team_assignment or ''
+        if not team and team_profile:
+            team = team_profile.team or ''
+        
         data.append({
             'user_id': str(user.id),
             'name': user.get_full_name() or user.email.split('@')[0],
             'email': user.email,
             'profile_picture': profile_pic,
-            'is_trainer': trainer_profile is not None and bool(trainer_profile.specialty),
+            'is_trainer': user.is_trainer,
             'is_team_lead': user.is_team_lead,
-            'team': trainer_profile.specialty if trainer_profile else '',
+            'team': team,
             'min_weekly_hours': team_profile.min_weekly_hours if team_profile else 0,
             'max_weekly_hours': team_profile.max_weekly_hours if team_profile else 15,
             'shift_preference': team_profile.shift_preference if team_profile else 'no_preference',
             'scheduled_hours': 0,  # TODO: Calculate from actual shifts
-            'availability': availability
+            'availability': availability,
+            'birthday': student_profile.birthday.isoformat() if student_profile and student_profile.birthday else None,
+            'grad_year': student_profile.graduation_year if student_profile else None,
+            'phone': team_profile.phone if team_profile else '',
+            'notes': team_profile.notes if team_profile else '',
+            'trainer_specialty': trainer_profile.specialty if trainer_profile else '',
+            'trainer_bio': trainer_profile.bio if trainer_profile else '',
+            'trainer_certifications': trainer_profile.certifications if trainer_profile else '',
         })
     
     return JsonResponse({'members': data})
@@ -661,26 +680,36 @@ def api_save_team_member(request):
         User = get_user_model()
         user = get_object_or_404(User, id=user_id)
         
-        # Update user's is_team_lead flag
+        # Get team assignment
+        team = data.get('team', '')
+        
+        # Update user fields
         user.is_team_lead = data.get('is_team_lead', False)
+        user.is_trainer = data.get('is_trainer', user.is_trainer)
+        user.team_assignment = team  # Save team to User model
         user.save()
         
-        # Get or create trainer profile
-        trainer_profile, _ = TrainerProfile.objects.get_or_create(user=user)
-        
-        # Update team/specialty (trainer if has specialty)
-        team = data.get('team', '')
-        trainer_profile.specialty = team
-        trainer_profile.save()
-        
-        # Get or create TeamMemberProfile for hours
+        # Get or create TeamMemberProfile for scheduling data
         team_profile, _ = TeamMemberProfile.objects.get_or_create(user=user)
         team_profile.min_weekly_hours = data.get('min_weekly_hours', 0)
         team_profile.max_weekly_hours = data.get('max_weekly_hours', 15)
         team_profile.expected_weekly_hours = data.get('max_weekly_hours', 15)
         team_profile.shift_preference = data.get('shift_preference', 'no_preference')
-        team_profile.team = team
+        team_profile.team = team  # Also save to TeamMemberProfile
+        team_profile.is_trainer = data.get('is_trainer', team_profile.is_trainer)
+        team_profile.is_team_lead = data.get('is_team_lead', False)
         team_profile.save()
+        
+        # Update TrainerProfile if trainer data provided
+        if data.get('trainer_specialty') or data.get('trainer_bio') or data.get('trainer_certifications'):
+            trainer_profile, _ = TrainerProfile.objects.get_or_create(user=user)
+            if data.get('trainer_specialty'):
+                trainer_profile.specialty = data['trainer_specialty']
+            if data.get('trainer_bio'):
+                trainer_profile.bio = data['trainer_bio']
+            if data.get('trainer_certifications'):
+                trainer_profile.certifications = data['trainer_certifications']
+            trainer_profile.save()
         
         # Update availability - clear existing and create new
         TrainerAvailability.objects.filter(trainer=user).delete()

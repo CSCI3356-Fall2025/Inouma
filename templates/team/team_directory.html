@@ -11,1511 +11,652 @@
 
 {% block extra_head %}
 <style>
-:root {
-    --gunmetal: #293242;
-    --sunglow: #fcc931;
-    --timberwolf: #cfcfce;
-    --keppel: #00b59c;
-    --cinnabar: #f0523e;
-}
+:root { --gunmetal: #293242; --sunglow: #fcc931; --timberwolf: #cfcfce; --keppel: #00b59c; --cinnabar: #f0523e; }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
+.page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.page-header h1 { margin: 0; color: var(--gunmetal); }
+.header-actions { display: flex; gap: 0.75rem; }
 
-.page-header h1 {
-    margin: 0;
-    color: var(--gunmetal);
-}
-
-.header-actions {
-    display: flex;
-    gap: 0.75rem;
-}
-
-/* Search and Filters */
-.search-bar {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.search-input-wrapper {
-    flex: 1;
-    min-width: 250px;
-    position: relative;
-}
-
-.search-input-wrapper input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border: 2px solid var(--timberwolf);
-    border-radius: 8px;
-    font-size: 1rem;
-}
-
-.search-input-wrapper input:focus {
-    outline: none;
-    border-color: var(--sunglow);
-}
-
-.search-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
-}
+/* Search & Chips */
+.search-bar { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.search-container { flex: 1; min-width: 300px; position: relative; }
+.search-chips-wrapper { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.search-chips-wrapper:has(.search-chips:empty) { margin-bottom: 0; }
+.search-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.search-chips:empty { display: none; }
+.btn-clear-chips { background: #fee2e2; color: #dc2626; border: none; padding: 0.35rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.btn-clear-chips:hover { background: #fecaca; }
+.chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.75rem; background: var(--sunglow); color: var(--gunmetal); border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+.chip button { background: rgba(0,0,0,0.15); border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 0.7rem; }
+.search-input-wrapper { position: relative; }
+.search-input-wrapper input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 2px solid var(--timberwolf); border-radius: 8px; font-size: 1rem; }
+.search-input-wrapper input:focus { outline: none; border-color: var(--sunglow); }
+.search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #999; }
+.search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid var(--timberwolf); border-top: none; border-radius: 0 0 8px 8px; max-height: 300px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; }
+.search-dropdown.show { display: block; }
+.dropdown-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; cursor: pointer; }
+.dropdown-item:hover { background: #f8f9fa; }
+.dropdown-item.selected { background: #fffbeb; }
+.dropdown-empty { padding: 1rem; text-align: center; color: #999; }
 
 /* Filter Panel */
-.filter-panel {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-    display: none;
-}
-
-.filter-panel.show {
-    display: block;
-}
-
-.filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.filter-group label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--gunmetal);
-}
-
-.filter-group select,
-.filter-group input {
-    padding: 0.5rem;
-    border: 1px solid var(--timberwolf);
-    border-radius: 6px;
-    font-size: 0.9rem;
-}
-
-.filter-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid #e0e0e0;
-}
+.filter-panel { background: #f8f9fa; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem; display: none; }
+.filter-panel.show { display: block; }
+.filter-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.filter-group label { display: block; font-size: 0.8rem; color: #666; margin-bottom: 0.35rem; font-weight: 500; }
+.filter-group select, .filter-group input { width: 100%; padding: 0.5rem; border: 1px solid var(--timberwolf); border-radius: 6px; font-size: 0.9rem; }
+.filter-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; }
 
 /* View Toggle */
-.view-toggle {
-    display: flex;
-    gap: 0.5rem;
-    background: #f0f0f0;
-    padding: 0.25rem;
-    border-radius: 8px;
-}
-
-.view-toggle button {
-    padding: 0.5rem 1rem;
-    border: none;
-    background: transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-}
-
-.view-toggle button.active {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Stats Row */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.stat-box {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-    border: 1px solid #e9ecef;
-}
-
-.stat-box-value {
-    font-size: 1.75rem;
-    font-weight: bold;
-    color: var(--gunmetal);
-}
-
-.stat-box-label {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-/* Groups Grid */
-.groups-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
-}
-
-.group-card {
-    background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-
-.group-card:hover {
-    border-color: var(--sunglow);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.group-card-header {
-    padding: 1.25rem;
-    background: linear-gradient(135deg, var(--gunmetal), #3d4a5c);
-    color: white;
-}
-
-.group-card-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-}
-
-.group-card-header .group-lead {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    margin-top: 0.25rem;
-}
-
-.group-card-body {
-    padding: 1rem 1.25rem;
-}
-
-.group-member-count {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.group-member-avatars {
-    display: flex;
-    margin-top: 0.75rem;
-}
-
-.group-member-avatars .avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 2px solid white;
-    margin-left: -8px;
-    background: var(--timberwolf);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--gunmetal);
-}
-
-.group-member-avatars .avatar:first-child {
-    margin-left: 0;
-}
-
-.group-member-avatars .avatar.more {
-    background: var(--sunglow);
-}
-
-/* Members List View */
-.members-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.members-table th,
-.members-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.members-table th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: var(--gunmetal);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.members-table tr:hover {
-    background: #f8f9fa;
-}
-
-.member-row {
-    cursor: pointer;
-}
-
-.member-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.member-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--timberwolf);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    color: var(--gunmetal);
-    font-size: 0.9rem;
-    overflow: hidden;
-}
-
-.member-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.member-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.member-name {
-    font-weight: 500;
-    color: var(--gunmetal);
-}
-
-.member-email {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-/* Tags/Badges */
-.tag {
-    display: inline-block;
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    margin-left: 0.25rem;
-}
-
-.tag-trainer {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-
-.tag-lead {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.tag-birthday {
-    background: #e6f7f5;
-    color: #00836e;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-.tag-graduating {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-/* Group Detail Panel */
-.group-detail-panel {
-    display: none;
-    background: white;
-    border: 2px solid var(--sunglow);
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-}
-
-.group-detail-panel.show {
-    display: block;
-}
-
-.group-detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, var(--gunmetal), #3d4a5c);
-    color: white;
-}
-
-.group-detail-header h2 {
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.group-detail-close {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.group-detail-body {
-    padding: 1.5rem;
-}
-
-.group-members-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.group-member-card {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.group-member-card:hover {
-    background: #e9ecef;
-}
-
-/* Member Detail Modal */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    max-width: 600px;
-    width: 95%;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    padding: 0;
-    line-height: 1;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-}
-
-/* Member Profile in Modal */
-.member-profile-header {
-    display: flex;
-    gap: 1.25rem;
-    align-items: flex-start;
-}
-
-.member-profile-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: var(--timberwolf);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--gunmetal);
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.member-profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.member-profile-info h2 {
-    margin: 0 0 0.25rem;
-    color: var(--gunmetal);
-}
-
-.member-profile-info .email {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.member-profile-tags {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    flex-wrap: wrap;
-}
-
-/* Form Sections */
-.form-section {
-    margin-top: 1.5rem;
-}
-
-.form-section h3 {
-    font-size: 0.9rem;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.form-group.full-width {
-    grid-column: span 2;
-}
-
-.form-group label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--gunmetal);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.6rem;
-    border: 1px solid var(--timberwolf);
-    border-radius: 6px;
-    font-size: 0.9rem;
-}
-
-.form-group input:disabled,
-.form-group select:disabled {
-    background: #f5f5f5;
-    color: #666;
-}
-
-/* Checkbox group */
-.checkbox-group {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-}
-
-.checkbox-item input {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
-/* Birthday Section */
-.birthday-section {
-    background: linear-gradient(135deg, #e6f7f5, #f0faf9);
-    border: 2px solid #80dace;
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-}
-
-.birthday-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.birthday-header h3 {
-    margin: 0;
-    color: var(--keppel);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.birthday-list {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.birthday-card {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: white;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.birthday-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* Empty state */
-.empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
+.view-toggle { display: flex; border: 2px solid var(--timberwolf); border-radius: 8px; overflow: hidden; }
+.view-toggle button { padding: 0.5rem 1rem; border: none; background: white; cursor: pointer; font-weight: 500; }
+.view-toggle button.active { background: var(--sunglow); color: var(--gunmetal); }
+
+/* Stats */
+.stats-row { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.stat-card { background: #f8f9fa; padding: 0.75rem 1.25rem; border-radius: 8px; text-align: center; min-width: 100px; }
+.stat-value { font-size: 1.35rem; font-weight: 700; color: var(--gunmetal); }
+.stat-label { font-size: 0.8rem; color: #666; }
+
+/* Team Cards - Muted */
+.teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+.team-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #e9ecef; }
+.team-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.team-header { padding: 0.875rem 1rem; background: var(--gunmetal); color: white; }
+.team-header h3 { margin: 0 0 0.15rem; font-size: 1rem; font-weight: 600; }
+.team-header .lead { font-size: 0.8rem; opacity: 0.75; }
+.team-body { padding: 1rem; }
+.team-count { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; color: #666; font-size: 0.9rem; }
+.team-avatars { display: flex; }
+.team-avatars .avatar { margin-left: -8px; border: 2px solid white; }
+.team-avatars .avatar:first-child { margin-left: 0; }
+
+/* Avatar */
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--gunmetal); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+.avatar.more { background: var(--timberwolf); color: #666; }
+
+/* List Table */
+.list-table { width: 100%; border-collapse: collapse; }
+.list-table th, .list-table td { padding: 0.7rem 0.85rem; text-align: left; border-bottom: 1px solid #e9ecef; }
+.list-table th { background: #f8f9fa; font-weight: 600; color: var(--gunmetal); font-size: 0.8rem; text-transform: uppercase; }
+.list-table tbody tr { cursor: pointer; }
+.list-table tbody tr:hover { background: #f8f9fa; }
+.list-table tr.selected { background: #fffbeb; }
+.member-cell { display: flex; align-items: center; gap: 0.7rem; }
+.member-cell .info { display: flex; flex-direction: column; }
+.member-cell .name { font-weight: 500; color: var(--gunmetal); }
+.member-cell .email { font-size: 0.8rem; color: #888; }
+
+/* Tags */
+.tag { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; margin-left: 0.4rem; }
+.tag-lead { background: var(--sunglow); color: var(--gunmetal); }
+.tag-trainer { background: #d1fae5; color: #065f46; }
+.tag-birthday { background: #fce7f3; color: #9d174d; }
+.tag-graduating { background: #e0e7ff; color: #3730a3; }
+
+/* Buttons */
+.btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+.btn-primary { background: var(--sunglow); color: var(--gunmetal); }
+.btn-primary:hover { background: #e5b52c; }
+.btn-secondary { background: #e9ecef; color: var(--gunmetal); }
+.btn-secondary:hover { background: #dee2e6; }
+.btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.btn-warning:hover { background: #fde68a; }
+.btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e9ecef; }
+.modal-header .profile { display: flex; align-items: center; gap: 1rem; }
+.modal-header .avatar { width: 56px; height: 56px; font-size: 1.1rem; }
+.modal-header .info h2 { margin: 0 0 0.2rem; font-size: 1.15rem; }
+.modal-header .info .email { color: #666; font-size: 0.85rem; }
+.modal-header .tags { margin-top: 0.4rem; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+.modal-body { padding: 1.25rem 1.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e9ecef; display: flex; justify-content: flex-end; gap: 0.75rem; }
+.detail-section { margin-bottom: 1.25rem; }
+.detail-section:last-child { margin-bottom: 0; }
+.detail-section h3 { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 0.6rem; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.detail-item label { display: block; font-size: 0.75rem; color: #999; margin-bottom: 0.15rem; }
+.detail-item span, .detail-item p { font-weight: 500; color: var(--gunmetal); margin: 0; font-size: 0.95rem; }
+
+/* Bulk Bar */
+.bulk-bar { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--gunmetal); color: white; padding: 0.875rem 1.25rem; border-radius: 10px; display: none; align-items: center; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.25); z-index: 1000; }
+.bulk-bar.show { display: flex; }
+.bulk-bar select { padding: 0.45rem 0.75rem; border-radius: 6px; border: none; }
+.bulk-bar .btn-cancel { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); }
+
+/* Birthday Banner */
+.birthday-banner { background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%); border: 1px solid #fbcfe8; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: none; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.birthday-banner.show { display: flex; }
+.birthday-banner h3 { margin: 0; font-size: 1rem; color: #9d174d; }
+.birthday-list { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.birthday-item { background: white; padding: 0.4rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500; color: #9d174d; }
+
+/* Form Styles */
+.form-section { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e9ecef; }
+.form-section:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+.form-section h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 1rem; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 0.8rem; color: #666; margin-bottom: 0.35rem; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea { padding: 0.6rem 0.75rem; border: 1px solid var(--timberwolf); border-radius: 6px; font-size: 0.95rem; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--sunglow); }
+.form-group textarea { resize: vertical; font-family: inherit; }
+.checkbox-group { display: flex; gap: 1.5rem; padding-top: 0.35rem; }
+.checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; cursor: pointer; }
+.checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <div class="card">
     <div class="page-header">
         <div>
             <h1>👥 Team Directory</h1>
-            <p style="margin: 0.5rem 0 0; color: #666;">Manage team members, groups, and permissions</p>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage team members and assignments</p>
         </div>
         <div class="header-actions">
             <button class="btn btn-secondary" onclick="toggleFilters()">🔍 Filters</button>
-            <button class="btn btn-secondary" onclick="exportBirthdays()">📅 Export Birthdays</button>
-            <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Member</button>
+            <button class="btn btn-secondary" onclick="exportData()">📤 Export</button>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add Member</button>
         </div>
     </div>
     
-    <!-- Search Bar -->
     <div class="search-bar">
-        <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" placeholder="Search by name, email, or group..." onkeyup="handleSearch()">
+        <div class="search-container">
+            <div class="search-chips-wrapper">
+                <div class="search-chips" id="searchChips"></div>
+                <button class="btn-clear-chips" id="clearChipsBtn" onclick="clearSearchChips()" style="display:none">✕ Clear</button>
+            </div>
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search members..." oninput="handleSearch()" onfocus="showDropdown()" autocomplete="off">
+                <div class="search-dropdown" id="searchDropdown"></div>
+            </div>
         </div>
         <div class="view-toggle">
-            <button class="active" onclick="setView('groups')">Groups</button>
-            <button onclick="setView('list')">List</button>
+            <button class="active" data-view="teams" onclick="setView('teams')">Teams</button>
+            <button data-view="list" onclick="setView('list')">List</button>
         </div>
     </div>
     
-    <!-- Filter Panel -->
     <div class="filter-panel" id="filterPanel">
         <div class="filter-row">
-            <div class="filter-group">
-                <label>Group</label>
-                <select id="filterGroup" onchange="applyFilters()">
-                    <option value="">All Groups</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Role</label>
-                <select id="filterRole" onchange="applyFilters()">
-                    <option value="">All Roles</option>
-                    <option value="trainer">Trainers Only</option>
-                    <option value="lead">Team Leads Only</option>
-                    <option value="member">Regular Members</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Graduation Year</label>
-                <input type="number" id="filterGradYear" placeholder="e.g. 2025" min="2000" max="2100" onchange="applyFilters()">
-            </div>
-            <div class="filter-group">
-                <label>Status</label>
-                <select id="filterStatus" onchange="applyFilters()">
-                    <option value="">All</option>
-                    <option value="active">Active</option>
-                    <option value="graduating">Graduating This Year</option>
-                    <option value="graduated">Already Graduated</option>
-                </select>
-            </div>
+            <div class="filter-group"><label>Team</label><select id="filterTeam" onchange="applyFilters()"><option value="">All Teams</option></select></div>
+            <div class="filter-group"><label>Role</label><select id="filterRole" onchange="applyFilters()"><option value="">All Roles</option><option value="lead">Team Leads</option><option value="trainer">Trainers</option><option value="member">Members</option></select></div>
+            <div class="filter-group"><label>Graduation Year</label><select id="filterGradYear" onchange="applyFilters()"><option value="">Any Year</option></select></div>
+            <div class="filter-group"><label>Status</label><select id="filterStatus" onchange="applyFilters()"><option value="">All</option><option value="active">Active</option><option value="graduating">Graduating</option><option value="graduated">Graduated</option></select></div>
         </div>
         <div class="filter-row">
-            <div class="filter-group">
-                <label>Birthday Month</label>
-                <select id="filterBirthdayMonth" onchange="applyFilters()">
-                    <option value="">Any Month</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Age Range</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="number" id="filterAgeMin" placeholder="Min" style="width: 70px;" onchange="applyFilters()">
-                    <span>-</span>
-                    <input type="number" id="filterAgeMax" placeholder="Max" style="width: 70px;" onchange="applyFilters()">
-                </div>
-            </div>
-            <div class="filter-group">
-                <label>Trained On</label>
-                <select id="filterTrainedOn" onchange="applyFilters()">
-                    <option value="">Any Equipment</option>
-                </select>
-            </div>
+            <div class="filter-group"><label>Birthday Month</label><select id="filterBirthMonth" onchange="applyFilters()"><option value="">Any</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option></select></div>
+            <div class="filter-group"><label>Age Range</label><div style="display:flex;gap:0.5rem"><input type="number" id="filterAgeMin" placeholder="Min" style="width:70px" onchange="applyFilters()"><input type="number" id="filterAgeMax" placeholder="Max" style="width:70px" onchange="applyFilters()"></div></div>
         </div>
-        <div class="filter-actions">
-            <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
-            <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
-        </div>
+        <div class="filter-actions"><button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear</button><button class="btn btn-primary btn-sm" onclick="applyFilters()">Apply</button></div>
     </div>
-</div>
-
-<!-- Birthday Section (shown if today has birthdays) -->
-<div class="birthday-section" id="birthdaySection" style="display: none;">
-    <div class="birthday-header">
-        <h3>🎂 Today's Birthdays</h3>
-        <button class="btn btn-secondary btn-sm" onclick="sendBirthdayEmails()">Send Birthday Wishes</button>
-    </div>
-    <div class="birthday-list" id="birthdayList">
-        <!-- Populated by JS -->
-    </div>
-</div>
-
-<!-- Stats Row -->
-<div class="card">
+    
+    <div class="birthday-banner" id="birthdayBanner"><h3>🎂 Today's Birthdays</h3><div class="birthday-list" id="birthdayList"></div></div>
+    
     <div class="stats-row">
-        <div class="stat-box">
-            <div class="stat-box-value" id="statTotal">0</div>
-            <div class="stat-box-label">Total Members</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-box-value" id="statTrainers">0</div>
-            <div class="stat-box-label">Trainers</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-box-value" id="statLeads">0</div>
-            <div class="stat-box-label">Team Leads</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-box-value" id="statGroups">0</div>
-            <div class="stat-box-label">Groups</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-box-value" id="statGraduating">0</div>
-            <div class="stat-box-label">Graduating</div>
-        </div>
+        <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-value" id="statTrainers">0</div><div class="stat-label">Trainers</div></div>
+        <div class="stat-card"><div class="stat-value" id="statLeads">0</div><div class="stat-label">Leads</div></div>
+        <div class="stat-card"><div class="stat-value" id="statGraduating">0</div><div class="stat-label">Graduating</div></div>
     </div>
 </div>
 
-<!-- Group Detail Panel -->
-<div class="group-detail-panel" id="groupDetailPanel">
-    <div class="group-detail-header">
-        <h2><span id="groupDetailName"></span></h2>
-        <button class="group-detail-close" onclick="closeGroupDetail()">&times;</button>
-    </div>
-    <div class="group-detail-body">
-        <div class="group-members-list" id="groupMembersList">
-            <!-- Populated by JS -->
-        </div>
-    </div>
-</div>
-
-<!-- Groups View -->
-<div class="card" id="groupsView">
-    <h2 style="margin: 0 0 1.25rem; color: var(--gunmetal);">Teams & Groups</h2>
-    <div class="groups-grid" id="groupsGrid">
-        <!-- Populated by JS -->
-    </div>
-</div>
-
-<!-- List View -->
-<div class="card" id="listView" style="display: none;">
-    <h2 style="margin: 0 0 1.25rem; color: var(--gunmetal);">All Team Members</h2>
-    <table class="members-table">
-        <thead>
-            <tr>
-                <th>Member</th>
-                <th>Group</th>
-                <th>Role</th>
-                <th>Grad Year</th>
-                <th>Age</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="membersTableBody">
-            <!-- Populated by JS -->
-        </tbody>
+<div id="teamsView" class="teams-grid" style="margin-top:1.5rem"></div>
+<div id="listView" class="card" style="margin-top:1.5rem;display:none">
+    <table class="list-table">
+        <thead><tr><th style="width:40px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th><th>Member</th><th>Team</th><th>Role</th><th>Grad</th></tr></thead>
+        <tbody id="listBody"></tbody>
     </table>
 </div>
 
-<!-- Member Detail Modal -->
-<div id="memberModal" class="modal-overlay" style="display: none;">
+<div class="modal" id="memberModal">
     <div class="modal-content">
         <div class="modal-header">
-            <div class="member-profile-header">
-                <div class="member-profile-avatar" id="modalAvatar">JD</div>
-                <div class="member-profile-info">
-                    <h2 id="modalName">John Doe</h2>
-                    <div class="email" id="modalEmail">john.doe@bc.edu</div>
-                    <div class="member-profile-tags" id="modalTags"></div>
-                </div>
-            </div>
-            <button class="modal-close" onclick="closeMemberModal()">&times;</button>
+            <div class="profile"><div class="avatar" id="modalAvatar">JD</div><div class="info"><h2 id="modalName">John Doe</h2><div class="email" id="modalEmail">john@bc.edu</div><div class="tags" id="modalTags"></div></div></div>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <form id="memberForm">
-                <input type="hidden" id="memberId">
-                
+            <div class="detail-section"><h3>Personal Information</h3><div class="detail-grid"><div class="detail-item"><label>Phone</label><span id="dPhone">-</span></div><div class="detail-item"><label>Birthday</label><span id="dBirthday">-</span></div><div class="detail-item"><label>Age</label><span id="dAge">-</span></div><div class="detail-item"><label>Graduation</label><span id="dGrad">-</span></div></div></div>
+            <div class="detail-section"><h3>Team Assignment</h3><div class="detail-grid"><div class="detail-item"><label>Team</label><span id="dTeam">-</span></div><div class="detail-item"><label>Role</label><span id="dRole">-</span></div></div></div>
+            <div class="detail-section" id="trainerSection" style="display:none"><h3>Trainer Profile</h3><div class="detail-grid"><div class="detail-item"><label>Specialty</label><span id="dSpecialty">-</span></div><div class="detail-item"><label>Certifications</label><span id="dCerts">-</span></div></div><div class="detail-item" style="margin-top:0.75rem"><label>Bio</label><p id="dBio">-</p></div></div>
+            <div class="detail-section"><h3>Scheduling</h3><div class="detail-grid"><div class="detail-item"><label>Min Hours/Week</label><span id="dMinHours">0</span></div><div class="detail-item"><label>Max Hours/Week</label><span id="dMaxHours">20</span></div></div></div>
+            <div class="detail-section"><h3>Notes</h3><p id="dNotes" style="color:#666;font-size:0.9rem">No notes</p></div>
+        </div>
+        <div class="modal-footer">
+            <div style="display:flex;gap:0.5rem">
+                <button class="btn btn-warning btn-sm" onclick="archiveMember()">📦 Archive</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteMember()">🗑️ Delete</button>
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-left:auto">
+                <a href="#" id="availLink" class="btn btn-secondary" target="_blank">📅 Availability</a>
+                <button class="btn btn-primary" onclick="editMember()">✏️ Edit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bulk-bar" id="bulkBar">
+    <span><strong id="bulkCount">0</strong> selected</span>
+    <select id="bulkTeam"><option value="">Assign to team...</option><option value="__remove__">Remove from team</option></select>
+    <button class="btn btn-primary btn-sm" onclick="bulkAssign()">Apply</button>
+    <button class="btn btn-warning btn-sm" onclick="bulkArchive()">📦 Archive</button>
+    <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑️ Delete</button>
+    <button class="btn btn-cancel btn-sm" onclick="clearSelections()">Cancel</button>
+</div>
+
+<!-- Add/Edit Member Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-content" style="max-width:600px">
+        <div class="modal-header">
+            <h2 id="editModalTitle">Add Team Member</h2>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <form id="memberForm" onsubmit="saveMember(event)">
+            <div class="modal-body">
                 <div class="form-section">
-                    <h3>Personal Information</h3>
+                    <h3>Basic Information</h3>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label>First Name</label>
-                            <input type="text" id="memberFirstName">
-                        </div>
-                        <div class="form-group">
-                            <label>Last Name</label>
-                            <input type="text" id="memberLastName">
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" id="memberEmail" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" id="memberPhone">
-                        </div>
-                        <div class="form-group">
-                            <label>Birthday</label>
-                            <input type="date" id="memberBirthday">
-                        </div>
-                        <div class="form-group">
-                            <label>Graduation Year</label>
-                            <select id="memberGradYear">
-                                <option value="">Not Set</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label>First Name *</label><input type="text" id="editFirstName" required></div>
+                        <div class="form-group"><label>Last Name *</label><input type="text" id="editLastName" required></div>
+                        <div class="form-group"><label>Email *</label><input type="email" id="editEmail" required></div>
+                        <div class="form-group"><label>Phone</label><input type="tel" id="editPhone"></div>
+                        <div class="form-group"><label>Birthday</label><input type="date" id="editBirthday"></div>
+                        <div class="form-group"><label>Graduation Year</label><select id="editGradYear"><option value="">Select...</option></select></div>
                     </div>
                 </div>
-                
                 <div class="form-section">
                     <h3>Team Assignment</h3>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label>Group</label>
-                            <select id="memberGroup">
-                                <option value="">No Group</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Roles</label>
+                        <div class="form-group"><label>Team</label><select id="editTeam" onchange="handleRoleChange()"><option value="">Unassigned</option></select></div>
+                        <div class="form-group"><label>Role</label>
                             <div class="checkbox-group">
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="memberIsTrainer">
-                                    Trainer
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="memberIsLead">
-                                    Team Lead
-                                </label>
+                                <label class="checkbox-label"><input type="checkbox" id="editIsTrainer" onchange="handleRoleChange()"> Trainer</label>
+                                <label class="checkbox-label"><input type="checkbox" id="editIsLead" onchange="handleRoleChange()"> Team Lead</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+                <div class="form-section" id="editTrainerSection" style="display:none">
+                    <h3>Trainer Profile</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Specialty</label><input type="text" id="editSpecialty"></div>
+                        <div class="form-group"><label>Certifications</label><input type="text" id="editCerts"></div>
+                    </div>
+                    <div class="form-group"><label>Bio</label><textarea id="editBio" rows="3"></textarea></div>
+                </div>
                 <div class="form-section">
                     <h3>Scheduling</h3>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label>Max Weekly Hours</label>
-                            <input type="number" id="memberMaxHours" min="0" max="40">
-                        </div>
-                        <div class="form-group">
-                            <label>Min Weekly Hours</label>
-                            <input type="number" id="memberMinHours" min="0" max="40">
-                        </div>
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <a href="#" id="viewAvailabilityLink" class="btn btn-secondary">📅 View/Edit Availability</a>
+                        <div class="form-group"><label>Min Hours/Week</label><input type="number" id="editMinHours" min="0" max="40" value="0"></div>
+                        <div class="form-group"><label>Max Hours/Week</label><input type="number" id="editMaxHours" min="0" max="40" value="20"></div>
                     </div>
                 </div>
-                
                 <div class="form-section">
-                    <h3>Notes</h3>
-                    <div class="form-group full-width">
-                        <textarea id="memberNotes" rows="3" placeholder="Add notes about this team member..."></textarea>
-                    </div>
+                    <div class="form-group"><label>Notes</label><textarea id="editNotes" rows="2"></textarea></div>
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeMemberModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveMember()">Save Changes</button>
-        </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="editSubmitBtn">Save Member</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-let allMembers = [];
-let allGroups = [];
-let allMachines = [];
-let filteredMembers = [];
-let currentView = 'groups';
-let selectedGroupId = null;
+const CATS=['Laser','Vinyl','Woodworking','Textile','Metalworking','3D Printing','Electronics'], YEAR=new Date().getFullYear();
+let members=[],categories=[],categoryMap={},filtered=[],selected=new Set(),searchSelected=new Set(),currentView='teams',currentMember=null;
 
-const currentYear = new Date().getFullYear();
+document.addEventListener('DOMContentLoaded',loadData);
+document.addEventListener('click',e=>{if(!e.target.closest('.search-container'))hideDropdown()});
 
-document.addEventListener('DOMContentLoaded', function() {
-    populateGradYears();
-    loadData();
-});
-
-function populateGradYears() {
-    const memberGradYear = document.getElementById('memberGradYear');
-    
-    if (memberGradYear) {
-        for (let year = currentYear - 2; year <= currentYear + 6; year++) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            memberGradYear.appendChild(option);
-        }
-    }
-}
-
-function loadData() {
-    Promise.all([
-        fetch('/team/api/members/').then(r => r.json()),
-        fetch('/team/api/groups/').then(r => r.json()),
-        fetch('/machines/api/list/').then(r => r.json()).catch(() => ({ machines: [] }))
-    ])
-    .then(([membersData, groupsData, machinesData]) => {
-        allMembers = membersData.members || [];
-        allGroups = groupsData.groups || [];
-        allMachines = machinesData.machines || [];
-        
-        populateGroupFilters();
-        populateMachineFilter();
-        updateStats();
-        checkBirthdays();
-        applyFilters();
-    })
-    .catch(err => {
-        console.error('Error loading data:', err);
-        // Show empty state
-        allMembers = [];
-        allGroups = [];
-        allMachines = [];
-        updateStats();
-        applyFilters();
-    });
-}
-
-function populateMachineFilter() {
-    const filterTrainedOn = document.getElementById('filterTrainedOn');
-    if (!filterTrainedOn) return;
-    
-    filterTrainedOn.innerHTML = '<option value="">Any Equipment</option>';
-    
-    // Get unique machine categories or names
-    const uniqueMachines = [];
-    const seen = new Set();
-    
-    allMachines.forEach(machine => {
-        const name = machine.name || machine.category;
-        if (name && !seen.has(name)) {
-            seen.add(name);
-            uniqueMachines.push({ id: machine.id, name: name });
-        }
-    });
-    
-    uniqueMachines.sort((a, b) => a.name.localeCompare(b.name));
-    
-    uniqueMachines.forEach(machine => {
-        const option = document.createElement('option');
-        option.value = machine.id;
-        option.textContent = machine.name;
-        filterTrainedOn.appendChild(option);
-    });
-}
-
-function populateGroupFilters() {
-    const filterGroup = document.getElementById('filterGroup');
-    const memberGroup = document.getElementById('memberGroup');
-    
-    // Clear existing options (except first)
-    filterGroup.innerHTML = '<option value="">All Groups</option>';
-    memberGroup.innerHTML = '<option value="">No Group</option>';
-    
-    allGroups.forEach(group => {
-        const opt1 = document.createElement('option');
-        opt1.value = group.id;
-        opt1.textContent = group.name;
-        filterGroup.appendChild(opt1);
-        
-        const opt2 = document.createElement('option');
-        opt2.value = group.id;
-        opt2.textContent = group.name;
-        memberGroup.appendChild(opt2);
-    });
-}
-
-function updateStats() {
-    const trainers = allMembers.filter(m => m.is_trainer).length;
-    const leads = allMembers.filter(m => m.is_lead).length;
-    const graduating = allMembers.filter(m => m.grad_year === currentYear).length;
-    
-    document.getElementById('statTotal').textContent = allMembers.length;
-    document.getElementById('statTrainers').textContent = trainers;
-    document.getElementById('statLeads').textContent = leads;
-    document.getElementById('statGroups').textContent = allGroups.length;
-    document.getElementById('statGraduating').textContent = graduating;
-}
-
-function checkBirthdays() {
-    const today = new Date();
-    const todayStr = String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    
-    const birthdayMembers = allMembers.filter(m => {
-        if (!m.birthday) return false;
-        const bday = m.birthday.substring(5); // Get MM-DD part
-        return bday === todayStr;
-    });
-    
-    if (birthdayMembers.length > 0) {
-        const section = document.getElementById('birthdaySection');
-        const list = document.getElementById('birthdayList');
-        
-        list.innerHTML = birthdayMembers.map(m => `
-            <div class="birthday-card" onclick="openMemberModal(${m.id})">
-                <div class="member-avatar">${getInitials(m)}</div>
-                <div>
-                    <div style="font-weight: 500;">${m.first_name} ${m.last_name}</div>
-                    <div style="font-size: 0.8rem; color: var(--keppel);">🎂 Happy Birthday!</div>
-                </div>
-            </div>
-        `).join('');
-        
-        section.style.display = 'block';
-    }
-}
-
-function toggleFilters() {
-    document.getElementById('filterPanel').classList.toggle('show');
-}
-
-function clearFilters() {
-    document.getElementById('filterGroup').value = '';
-    document.getElementById('filterRole').value = '';
-    document.getElementById('filterGradYear').value = '';
-    document.getElementById('filterStatus').value = '';
-    document.getElementById('filterBirthdayMonth').value = '';
-    document.getElementById('filterAgeMin').value = '';
-    document.getElementById('filterAgeMax').value = '';
-    document.getElementById('filterTrainedOn').value = '';
-    document.getElementById('searchInput').value = '';
-    applyFilters();
-}
-
-function applyFilters() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const groupId = document.getElementById('filterGroup').value;
-    const role = document.getElementById('filterRole').value;
-    const gradYear = document.getElementById('filterGradYear').value;
-    const status = document.getElementById('filterStatus').value;
-    const birthdayMonth = document.getElementById('filterBirthdayMonth').value;
-    const ageMin = parseInt(document.getElementById('filterAgeMin').value) || 0;
-    const ageMax = parseInt(document.getElementById('filterAgeMax').value) || 100;
-    
-    filteredMembers = allMembers.filter(m => {
-        // Search filter
-        if (search) {
-            const fullName = `${m.first_name} ${m.last_name}`.toLowerCase();
-            const email = (m.email || '').toLowerCase();
-            const group = allGroups.find(g => g.id === m.group_id);
-            const groupName = group ? group.name.toLowerCase() : '';
-            
-            if (!fullName.includes(search) && !email.includes(search) && !groupName.includes(search)) {
-                return false;
+async function loadData(){
+    try{
+        const[mRes,cRes]=await Promise.all([fetch('/team/api/members/').then(r=>r.json()),fetch('/team/api/machine-categories/').then(r=>r.json()).catch(()=>({}))]);
+        members=mRes.members||[];
+        // Handle new category format (objects with name, icon, color) or fallback to strings
+        if(cRes.categories?.length){
+            if(typeof cRes.categories[0]==='object'){
+                categories=cRes.categories.map(c=>c.name);
+                categoryMap={};
+                cRes.categories.forEach(c=>{categoryMap[c.name]={icon:c.icon||'',color:c.color||'#293242'}});
+            }else{
+                categories=cRes.categories;
             }
+        }else if(cRes.category_names?.length){
+            categories=cRes.category_names;
+        }else{
+            categories=CATS;
         }
-        
-        // Group filter
-        if (groupId && m.group_id != groupId) return false;
-        
-        // Role filter
-        if (role === 'trainer' && !m.is_trainer) return false;
-        if (role === 'lead' && !m.is_lead) return false;
-        if (role === 'member' && (m.is_trainer || m.is_lead)) return false;
-        
-        // Grad year filter
-        if (gradYear && m.grad_year != gradYear) return false;
-        
-        // Status filter
-        if (status === 'graduating' && m.grad_year !== currentYear) return false;
-        if (status === 'graduated' && m.grad_year >= currentYear) return false;
-        if (status === 'active' && m.grad_year < currentYear) return false;
-        
-        // Birthday month filter
-        if (birthdayMonth && m.birthday) {
-            const bdayMonth = parseInt(m.birthday.split('-')[1]);
-            if (bdayMonth != birthdayMonth) return false;
-        } else if (birthdayMonth && !m.birthday) {
-            return false;
-        }
-        
-        // Age filter
-        if (m.birthday) {
-            const age = calculateAge(m.birthday);
-            if (age < ageMin || age > ageMax) return false;
-        }
-        
+        initFilters();updateStats();checkBirthdays();applyFilters();
+    }catch(e){console.error(e)}
+}
+
+function getCategoryDisplay(name){
+    const cat=categoryMap[name];
+    if(cat&&cat.icon)return`${cat.icon} ${name}`;
+    return name;
+}
+
+function getCategoryColor(name){
+    return categoryMap[name]?.color||'#293242';
+}
+
+function initFilters(){
+    const tf=document.getElementById('filterTeam'),gf=document.getElementById('filterGradYear'),bt=document.getElementById('bulkTeam');
+    tf.innerHTML='<option value="">All Teams</option>'+categories.map(c=>`<option value="${c}">${getCategoryDisplay(c)}</option>`).join('')+'<option value="__none__">Unassigned</option>';
+    gf.innerHTML='<option value="">Any Year</option>';for(let y=YEAR-2;y<=YEAR+5;y++)gf.innerHTML+=`<option value="${y}">${y}</option>`;
+    bt.innerHTML='<option value="">Assign to team...</option><option value="__remove__">Remove from team</option>'+categories.map(c=>`<option value="${c}">${getCategoryDisplay(c)}</option>`).join('');
+}
+
+function updateStats(){
+    document.getElementById('statTotal').textContent=members.length;
+    document.getElementById('statTrainers').textContent=members.filter(m=>m.is_trainer).length;
+    document.getElementById('statLeads').textContent=members.filter(m=>m.is_lead).length;
+    document.getElementById('statGraduating').textContent=members.filter(m=>m.grad_year===YEAR).length;
+}
+
+function checkBirthdays(){
+    const td=new Date(),tds=`${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+    const bdays=members.filter(m=>m.birthday?.substring(5)===tds);
+    const banner=document.getElementById('birthdayBanner');
+    if(bdays.length){document.getElementById('birthdayList').innerHTML=bdays.map(m=>`<span class="birthday-item">${m.first_name} ${m.last_name}</span>`).join('');banner.classList.add('show')}else banner.classList.remove('show');
+}
+
+// Search
+function handleSearch(){const q=document.getElementById('searchInput').value.toLowerCase().trim();q?(showDropdown(),renderDropdown(q)):hideDropdown();applyFilters()}
+function showDropdown(){document.getElementById('searchDropdown').classList.add('show')}
+function hideDropdown(){document.getElementById('searchDropdown').classList.remove('show')}
+function renderDropdown(q){
+    const matches=members.filter(m=>`${m.first_name} ${m.last_name}`.toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)).slice(0,8);
+    document.getElementById('searchDropdown').innerHTML=matches.length?matches.map(m=>`<div class="dropdown-item ${searchSelected.has(m.id)?'selected':''}" onclick="toggleSearchSel('${m.id}')"><div class="avatar">${initials(m)}</div><div><div style="font-weight:500">${m.first_name} ${m.last_name}</div><div style="font-size:0.8rem;color:#888">${m.email}</div></div>${searchSelected.has(m.id)?'<span style="color:var(--keppel)">✓</span>':''}</div>`).join(''):'<div class="dropdown-empty">No results</div>';
+}
+function toggleSearchSel(id){searchSelected.has(id)?searchSelected.delete(id):(searchSelected.add(id),selected.add(id));renderChips();renderDropdown(document.getElementById('searchInput').value.toLowerCase().trim());applyFilters();updateBulkBar()}
+function renderChips(){
+    document.getElementById('searchChips').innerHTML=Array.from(searchSelected).map(id=>{const m=members.find(x=>x.id===id);return m?`<div class="chip">${m.first_name} ${m.last_name}<button onclick="removeChip('${id}')">&times;</button></div>`:''}).join('');
+    document.getElementById('clearChipsBtn').style.display=searchSelected.size?'block':'none';
+}
+function clearSearchChips(){searchSelected.clear();selected.clear();renderChips();applyFilters();updateBulkBar()}
+function removeChip(id){searchSelected.delete(id);selected.delete(id);renderChips();applyFilters();updateBulkBar()}
+
+// Filters
+function toggleFilters(){document.getElementById('filterPanel').classList.toggle('show')}
+function clearFilters(){['filterTeam','filterRole','filterGradYear','filterStatus','filterBirthMonth','filterAgeMin','filterAgeMax'].forEach(id=>{const el=document.getElementById(id);el.tagName==='SELECT'?el.selectedIndex=0:el.value=''});document.getElementById('searchInput').value='';searchSelected.clear();renderChips();applyFilters()}
+function applyFilters(){
+    const q=document.getElementById('searchInput').value.toLowerCase().trim(),team=document.getElementById('filterTeam').value,role=document.getElementById('filterRole').value,gradYear=document.getElementById('filterGradYear').value,status=document.getElementById('filterStatus').value,birthMonth=document.getElementById('filterBirthMonth').value,ageMin=parseInt(document.getElementById('filterAgeMin').value)||0,ageMax=parseInt(document.getElementById('filterAgeMax').value)||150;
+    filtered=members.filter(m=>{
+        if(searchSelected.size)return searchSelected.has(m.id);
+        if(q&&!`${m.first_name} ${m.last_name}`.toLowerCase().includes(q)&&!(m.email||'').toLowerCase().includes(q))return false;
+        if(team==='__none__'&&m.team_assignment)return false;
+        if(team&&team!=='__none__'&&m.team_assignment!==team)return false;
+        if(role==='lead'&&!m.is_lead)return false;
+        if(role==='trainer'&&!m.is_trainer)return false;
+        if(role==='member'&&(m.is_lead||m.is_trainer))return false;
+        if(gradYear&&m.grad_year!=gradYear)return false;
+        if(status==='graduating'&&m.grad_year!==YEAR)return false;
+        if(status==='graduated'&&(!m.grad_year||m.grad_year>=YEAR))return false;
+        if(status==='active'&&m.grad_year&&m.grad_year<YEAR)return false;
+        if(birthMonth&&m.birthday&&parseInt(m.birthday.split('-')[1])!=birthMonth)return false;
+        if(birthMonth&&!m.birthday)return false;
+        if(m.birthday){const age=calcAge(m.birthday);if(age<ageMin||age>ageMax)return false}
         return true;
     });
-    
-    renderCurrentView();
+    render();
 }
 
-function handleSearch() {
-    applyFilters();
+// Views
+function setView(v){currentView=v;document.querySelectorAll('.view-toggle button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));document.getElementById('teamsView').style.display=v==='teams'?'grid':'none';document.getElementById('listView').style.display=v==='list'?'block':'none';render()}
+function render(){currentView==='teams'?renderTeams():renderList()}
+function renderTeams(){
+    document.getElementById('teamsView').innerHTML=[...categories,'Unassigned'].map(team=>{
+        const tm=filtered.filter(m=>team==='Unassigned'?!m.team_assignment:m.team_assignment===team);
+        if(!tm.length&&team!=='Unassigned')return'';
+        const lead=tm.find(m=>m.is_lead);
+        const icon=categoryMap[team]?.icon||'';
+        const color=team==='Unassigned'?'#64748b':getCategoryColor(team);
+        return`<div class="team-card" onclick="openTeamDetail('${team}')"><div class="team-header" style="border-left:4px solid ${color}"><h3>${icon?icon+' ':''}${team}</h3><div class="lead">${lead?`Lead: ${lead.first_name} ${lead.last_name}`:'No lead'}</div></div><div class="team-body"><div class="team-count">👥 ${tm.length} member${tm.length!==1?'s':''}</div><div class="team-avatars">${tm.slice(0,5).map(m=>`<div class="avatar">${initials(m)}</div>`).join('')}${tm.length>5?`<div class="avatar more">+${tm.length-5}</div>`:''}</div></div></div>`;
+    }).join('');
+}
+function renderList(){
+    const td=new Date(),tds=`${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+    document.getElementById('listBody').innerHTML=filtered.map(m=>{
+        const isBday=m.birthday?.substring(5)===tds,isGrad=m.grad_year===YEAR;
+        let tags='';if(m.is_lead)tags+='<span class="tag tag-lead">Lead</span>';else if(m.is_trainer)tags+='<span class="tag tag-trainer">Trainer</span>';if(isBday)tags+='<span class="tag tag-birthday">🎂</span>';if(isGrad)tags+='<span class="tag tag-graduating">Grad</span>';
+        const teamDisplay=m.team_assignment?getCategoryDisplay(m.team_assignment):'<span style="color:#999">—</span>';
+        return`<tr class="${selected.has(m.id)?'selected':''}" data-id="${m.id}" onclick="openModal('${m.id}')"><td onclick="event.stopPropagation()"><input type="checkbox" ${selected.has(m.id)?'checked':''} onchange="toggleSel('${m.id}',this.checked)"></td><td><div class="member-cell"><div class="avatar">${initials(m)}</div><div class="info"><span class="name">${m.first_name} ${m.last_name}${tags}</span><span class="email">${m.email}</span></div></div></td><td>${teamDisplay}</td><td>${m.is_lead?'Lead':m.is_trainer?'Trainer':'Member'}</td><td>${m.grad_year||'—'}</td></tr>`;
+    }).join('');
+    updateSelectAllState();
+}
+function openTeamDetail(team){searchSelected.clear();members.filter(m=>team==='Unassigned'?!m.team_assignment:m.team_assignment===team).forEach(m=>searchSelected.add(m.id));renderChips();applyFilters();setView('list')}
+
+// Selection
+function toggleSel(id,checked){checked?selected.add(id):selected.delete(id);document.querySelector(`tr[data-id="${id}"]`)?.classList.toggle('selected',checked);updateBulkBar();updateSelectAllState()}
+function toggleSelectAll(){const checked=document.getElementById('selectAll').checked;filtered.forEach(m=>checked?selected.add(m.id):selected.delete(m.id));render();updateBulkBar()}
+function updateSelectAllState(){const cb=document.getElementById('selectAll');cb.checked=filtered.length&&filtered.every(m=>selected.has(m.id));cb.indeterminate=filtered.some(m=>selected.has(m.id))&&!cb.checked}
+function updateBulkBar(){document.getElementById('bulkCount').textContent=selected.size;document.getElementById('bulkBar').classList.toggle('show',selected.size>0)}
+function clearSelections(){selected.clear();searchSelected.clear();renderChips();applyFilters();updateBulkBar()}
+async function bulkAssign(){
+    const team=document.getElementById('bulkTeam').value;if(!team)return alert('Select a team');
+    try{const res=await fetch('/team/api/members/bulk-team-assign/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({member_ids:Array.from(selected),team_assignment:team==='__remove__'?'':team})});const data=await res.json();if(data.success){selected.forEach(id=>{const m=members.find(x=>x.id===id);if(m)m.team_assignment=team==='__remove__'?'':team});clearSelections()}else alert(data.error||'Error')}catch(e){alert('Error');console.error(e)}
 }
 
-function setView(view) {
-    currentView = view;
-    
-    document.querySelectorAll('.view-toggle button').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(view));
-    });
-    
-    document.getElementById('groupsView').style.display = view === 'groups' ? 'block' : 'none';
-    document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-    
-    renderCurrentView();
+// Modal
+function openModal(id){
+    const m=members.find(x=>x.id===id||x.id===String(id));if(!m)return;currentMember=m;
+    document.getElementById('modalAvatar').textContent=initials(m);
+    document.getElementById('modalName').textContent=`${m.first_name} ${m.last_name}`;
+    document.getElementById('modalEmail').textContent=m.email;
+    document.getElementById('modalTags').innerHTML=(m.is_lead?'<span class="tag tag-lead">Team Lead</span>':'')+(m.is_trainer&&!m.is_lead?'<span class="tag tag-trainer">Trainer</span>':'');
+    document.getElementById('dPhone').textContent=m.phone||'-';
+    document.getElementById('dBirthday').textContent=m.birthday?fmtDate(m.birthday):'-';
+    document.getElementById('dAge').textContent=m.birthday?calcAge(m.birthday):'-';
+    document.getElementById('dGrad').textContent=m.grad_year||'-';
+    document.getElementById('dTeam').textContent=m.team_assignment?getCategoryDisplay(m.team_assignment):'Unassigned';
+    document.getElementById('dRole').textContent=m.is_lead?'Team Lead':m.is_trainer?'Trainer':'Member';
+    document.getElementById('dMinHours').textContent=m.min_weekly_hours||0;
+    document.getElementById('dMaxHours').textContent=m.max_weekly_hours||20;
+    document.getElementById('dNotes').textContent=m.notes||'No notes';
+    const ts=document.getElementById('trainerSection');
+    if(m.is_trainer||m.is_lead){ts.style.display='block';document.getElementById('dSpecialty').textContent=m.trainer_specialty||'-';document.getElementById('dCerts').textContent=m.trainer_certifications||'-';document.getElementById('dBio').textContent=m.trainer_bio||'-'}else ts.style.display='none';
+    const searchName = m.first_name && m.last_name ? `${m.first_name} ${m.last_name}` : m.email;
+    document.getElementById('availLink').href=`/scheduling/staff/availability/?user=${id}&tab=availability&search=${encodeURIComponent(searchName)}`;
+    document.getElementById('memberModal').classList.add('show');
+}
+function closeModal(){document.getElementById('memberModal').classList.remove('show');currentMember=null}
+
+// Edit/Add Modal
+let editingMemberId=null;
+
+function openAddModal(){
+    editingMemberId=null;
+    document.getElementById('editModalTitle').textContent='Add Team Member';
+    document.getElementById('editSubmitBtn').textContent='Add Member';
+    document.getElementById('memberForm').reset();
+    populateEditDropdowns();
+    document.getElementById('editTrainerSection').style.display='none';
+    document.getElementById('editModal').classList.add('show');
 }
 
-function renderCurrentView() {
-    if (currentView === 'groups') {
-        renderGroupsView();
-    } else {
-        renderListView();
+function editMember(){
+    if(!currentMember)return;
+    const m=currentMember; // Store reference before closing
+    editingMemberId=m.id;
+    closeModal(); // This sets currentMember to null, but we have 'm'
+    document.getElementById('editModalTitle').textContent='Edit Team Member';
+    document.getElementById('editSubmitBtn').textContent='Save Changes';
+    populateEditDropdowns();
+    
+    // Fill form with member data
+    document.getElementById('editFirstName').value=m.first_name||'';
+    document.getElementById('editLastName').value=m.last_name||'';
+    document.getElementById('editEmail').value=m.email||'';
+    document.getElementById('editPhone').value=m.phone||'';
+    document.getElementById('editBirthday').value=m.birthday||'';
+    document.getElementById('editGradYear').value=m.grad_year||'';
+    document.getElementById('editTeam').value=m.team_assignment||'';
+    document.getElementById('editIsTrainer').checked=m.is_trainer||false;
+    document.getElementById('editIsLead').checked=m.is_lead||false;
+    document.getElementById('editSpecialty').value=m.trainer_specialty||'';
+    document.getElementById('editCerts').value=m.trainer_certifications||'';
+    document.getElementById('editBio').value=m.trainer_bio||'';
+    document.getElementById('editMinHours').value=m.min_weekly_hours||0;
+    document.getElementById('editMaxHours').value=m.max_weekly_hours||20;
+    document.getElementById('editNotes').value=m.notes||'';
+    
+    handleRoleChange();
+    document.getElementById('editModal').classList.add('show');
+}
+
+function closeEditModal(){document.getElementById('editModal').classList.remove('show');editingMemberId=null}
+
+function populateEditDropdowns(){
+    const gradSel=document.getElementById('editGradYear');
+    gradSel.innerHTML='<option value="">Select...</option>';
+    for(let y=YEAR-2;y<=YEAR+5;y++)gradSel.innerHTML+=`<option value="${y}">${y}</option>`;
+    
+    const teamSel=document.getElementById('editTeam');
+    teamSel.innerHTML='<option value="">Unassigned</option>'+categories.map(c=>`<option value="${c}">${getCategoryDisplay(c)}</option>`).join('');
+}
+
+function handleRoleChange(){
+    const isTrainer=document.getElementById('editIsTrainer').checked;
+    const isLead=document.getElementById('editIsLead').checked;
+    document.getElementById('editTrainerSection').style.display=(isTrainer||isLead)?'block':'none';
+    // If lead, also check trainer
+    if(isLead&&!isTrainer)document.getElementById('editIsTrainer').checked=true;
+    // Highlight team field if lead is selected but no team
+    const teamField=document.getElementById('editTeam');
+    if(isLead&&!teamField.value){
+        teamField.style.borderColor='#f59e0b';
+        teamField.style.boxShadow='0 0 0 3px rgba(245,158,11,0.2)';
+    }else{
+        teamField.style.borderColor='';
+        teamField.style.boxShadow='';
     }
 }
 
-function renderGroupsView() {
-    const grid = document.getElementById('groupsGrid');
+async function saveMember(e){
+    e.preventDefault();
     
-    // Include "Unassigned" group
-    const groupsWithUnassigned = [
-        ...allGroups,
-        { id: null, name: 'Unassigned', lead_id: null }
-    ];
-    
-    grid.innerHTML = groupsWithUnassigned.map(group => {
-        const members = filteredMembers.filter(m => m.group_id === group.id);
-        const lead = members.find(m => m.is_lead);
-        
-        if (members.length === 0 && group.id !== null) return '';
-        
-        const avatars = members.slice(0, 5).map(m => 
-            `<div class="avatar">${getInitials(m)}</div>`
-        ).join('');
-        
-        const moreCount = members.length > 5 ? members.length - 5 : 0;
-        
-        return `
-            <div class="group-card" onclick="openGroupDetail(${group.id})">
-                <div class="group-card-header" style="${group.color ? `background: ${group.color}` : ''}">
-                    <h3>${group.name}</h3>
-                    <div class="group-lead">${lead ? `Lead: ${lead.first_name} ${lead.last_name}` : 'No lead assigned'}</div>
-                </div>
-                <div class="group-card-body">
-                    <div class="group-member-count">
-                        <span>👥</span>
-                        <span>${members.length} member${members.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div class="group-member-avatars">
-                        ${avatars}
-                        ${moreCount > 0 ? `<div class="avatar more">+${moreCount}</div>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderListView() {
-    const tbody = document.getElementById('membersTableBody');
-    const today = new Date();
-    const todayStr = String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    
-    tbody.innerHTML = filteredMembers.map(m => {
-        const group = allGroups.find(g => g.id === m.group_id);
-        const age = m.birthday ? calculateAge(m.birthday) : '-';
-        const isBirthday = m.birthday && m.birthday.substring(5) === todayStr;
-        const isGraduating = m.grad_year === currentYear;
-        
-        let tags = '';
-        if (m.is_lead) tags += '<span class="tag tag-lead">Lead</span>';
-        if (m.is_trainer) tags += '<span class="tag tag-trainer">Trainer</span>';
-        if (isBirthday) tags += '<span class="tag tag-birthday">🎂 Birthday!</span>';
-        if (isGraduating) tags += '<span class="tag tag-graduating">Graduating</span>';
-        
-        return `
-            <tr class="member-row" onclick="openMemberModal(${m.id})">
-                <td>
-                    <div class="member-cell">
-                        <div class="member-avatar">${getInitials(m)}</div>
-                        <div class="member-info">
-                            <span class="member-name">${m.first_name} ${m.last_name} ${tags}</span>
-                            <span class="member-email">${m.email}</span>
-                        </div>
-                    </div>
-                </td>
-                <td>${group ? group.name : '<span style="color: #999;">Unassigned</span>'}</td>
-                <td>${m.is_lead ? 'Team Lead' : (m.is_trainer ? 'Trainer' : 'Member')}</td>
-                <td>${m.grad_year || '-'}</td>
-                <td>${age}</td>
-                <td>
-                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openMemberModal(${m.id})">Edit</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function openGroupDetail(groupId) {
-    selectedGroupId = groupId;
-    const group = groupId ? allGroups.find(g => g.id === groupId) : { name: 'Unassigned' };
-    const members = filteredMembers.filter(m => m.group_id === groupId);
-    
-    document.getElementById('groupDetailName').textContent = group.name;
-    
-    const list = document.getElementById('groupMembersList');
-    list.innerHTML = members.map(m => {
-        let tags = '';
-        if (m.is_lead) tags += '<span class="tag tag-lead">Lead</span>';
-        if (m.is_trainer) tags += '<span class="tag tag-trainer">Trainer</span>';
-        
-        return `
-            <div class="group-member-card" onclick="openMemberModal(${m.id})">
-                <div class="member-avatar">${getInitials(m)}</div>
-                <div class="member-info">
-                    <span class="member-name">${m.first_name} ${m.last_name} ${tags}</span>
-                    <span class="member-email">${m.email}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    document.getElementById('groupDetailPanel').classList.add('show');
-}
-
-function closeGroupDetail() {
-    document.getElementById('groupDetailPanel').classList.remove('show');
-    selectedGroupId = null;
-}
-
-function openMemberModal(memberId) {
-    const member = allMembers.find(m => m.id === memberId);
-    if (!member) return;
-    
-    // Populate form
-    document.getElementById('memberId').value = member.id;
-    document.getElementById('memberFirstName').value = member.first_name || '';
-    document.getElementById('memberLastName').value = member.last_name || '';
-    document.getElementById('memberEmail').value = member.email || '';
-    document.getElementById('memberPhone').value = member.phone || '';
-    document.getElementById('memberBirthday').value = member.birthday || '';
-    document.getElementById('memberGradYear').value = member.grad_year || '';
-    document.getElementById('memberGroup').value = member.group_id || '';
-    document.getElementById('memberIsTrainer').checked = member.is_trainer || false;
-    document.getElementById('memberIsLead').checked = member.is_lead || false;
-    document.getElementById('memberMaxHours').value = member.max_weekly_hours || 20;
-    document.getElementById('memberMinHours').value = member.min_weekly_hours || 0;
-    document.getElementById('memberNotes').value = member.notes || '';
-    
-    // Update header
-    document.getElementById('modalAvatar').textContent = getInitials(member);
-    document.getElementById('modalName').textContent = `${member.first_name} ${member.last_name}`;
-    document.getElementById('modalEmail').textContent = member.email;
-    
-    // Tags
-    let tagsHtml = '';
-    if (member.is_lead) tagsHtml += '<span class="tag tag-lead">Team Lead</span>';
-    if (member.is_trainer) tagsHtml += '<span class="tag tag-trainer">Trainer</span>';
-    document.getElementById('modalTags').innerHTML = tagsHtml;
-    
-    // Availability link
-    document.getElementById('viewAvailabilityLink').href = `/scheduling/staff/availability/?user=${memberId}`;
-    
-    document.getElementById('memberModal').style.display = 'flex';
-}
-
-function closeMemberModal() {
-    document.getElementById('memberModal').style.display = 'none';
-}
-
-function openAddMemberModal() {
-    // Clear form for new member
-    document.getElementById('memberId').value = '';
-    document.getElementById('memberFirstName').value = '';
-    document.getElementById('memberLastName').value = '';
-    document.getElementById('memberEmail').value = '';
-    document.getElementById('memberEmail').disabled = false;
-    document.getElementById('memberPhone').value = '';
-    document.getElementById('memberBirthday').value = '';
-    document.getElementById('memberGradYear').value = '';
-    document.getElementById('memberGroup').value = '';
-    document.getElementById('memberIsTrainer').checked = false;
-    document.getElementById('memberIsLead').checked = false;
-    document.getElementById('memberMaxHours').value = 20;
-    document.getElementById('memberMinHours').value = 0;
-    document.getElementById('memberNotes').value = '';
-    
-    document.getElementById('modalAvatar').textContent = '?';
-    document.getElementById('modalName').textContent = 'New Team Member';
-    document.getElementById('modalEmail').textContent = '';
-    document.getElementById('modalTags').innerHTML = '';
-    
-    document.getElementById('memberModal').style.display = 'flex';
-}
-
-function saveMember() {
-    const memberId = document.getElementById('memberId').value;
-    
-    const data = {
-        id: memberId || null,
-        first_name: document.getElementById('memberFirstName').value,
-        last_name: document.getElementById('memberLastName').value,
-        email: document.getElementById('memberEmail').value,
-        phone: document.getElementById('memberPhone').value,
-        birthday: document.getElementById('memberBirthday').value,
-        grad_year: document.getElementById('memberGradYear').value || null,
-        group_id: document.getElementById('memberGroup').value || null,
-        is_trainer: document.getElementById('memberIsTrainer').checked,
-        is_lead: document.getElementById('memberIsLead').checked,
-        max_weekly_hours: document.getElementById('memberMaxHours').value,
-        min_weekly_hours: document.getElementById('memberMinHours').value,
-        notes: document.getElementById('memberNotes').value
-    };
-    
-    fetch('/team/api/members/save/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(data)
-    })
-    .then(r => r.json())
-    .then(result => {
-        if (result.success) {
-            closeMemberModal();
-            loadData();
-        } else {
-            alert('Error: ' + (result.error || 'Failed to save'));
-        }
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        // For demo, update local data
-        if (memberId) {
-            const idx = allMembers.findIndex(m => m.id == memberId);
-            if (idx !== -1) {
-                allMembers[idx] = { ...allMembers[idx], ...data };
-            }
-        } else {
-            data.id = allMembers.length + 1;
-            allMembers.push(data);
-        }
-        closeMemberModal();
-        updateStats();
-        applyFilters();
-    });
-}
-
-function exportBirthdays() {
-    // Generate ICS file for all birthdays
-    let icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//The Hatchery//Team Birthdays//EN
-`;
-    
-    allMembers.forEach(m => {
-        if (m.birthday) {
-            const [year, month, day] = m.birthday.split('-');
-            const dateStr = `${currentYear}${month}${day}`;
-            
-            icsContent += `BEGIN:VEVENT
-DTSTART;VALUE=DATE:${dateStr}
-DTEND;VALUE=DATE:${dateStr}
-RRULE:FREQ=YEARLY
-SUMMARY:🎂 ${m.first_name} ${m.last_name}'s Birthday
-DESCRIPTION:Birthday of ${m.first_name} ${m.last_name} (${m.email})
-END:VEVENT
-`;
-        }
-    });
-    
-    icsContent += 'END:VCALENDAR';
-    
-    // Download file
-    const blob = new Blob([icsContent], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'hatchery_team_birthdays.ics';
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function sendBirthdayEmails() {
-    if (!confirm('Send birthday wishes to all team members with birthdays today?')) {
+    // Validate team lead must have team
+    const isLead = document.getElementById('editIsLead').checked;
+    const team = document.getElementById('editTeam').value;
+    if(isLead && !team){
+        alert('Team Leads must be assigned to a team');
+        document.getElementById('editTeam').focus();
         return;
     }
     
-    fetch('/team/api/send-birthday-emails/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(r => r.json())
-    .then(result => {
-        alert(result.message || 'Birthday emails sent!');
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        alert('Birthday emails sent! (Demo mode)');
-    });
+    const data={
+        first_name:document.getElementById('editFirstName').value.trim(),
+        last_name:document.getElementById('editLastName').value.trim(),
+        email:document.getElementById('editEmail').value.trim(),
+        phone:document.getElementById('editPhone').value.trim(),
+        birthday:document.getElementById('editBirthday').value||null,
+        grad_year:document.getElementById('editGradYear').value?parseInt(document.getElementById('editGradYear').value):null,
+        team_assignment:document.getElementById('editTeam').value,
+        is_trainer:document.getElementById('editIsTrainer').checked,
+        is_lead:document.getElementById('editIsLead').checked,
+        trainer_specialty:document.getElementById('editSpecialty').value.trim(),
+        trainer_certifications:document.getElementById('editCerts').value.trim(),
+        trainer_bio:document.getElementById('editBio').value.trim(),
+        min_weekly_hours:parseInt(document.getElementById('editMinHours').value)||0,
+        max_weekly_hours:parseInt(document.getElementById('editMaxHours').value)||20,
+        notes:document.getElementById('editNotes').value.trim()
+    };
+    
+    const url=editingMemberId?`/team/api/members/${editingMemberId}/update/`:'/team/api/members/create/';
+    try{
+        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(data)});
+        const result=await res.json();
+        if(result.success){
+            closeEditModal();
+            loadData(); // Reload all data
+        }else alert(result.error||'Error saving member');
+    }catch(err){console.error(err);alert('Error saving member')}
 }
 
-function getInitials(member) {
-    const first = (member.first_name || '')[0] || '';
-    const last = (member.last_name || '')[0] || '';
-    return (first + last).toUpperCase() || '?';
+// Export
+function exportData(){
+    const headers=['First Name','Last Name','Email','Phone','Birthday','Graduation Year','Team','Role','Min Hours','Max Hours','Notes'];
+    const rows=filtered.map(m=>[
+        m.first_name||'',m.last_name||'',m.email||'',m.phone||'',m.birthday||'',m.grad_year||'',
+        m.team_assignment||'Unassigned',m.is_lead?'Team Lead':m.is_trainer?'Trainer':'Member',
+        m.min_weekly_hours||0,m.max_weekly_hours||20,m.notes||''
+    ]);
+    
+    const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`team_directory_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-function calculateAge(birthday) {
-    const today = new Date();
-    const birth = new Date(birthday);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
+// Archive/Delete - Single Member
+async function archiveMember(){
+    if(!currentMember)return;
+    const name=`${currentMember.first_name} ${currentMember.last_name}`;
+    if(!confirm(`Archive ${name}? They will be deactivated but not deleted.`))return;
+    
+    try{
+        const res=await fetch('/team/api/members/archive/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({member_ids:[currentMember.id]})});
+        const data=await res.json();
+        if(data.success){closeModal();loadData()}else alert(data.error||'Error archiving member');
+    }catch(e){console.error(e);alert('Error archiving member')}
 }
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+async function deleteMember(){
+    if(!currentMember)return;
+    const name=`${currentMember.first_name} ${currentMember.last_name}`;
+    if(!confirm(`⚠️ Permanently delete ${name}? This cannot be undone!`))return;
+    if(!confirm(`Are you absolutely sure you want to delete ${name}?`))return;
+    
+    try{
+        const res=await fetch('/team/api/members/delete/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({member_ids:[currentMember.id]})});
+        const data=await res.json();
+        if(data.success){closeModal();loadData()}else alert(data.error||'Error deleting member');
+    }catch(e){console.error(e);alert('Error deleting member')}
 }
 
-// Close modal on overlay click
-document.getElementById('memberModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeMemberModal();
-    }
-});
+// Archive/Delete - Bulk
+async function bulkArchive(){
+    if(!selected.size)return;
+    if(!confirm(`Archive ${selected.size} member(s)? They will be deactivated but not deleted.`))return;
+    
+    try{
+        const res=await fetch('/team/api/members/archive/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({member_ids:Array.from(selected)})});
+        const data=await res.json();
+        if(data.success){clearSelections();loadData()}else alert(data.error||'Error archiving members');
+    }catch(e){console.error(e);alert('Error archiving members')}
+}
+
+async function bulkDelete(){
+    if(!selected.size)return;
+    if(!confirm(`⚠️ Permanently delete ${selected.size} member(s)? This cannot be undone!`))return;
+    if(!confirm(`Are you absolutely sure? This will permanently remove ${selected.size} member(s).`))return;
+    
+    try{
+        const res=await fetch('/team/api/members/delete/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({member_ids:Array.from(selected)})});
+        const data=await res.json();
+        if(data.success){clearSelections();loadData()}else alert(data.error||'Error deleting members');
+    }catch(e){console.error(e);alert('Error deleting members')}
+}
+
+// Helpers
+function initials(m){return((m.first_name?.[0]||'')+(m.last_name?.[0]||'')).toUpperCase()||'?'}
+function fmtDate(d){return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function calcAge(d){const t=new Date(),b=new Date(d);let a=t.getFullYear()-b.getFullYear();if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;return a}
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():''}
 </script>
-
 {% endblock %}
