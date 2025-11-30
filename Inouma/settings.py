@@ -52,6 +52,9 @@ INSTALLED_APPS = [
 
     # Reservations
     'reservations',
+
+    # Social
+    'social',
   
 ]
 

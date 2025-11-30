@@ -9,6 +9,25 @@ app_name = 'reservations'
 
 urlpatterns = [
     # =========================================================================
+    # PAGE VIEWS (Templates)
+    # =========================================================================
+    
+    # Student pages
+    path('my-reservations/', views.my_reservations, name='my_reservations'),
+    path('training/', views.training_browser, name='training_browser'),
+    path('my-progress/', views.my_training_progress, name='my_training_progress'),
+    
+    # Staff pages
+    path('staff/', views.staff_reservations_hub, name='staff_reservations_hub'),
+    path('staff/reservations/', views.staff_reservations_dashboard, name='staff_reservations_dashboard'),
+    path('staff/trainings/', views.staff_training_dashboard, name='staff_training_dashboard'),
+    path('staff/maintenance/', views.maintenance_management, name='maintenance_management'),
+    path('staff/blackouts/', views.blackout_management, name='blackout_management'),
+    
+    # Team member pages
+    path('team/my-sessions/', views.team_my_training_sessions, name='team_my_training_sessions'),
+    
+    # =========================================================================
     # MACHINE RESERVATION APIs
     # =========================================================================
     

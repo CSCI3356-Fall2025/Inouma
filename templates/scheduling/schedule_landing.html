@@ -21,7 +21,7 @@
             <div style="color: #666; font-size: 0.9rem;">Active Semester</div>
         </div>
         
-        <div style="padding: 1rem; background: var(--light-gold); border-radius: 8px; text-align: center;">
+        <div style="padding: 1rem; background: var(--light-maroon); border-radius: 8px; text-align: center;">
             <div style="font-size: 2rem; font-weight: bold; color: var(--maroon);">{{ total_team_members }}</div>
             <div style="color: #666; font-size: 0.9rem;">Team Members</div>
         </div>
@@ -44,16 +44,6 @@
             <p>View and edit the active weekly schedule, see coverage gaps, and make adjustments</p>
             <div class="option-arrow">→</div>
         </div>
-
-        <!-- Manage Semesters -->
-        <div class="option-card" onclick="window.location.href='{% url 'scheduling:manage_semesters' %}'">
-            <div class="option-icon" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
-                📚
-            </div>
-            <h2>Manage Semesters</h2>
-            <p>Create new semesters, archive old ones, and switch between semester schedules</p>
-            <div class="option-arrow">→</div>
-        </div>
         
         <!-- Initialize/Configure Semester -->
         <div class="option-card" onclick="window.location.href='{% url 'scheduling:configure_semester' %}'">
@@ -65,13 +55,13 @@
             <div class="option-arrow">→</div>
         </div>
         
-        <!-- Availability & Hours -->
+        <!-- Unavailability & Hours -->
         <div class="option-card" onclick="window.location.href='{% url 'scheduling:manage_availability' %}'">
             <div class="option-icon" style="background: linear-gradient(135deg, var(--maroon), #a8305a);">
                 📋
             </div>
-            <h2>Availability & Hours</h2>
-            <p>Set weekly hours, manage availability windows, and view who's available when</p>
+            <h2>Unavailability & Hours</h2>
+            <p>Set weekly hours, manage unavailability windows, and view who's available when</p>
             <div class="option-arrow">→</div>
         </div>
         
@@ -81,7 +71,27 @@
                 🤖
             </div>
             <h2>Auto-Schedule</h2>
-            <p>Automatically generate the weekly schedule based on requirements and availability</p>
+            <p>Automatically generate the weekly schedule based on requirements and unavailability</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Review Requests -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:review_requests' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #FF5722, #E64A19);">
+                📬
+            </div>
+            <h2>Review Requests</h2>
+            <p>Approve or reject shift swaps, cancellations, and schedule change requests</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Manage Semesters -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:manage_semesters' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+                📚
+            </div>
+            <h2>Manage Semesters</h2>
+            <p>Create new semesters, archive old ones, and switch between semester schedules</p>
             <div class="option-arrow">→</div>
         </div>
         
@@ -92,16 +102,6 @@
             </div>
             <h2>Publish Schedule</h2>
             <p>Send calendar invites to team members and make the schedule visible</p>
-            <div class="option-arrow">→</div>
-        </div>
-
-        <!-- Review Requests -->
-        <div class="option-card" onclick="window.location.href='{% url 'scheduling:review_requests' %}'">
-            <div class="option-icon" style="background: linear-gradient(135deg, #FF5722, #E64A19);">
-                📬
-            </div>
-            <h2>Review Requests</h2>
-            <p>Approve or reject shift swaps, cancellations, and schedule change requests</p>
             <div class="option-arrow">→</div>
         </div>
         

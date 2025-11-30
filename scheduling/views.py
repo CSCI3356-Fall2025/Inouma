@@ -430,16 +430,28 @@ def run_auto_scheduler(request):
 
 
 @login_required
-@user_passes_test(is_staff_user)
 def clear_schedule(request, semester_id):
     """Clear all shifts for a semester"""
+    # Check staff permission manually for better AJAX error handling
+    if not (request.user.is_staff or request.user.is_superuser):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+            return JsonResponse({'success': False, 'error': 'Permission denied - staff access required'}, status=403)
+        return redirect('scheduling:schedule_landing')
+    
     semester = get_object_or_404(Semester, id=semester_id)
     
     if request.method == 'POST':
         count = Shift.objects.filter(semester=semester).delete()[0]
         
-        # Check if it's an AJAX request
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        # Check if it's an AJAX/fetch request (multiple ways to detect)
+        is_ajax = (
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.content_type == 'application/json' or
+            'application/json' in request.headers.get('Accept', '') or
+            request.headers.get('X-CSRFToken')  # fetch requests typically include this
+        )
+        
+        if is_ajax:
             return JsonResponse({
                 'success': True,
                 'deleted_count': count,
@@ -448,6 +460,10 @@ def clear_schedule(request, semester_id):
         
         messages.success(request, f'Cleared {count} shifts from {semester.name}')
         return redirect('scheduling:schedule_landing')
+    
+    # For GET requests, check if it's expecting JSON
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({'error': 'POST method required'}, status=405)
     
     return render(request, 'scheduling/confirm_clear.html', {
         'semester': semester
@@ -606,19 +622,22 @@ def api_get_team_members(request):
         except:
             pass
         
-        # Get availability from TrainerAvailability model
-        availability = {}
-        avail_records = TrainerAvailability.objects.filter(trainer=user)
-        
-        for i in range(7):
-            day_slots = avail_records.filter(weekday=i)
-            slots = []
-            for slot in day_slots:
-                slots.append({
-                    'start': slot.start_time.strftime('%H:%M') if slot.start_time else '09:00',
-                    'end': slot.end_time.strftime('%H:%M') if slot.end_time else '17:00'
-                })
-            availability[i] = slots
+        # Get unavailability from Unavailability model (scheduling)
+        unavailability = {}
+        semester_id = request.GET.get('semester_id')
+        if semester_id:
+            unavail_records = Unavailability.objects.filter(user=user, semester_id=semester_id)
+            
+            for i in range(7):
+                day_slots = unavail_records.filter(day_of_week=i)
+                slots = []
+                for slot in day_slots:
+                    slots.append({
+                        'start': slot.start_time.strftime('%H:%M') if slot.start_time else '09:00',
+                        'end': slot.end_time.strftime('%H:%M') if slot.end_time else '17:00',
+                        'reason': slot.reason or ''
+                    })
+                unavailability[i] = slots
         
         # Get profile picture URL
         profile_pic = None
@@ -649,7 +668,7 @@ def api_get_team_members(request):
             'max_weekly_hours': team_profile.max_weekly_hours if team_profile else 15,
             'shift_preference': team_profile.shift_preference if team_profile else 'no_preference',
             'scheduled_hours': 0,  # TODO: Calculate from actual shifts
-            'availability': availability,
+            'unavailability': unavailability,
             'birthday': student_profile.birthday.isoformat() if student_profile and student_profile.birthday else None,
             'grad_year': student_profile.graduation_year if student_profile else None,
             'phone': team_profile.phone if team_profile else '',
@@ -666,10 +685,10 @@ def api_get_team_members(request):
 @user_passes_test(is_staff_user)
 @require_POST
 def api_save_team_member(request):
-    """Save team member settings and availability"""
+    """Save team member settings and unavailability"""
     try:
         from django.contrib.auth import get_user_model
-        from accounts.models import TrainerAvailability, TrainerProfile
+        from accounts.models import TrainerProfile
         
         data = json.loads(request.body)
         user_id = data.get('user_id')
@@ -711,21 +730,25 @@ def api_save_team_member(request):
                 trainer_profile.certifications = data['trainer_certifications']
             trainer_profile.save()
         
-        # Update availability - clear existing and create new
-        TrainerAvailability.objects.filter(trainer=user).delete()
-        
-        availability_data = data.get('availability', {})
-        for day_str, slots in availability_data.items():
-            day_of_week = int(day_str)
+        # Update unavailability - clear existing and create new for current semester
+        semester_id = data.get('semester_id')
+        if semester_id:
+            Unavailability.objects.filter(user=user, semester_id=semester_id).delete()
             
-            for slot in slots:
-                if slot.get('start') and slot.get('end'):
-                    TrainerAvailability.objects.create(
-                        trainer=user,
-                        weekday=day_of_week,
-                        start_time=slot['start'],
-                        end_time=slot['end']
-                    )
+            unavailability_data = data.get('unavailability', {})
+            for day_str, slots in unavailability_data.items():
+                day_of_week = int(day_str)
+                
+                for slot in slots:
+                    if slot.get('start') and slot.get('end'):
+                        Unavailability.objects.create(
+                            user=user,
+                            semester_id=semester_id,
+                            day_of_week=day_of_week,
+                            start_time=slot['start'],
+                            end_time=slot['end'],
+                            reason=slot.get('reason', '')
+                        )
         
         return JsonResponse({'success': True})
         

@@ -40,6 +40,7 @@ urlpatterns = [
     # path('schedule/', include('schedule.urls')),
     path('team/', include('team.urls')),
     path('reservations/', include('reservations.urls')),
+    path('social/', include('social.urls')),
 ]
 
 

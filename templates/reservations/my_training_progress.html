@@ -1,0 +1,802 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Training Progress - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'student_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Training Progress</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Stats Cards */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.stat-card.highlight {
+    background: linear-gradient(135deg, var(--sunglow), #f5d54a);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+/* Category Section */
+.category-section {
+    margin-bottom: 2rem;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.category-icon {
+    font-size: 1.5rem;
+}
+
+.category-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.category-progress {
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Training Card */
+.training-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.training-card.completed {
+    border-left: 4px solid var(--keppel);
+}
+
+.training-card.in-progress {
+    border-left: 4px solid var(--sunglow);
+}
+
+.training-card.not-started {
+    border-left: 4px solid #e9ecef;
+    opacity: 0.8;
+}
+
+.training-level {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.training-level.level-1 {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.training-level.level-2 {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.training-level.level-3 {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.training-info {
+    flex: 1;
+}
+
+.training-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+}
+
+.training-meta {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.training-status {
+    text-align: right;
+}
+
+.status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.registered {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.waitlisted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.not-started {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.completion-date {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 0.25rem;
+}
+
+/* Upcoming Bookings */
+.booking-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.booking-date {
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-width: 60px;
+}
+
+.booking-date .day {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.booking-date .month {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.booking-info h4 {
+    margin: 0 0 0.25rem;
+    color: var(--gunmetal);
+}
+
+.booking-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--keppel);
+    transition: width 0.3s ease;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🎓 My Training Progress</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Track your training completions and upcoming sessions</p>
+        </div>
+        <a href="{% url 'training_browser' %}" class="btn btn-primary">
+            📅 Browse Sessions
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card highlight">
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-label">Trainings Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statUpcoming">0</div>
+            <div class="stat-label">Upcoming Sessions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statCategories">0</div>
+            <div class="stat-label">Categories Unlocked</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statMachines">0</div>
+            <div class="stat-label">Machines Available</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="progress">Training Progress</button>
+        <button class="tab" data-tab="upcoming">Upcoming Sessions</button>
+        <button class="tab" data-tab="history">Completion History</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="progressTab" class="tab-content"></div>
+    <div id="upcomingTab" class="tab-content" style="display: none;"></div>
+    <div id="historyTab" class="tab-content" style="display: none;"></div>
+</div>
+
+<script>
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+let completedTrainings = [];
+let upcomingBookings = [];
+let allTrainings = [];
+let categories = [];
+let categoryInfo = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            const tabName = this.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+        });
+    });
+});
+
+async function loadData() {
+    await Promise.all([
+        loadCategories(),
+        loadCompletedTrainings(),
+        loadUpcomingBookings(),
+        loadAllTrainings()
+    ]);
+    
+    updateStats();
+    renderProgress();
+    renderUpcoming();
+    renderHistory();
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories/');
+        const data = await response.json();
+        categories = data.categories || [];
+        categories.forEach(c => {
+            categoryInfo[c.name] = c;
+        });
+    } catch (err) {
+        console.error('Error loading categories:', err);
+    }
+}
+
+async function loadCompletedTrainings() {
+    try {
+        // This would need a custom API endpoint to get user's training records
+        const response = await fetch('/reservations/api/my-training-bookings/?status=completed');
+        const data = await response.json();
+        completedTrainings = data.bookings || [];
+    } catch (err) {
+        console.error('Error loading completed trainings:', err);
+    }
+}
+
+async function loadUpcomingBookings() {
+    try {
+        const response = await fetch('/reservations/api/my-training-bookings/?status=active');
+        const data = await response.json();
+        upcomingBookings = data.bookings || [];
+    } catch (err) {
+        console.error('Error loading upcoming bookings:', err);
+    }
+}
+
+async function loadAllTrainings() {
+    try {
+        const response = await fetch('/api/trainings/?status=active');
+        const data = await response.json();
+        allTrainings = data.trainings || [];
+    } catch (err) {
+        console.error('Error loading all trainings:', err);
+    }
+}
+
+function updateStats() {
+    // Count unique completed trainings
+    const completedIds = new Set(completedTrainings.map(b => b.training_name));
+    document.getElementById('statCompleted').textContent = completedIds.size;
+    
+    // Upcoming
+    document.getElementById('statUpcoming').textContent = upcomingBookings.length;
+    
+    // Categories with at least one training completed
+    const completedCategories = new Set(completedTrainings.map(b => b.category));
+    document.getElementById('statCategories').textContent = completedCategories.size;
+    
+    // Machines available (would need machine data - placeholder for now)
+    document.getElementById('statMachines').textContent = '-';
+}
+
+function renderProgress() {
+    const container = document.getElementById('progressTab');
+    
+    if (categories.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📚</div>
+                <h3>No Training Categories</h3>
+                <p>Training categories haven't been set up yet.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group trainings by category
+    const trainingsByCategory = {};
+    allTrainings.forEach(t => {
+        if (!trainingsByCategory[t.category]) {
+            trainingsByCategory[t.category] = [];
+        }
+        trainingsByCategory[t.category].push(t);
+    });
+    
+    // Create a set of completed training names for lookup
+    const completedNames = new Set(completedTrainings.map(b => b.training_name));
+    
+    // Create a map of upcoming bookings by training name
+    const upcomingByName = {};
+    upcomingBookings.forEach(b => {
+        upcomingByName[b.training_name] = b;
+    });
+    
+    let html = '';
+    
+    categories.forEach(category => {
+        const catTrainings = trainingsByCategory[category.name] || [];
+        if (catTrainings.length === 0) return;
+        
+        // Sort by level
+        catTrainings.sort((a, b) => a.level - b.level);
+        
+        // Count completed in this category
+        const completedInCategory = catTrainings.filter(t => completedNames.has(t.name)).length;
+        const progressPercent = Math.round((completedInCategory / catTrainings.length) * 100);
+        
+        const icon = category.icon || '🔧';
+        
+        html += `
+            <div class="category-section">
+                <div class="category-header">
+                    <span class="category-icon">${icon}</span>
+                    <span class="category-name">${escapeHtml(category.name)}</span>
+                    <span class="category-progress">${completedInCategory}/${catTrainings.length} completed</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                </div>
+                <div style="margin-top: 1rem;">
+        `;
+        
+        catTrainings.forEach(training => {
+            const isCompleted = completedNames.has(training.name);
+            const upcoming = upcomingByName[training.name];
+            
+            let statusClass = 'not-started';
+            let statusBadge = '<span class="status-badge not-started">Not Started</span>';
+            let extraInfo = '';
+            
+            if (isCompleted) {
+                statusClass = 'completed';
+                statusBadge = '<span class="status-badge completed">✓ Completed</span>';
+                // Find completion date
+                const record = completedTrainings.find(b => b.training_name === training.name);
+                if (record) {
+                    const date = new Date(record.registered_at);
+                    extraInfo = `<div class="completion-date">Completed ${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}</div>`;
+                }
+            } else if (upcoming) {
+                statusClass = 'in-progress';
+                if (upcoming.status === 'waitlisted') {
+                    statusBadge = `<span class="status-badge waitlisted">Waitlisted #${upcoming.waitlist_position || '?'}</span>`;
+                } else {
+                    statusBadge = '<span class="status-badge registered">Registered</span>';
+                }
+                const date = new Date(upcoming.date + 'T00:00:00');
+                extraInfo = `<div class="completion-date">${MONTHS[date.getMonth()]} ${date.getDate()} at ${formatTime(upcoming.start_time)}</div>`;
+            }
+            
+            html += `
+                <div class="training-card ${statusClass}">
+                    <div class="training-level level-${training.level}">L${training.level}</div>
+                    <div class="training-info">
+                        <div class="training-name">${escapeHtml(training.name)}</div>
+                        <div class="training-meta">${training.duration_minutes} min • Max ${training.max_participants} participant${training.max_participants !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="training-status">
+                        ${statusBadge}
+                        ${extraInfo}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || `
+        <div class="empty-state">
+            <div class="empty-state-icon">📚</div>
+            <h3>No Trainings Available</h3>
+            <p>Check back later for available training sessions.</p>
+        </div>
+    `;
+}
+
+function renderUpcoming() {
+    const container = document.getElementById('upcomingTab');
+    
+    if (upcomingBookings.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h3>No Upcoming Sessions</h3>
+                <p>You don't have any training sessions scheduled.</p>
+                <a href="{% url 'training_browser' %}" class="btn btn-primary">Browse Sessions</a>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort by date
+    const sorted = [...upcomingBookings].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.start_time.localeCompare(b.start_time);
+    });
+    
+    let html = '';
+    sorted.forEach(booking => {
+        const date = new Date(booking.date + 'T00:00:00');
+        const catInfo = categoryInfo[booking.category] || {};
+        const icon = catInfo.icon || '🔧';
+        
+        let statusBadge = '';
+        if (booking.status === 'waitlisted') {
+            statusBadge = `<span class="status-badge waitlisted">Waitlist #${booking.waitlist_position || '?'}</span>`;
+        } else if (booking.status === 'notified') {
+            statusBadge = `<span class="status-badge" style="background: #fef3c7; color: #92400e;">Confirm Required</span>`;
+        } else {
+            statusBadge = `<span class="status-badge registered">Registered</span>`;
+        }
+        
+        html += `
+            <div class="booking-card">
+                <div class="booking-date">
+                    <div class="day">${date.getDate()}</div>
+                    <div class="month">${MONTHS[date.getMonth()]}</div>
+                </div>
+                <div class="booking-info">
+                    <h4>${icon} ${escapeHtml(booking.training_name)}</h4>
+                    <p>
+                        ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)} • 
+                        with ${escapeHtml(booking.trainer_name)}
+                        ${booking.location ? ' • ' + escapeHtml(booking.location) : ''}
+                    </p>
+                </div>
+                <div>
+                    ${statusBadge}
+                    ${booking.status === 'notified' ? `
+                        <button class="btn btn-primary btn-sm" style="margin-top: 0.5rem;" onclick="confirmBooking(${booking.id})">
+                            Confirm
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderHistory() {
+    const container = document.getElementById('historyTab');
+    
+    if (completedTrainings.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📜</div>
+                <h3>No Training History</h3>
+                <p>You haven't completed any trainings yet.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort by completion date (most recent first)
+    const sorted = [...completedTrainings].sort((a, b) => {
+        return new Date(b.registered_at) - new Date(a.registered_at);
+    });
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 0.75rem;">';
+    
+    sorted.forEach(booking => {
+        const date = new Date(booking.registered_at);
+        const catInfo = categoryInfo[booking.category] || {};
+        const icon = catInfo.icon || '🔧';
+        
+        html += `
+            <div class="training-card completed">
+                <div class="training-level level-${booking.training_level}">L${booking.training_level}</div>
+                <div class="training-info">
+                    <div class="training-name">${icon} ${escapeHtml(booking.training_name)}</div>
+                    <div class="training-meta">
+                        Trained by ${escapeHtml(booking.trainer_name)} • ${escapeHtml(booking.category)}
+                    </div>
+                </div>
+                <div class="training-status">
+                    <span class="status-badge completed">✓ Completed</span>
+                    <div class="completion-date">${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function confirmBooking(bookingId) {
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/confirm/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Booking confirmed!', 'success');
+            loadData();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to confirm', 'error');
+    }
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

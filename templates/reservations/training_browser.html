@@ -1,0 +1,938 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Training Sessions - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'student_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Training Sessions</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Filters */
+.filters-section {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+.filter-group select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+/* Week Navigation */
+.week-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.week-nav button {
+    background: #e9ecef;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.week-nav button:hover {
+    background: #dee2e6;
+}
+
+.week-nav .current-week {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.day-column {
+    min-height: 200px;
+}
+
+.day-header {
+    text-align: center;
+    padding: 0.75rem;
+    background: var(--gunmetal);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    font-weight: 500;
+}
+
+.day-header .date {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.day-header .weekday {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.day-header.today {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.day-sessions {
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+    padding: 0.5rem;
+    min-height: 150px;
+}
+
+.session-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.session-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: var(--sunglow);
+}
+
+.session-card.booked {
+    border-left: 3px solid var(--keppel);
+}
+
+.session-card.full {
+    opacity: 0.7;
+}
+
+.session-card.full:not(.booked) {
+    border-left: 3px solid #ccc;
+}
+
+.session-time {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.session-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+}
+
+.session-trainer {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.session-status {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    margin-top: 0.35rem;
+}
+
+.session-status.available {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.session-status.full {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.session-status.booked {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.session-status.waitlisted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Level Badge */
+.level-badge {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
+.level-badge.level-1 { background: #d1fae5; color: #065f46; }
+.level-badge.level-2 { background: #fef3c7; color: #92400e; }
+.level-badge.level-3 { background: #fee2e2; color: #dc2626; }
+
+/* List View */
+.list-view {
+    display: none;
+}
+
+.list-view.active {
+    display: block;
+}
+
+.calendar-view.active {
+    display: grid;
+}
+
+.session-list-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.session-list-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.session-list-date {
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    min-width: 60px;
+}
+
+.session-list-date .day {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.session-list-date .month {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    gap: 0.25rem;
+    background: #e9ecef;
+    padding: 0.25rem;
+    border-radius: 6px;
+}
+
+.view-toggle button {
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.view-toggle button.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Empty State */
+.empty-day {
+    text-align: center;
+    padding: 1rem;
+    color: #999;
+    font-size: 0.8rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .calendar-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .calendar-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🎓 Training Sessions</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Browse and sign up for training sessions</p>
+        </div>
+        <div class="view-toggle">
+            <button class="active" onclick="setView('calendar')">📅 Calendar</button>
+            <button onclick="setView('list')">📋 List</button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label>Category:</label>
+            <select id="filterCategory" onchange="loadSessions()">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Level:</label>
+            <select id="filterLevel" onchange="loadSessions()">
+                <option value="">All Levels</option>
+                <option value="1">Level 1 - Introduction</option>
+                <option value="2">Level 2 - Intermediate</option>
+                <option value="3">Level 3 - Advanced</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" id="filterAvailable" onchange="loadSessions()">
+                Available only
+            </label>
+        </div>
+    </div>
+
+    <!-- Week Navigation -->
+    <div class="week-nav">
+        <button onclick="previousWeek()">← Previous</button>
+        <span class="current-week" id="currentWeekLabel">This Week</span>
+        <button onclick="nextWeek()">Next →</button>
+        <button onclick="goToThisWeek()" style="margin-left: 1rem;">Today</button>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="calendar-grid calendar-view active" id="calendarView"></div>
+
+    <!-- List View -->
+    <div class="list-view" id="listView"></div>
+</div>
+
+<!-- Session Detail Modal -->
+<div class="modal-overlay" id="sessionModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Training Session</h2>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
+    </div>
+</div>
+
+<script>
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+let allSessions = [];
+let categories = [];
+let currentWeekStart = getWeekStart(new Date());
+let currentView = 'calendar';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadSessions();
+});
+
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories/');
+        const data = await response.json();
+        categories = data.categories || [];
+        
+        const select = document.getElementById('filterCategory');
+        categories.forEach(cat => {
+            const icon = cat.icon ? cat.icon + ' ' : '';
+            select.innerHTML += `<option value="${cat.name}">${icon}${cat.name}</option>`;
+        });
+    } catch (err) {
+        console.error('Error loading categories:', err);
+    }
+}
+
+async function loadSessions() {
+    const category = document.getElementById('filterCategory').value;
+    const level = document.getElementById('filterLevel').value;
+    const availableOnly = document.getElementById('filterAvailable').checked;
+    
+    // Calculate date range (2 weeks from current week start)
+    const startDate = formatDate(currentWeekStart);
+    const endDate = formatDate(new Date(currentWeekStart.getTime() + 13 * 24 * 60 * 60 * 1000));
+    
+    let url = `/reservations/api/trainings/available/?start_date=${startDate}&end_date=${endDate}`;
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            allSessions = data.sessions;
+            
+            // Apply client-side filters
+            if (level) {
+                allSessions = allSessions.filter(s => s.training_level === parseInt(level));
+            }
+            if (availableOnly) {
+                allSessions = allSessions.filter(s => s.status === 'available' || s.user_booking);
+            }
+            
+            renderCurrentView();
+        }
+    } catch (err) {
+        console.error('Error loading sessions:', err);
+        showToast('Failed to load sessions', 'error');
+    }
+}
+
+function renderCurrentView() {
+    if (currentView === 'calendar') {
+        renderCalendar();
+    } else {
+        renderList();
+    }
+    updateWeekLabel();
+}
+
+function renderCalendar() {
+    const container = document.getElementById('calendarView');
+    const today = formatDate(new Date());
+    
+    let html = '';
+    
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart.getTime() + i * 24 * 60 * 60 * 1000);
+        const dateStr = formatDate(date);
+        const isToday = dateStr === today;
+        
+        const daySessions = allSessions.filter(s => s.date === dateStr);
+        
+        html += `
+            <div class="day-column">
+                <div class="day-header ${isToday ? 'today' : ''}">
+                    <div class="weekday">${WEEKDAYS[date.getDay()]}</div>
+                    <div class="date">${date.getDate()}</div>
+                </div>
+                <div class="day-sessions">
+                    ${daySessions.length > 0 ? daySessions.map(s => renderSessionCard(s)).join('') : '<div class="empty-day">No sessions</div>'}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function renderSessionCard(session) {
+    const hasBooking = session.user_booking !== null;
+    const isWaitlisted = hasBooking && session.user_booking.status === 'waitlisted';
+    const isFull = session.is_full && !hasBooking;
+    
+    let statusClass = 'available';
+    let statusText = `${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}`;
+    
+    if (hasBooking) {
+        if (isWaitlisted) {
+            statusClass = 'waitlisted';
+            statusText = `Waitlist #${session.user_booking.waitlist_position}`;
+        } else {
+            statusClass = 'booked';
+            statusText = 'Registered';
+        }
+    } else if (isFull) {
+        statusClass = 'full';
+        statusText = 'Full';
+    }
+    
+    return `
+        <div class="session-card ${hasBooking ? 'booked' : ''} ${isFull ? 'full' : ''}" 
+             onclick="openSessionModal(${session.id})">
+            <div class="session-time">${formatTime(session.start_time)} - ${formatTime(session.end_time)}</div>
+            <div class="session-name">
+                <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                ${escapeHtml(session.training_name)}
+            </div>
+            <div class="session-trainer">with ${escapeHtml(session.trainer_name)}</div>
+            <span class="session-status ${statusClass}">${statusText}</span>
+        </div>
+    `;
+}
+
+function renderList() {
+    const container = document.getElementById('listView');
+    
+    // Get sessions for the current week only
+    const weekEnd = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const weekSessions = allSessions.filter(s => {
+        const d = new Date(s.date);
+        return d >= currentWeekStart && d <= weekEnd;
+    });
+    
+    if (weekSessions.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: #666;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                <h3>No sessions this week</h3>
+                <p>Try selecting a different week or category.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort by date and time
+    weekSessions.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.start_time.localeCompare(b.start_time);
+    });
+    
+    container.innerHTML = weekSessions.map(session => {
+        const date = new Date(session.date + 'T00:00:00');
+        const hasBooking = session.user_booking !== null;
+        
+        return `
+            <div class="session-list-item" onclick="openSessionModal(${session.id})">
+                <div class="session-list-date">
+                    <div class="day">${date.getDate()}</div>
+                    <div class="month">${MONTHS[date.getMonth()]}</div>
+                </div>
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                        <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                        ${escapeHtml(session.training_name)}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #666;">
+                        ${formatTime(session.start_time)} - ${formatTime(session.end_time)} • with ${escapeHtml(session.trainer_name)}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+                        ${escapeHtml(session.category)} ${session.location ? '• ' + escapeHtml(session.location) : ''}
+                    </div>
+                </div>
+                <div>
+                    ${hasBooking 
+                        ? `<span class="session-status booked">${session.user_booking.status === 'waitlisted' ? 'Waitlist #' + session.user_booking.waitlist_position : 'Registered'}</span>`
+                        : session.is_full 
+                            ? '<span class="session-status full">Full</span>'
+                            : `<span class="session-status available">${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}</span>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setView(view) {
+    currentView = view;
+    
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    document.getElementById('calendarView').classList.toggle('active', view === 'calendar');
+    document.getElementById('listView').classList.toggle('active', view === 'list');
+    
+    renderCurrentView();
+}
+
+function previousWeek() {
+    currentWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+    loadSessions();
+}
+
+function nextWeek() {
+    currentWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    loadSessions();
+}
+
+function goToThisWeek() {
+    currentWeekStart = getWeekStart(new Date());
+    loadSessions();
+}
+
+function updateWeekLabel() {
+    const weekEnd = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const label = `${MONTHS[currentWeekStart.getMonth()]} ${currentWeekStart.getDate()} - ${MONTHS[weekEnd.getMonth()]} ${weekEnd.getDate()}, ${weekEnd.getFullYear()}`;
+    document.getElementById('currentWeekLabel').textContent = label;
+}
+
+// Session Modal
+function openSessionModal(sessionId) {
+    const session = allSessions.find(s => s.id === sessionId);
+    if (!session) return;
+    
+    const date = new Date(session.date + 'T00:00:00');
+    const hasBooking = session.user_booking !== null;
+    const levelLabels = {1: 'Introduction', 2: 'Intermediate', 3: 'Advanced'};
+    
+    document.getElementById('modalTitle').innerHTML = `
+        <span class="level-badge level-${session.training_level}">Level ${session.training_level}</span>
+        ${escapeHtml(session.training_name)}
+    `;
+    
+    let bodyHtml = `
+        <div style="margin-bottom: 1rem;">
+            <p style="color: #666; margin: 0;">
+                <strong>${WEEKDAYS_FULL[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}</strong><br>
+                ${formatTime(session.start_time)} - ${formatTime(session.end_time)} (${session.duration_minutes} min)
+            </p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <div style="font-size: 0.8rem; color: #888;">Trainer</div>
+                <div>${escapeHtml(session.trainer_name)}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: #888;">Category</div>
+                <div>${escapeHtml(session.category)}</div>
+            </div>
+            ${session.location ? `
+            <div>
+                <div style="font-size: 0.8rem; color: #888;">Location</div>
+                <div>${escapeHtml(session.location)}</div>
+            </div>
+            ` : ''}
+            <div>
+                <div style="font-size: 0.8rem; color: #888;">Capacity</div>
+                <div>${session.current_participants}/${session.max_participants} registered</div>
+            </div>
+        </div>
+    `;
+    
+    if (hasBooking) {
+        const booking = session.user_booking;
+        bodyHtml += `
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <strong>Your Booking</strong><br>
+                Status: ${booking.status === 'waitlisted' ? `Waitlisted (#${booking.waitlist_position})` : 'Registered'}
+                ${booking.confirmation_deadline ? `<br>Confirm by: ${new Date(booking.confirmation_deadline).toLocaleString()}` : ''}
+            </div>
+        `;
+    } else if (session.waitlist_count > 0) {
+        bodyHtml += `
+            <div style="background: #fef3c7; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem;">
+                ⚠️ Session is full. ${session.waitlist_count} on waitlist. You'll be added to the waitlist.
+            </div>
+        `;
+    }
+    
+    document.getElementById('modalBody').innerHTML = bodyHtml;
+    
+    // Footer buttons
+    let footerHtml = '<button class="btn btn-secondary" onclick="closeSessionModal()">Close</button>';
+    
+    if (hasBooking) {
+        if (session.user_booking.status === 'notified') {
+            footerHtml += `<button class="btn btn-primary" onclick="confirmWaitlist(${session.user_booking.id})">Confirm Spot</button>`;
+        }
+        footerHtml += `<button class="btn btn-danger" onclick="cancelBooking(${session.user_booking.id})">Cancel Booking</button>`;
+    } else {
+        footerHtml += `<button class="btn btn-primary" onclick="bookSession(${session.id})">${session.is_full ? 'Join Waitlist' : 'Register'}</button>`;
+    }
+    
+    document.getElementById('modalFooter').innerHTML = footerHtml;
+    document.getElementById('sessionModal').classList.add('active');
+}
+
+function closeSessionModal() {
+    document.getElementById('sessionModal').classList.remove('active');
+}
+
+async function bookSession(sessionId) {
+    try {
+        const response = await fetch(`/reservations/api/trainings/${sessionId}/book/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeSessionModal();
+            loadSessions();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to book session', 'error');
+    }
+}
+
+async function cancelBooking(bookingId) {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Booking cancelled', 'success');
+            closeSessionModal();
+            loadSessions();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to cancel booking', 'error');
+    }
+}
+
+async function confirmWaitlist(bookingId) {
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/confirm/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Booking confirmed!', 'success');
+            closeSessionModal();
+            loadSessions();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to confirm', 'error');
+    }
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('sessionModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSessionModal();
+});
+</script>
+{% endblock %}

@@ -1,139 +1,862 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}User Dashboard{% endblock %}
+{% block title %}Dashboard - The Hatchery{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+    --timberwolf: #cfcfce;
+}
+
+/* Welcome Section */
+.welcome-section {
+    background: linear-gradient(135deg, var(--gunmetal) 0%, #3d4a5c 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.welcome-text h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+}
+
+.welcome-text p {
+    margin: 0;
+    opacity: 0.85;
+}
+
+.welcome-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.welcome-stat {
+    text-align: center;
+}
+
+.welcome-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--sunglow);
+}
+
+.welcome-stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+}
+
+.grid-col-8 {
+    grid-column: span 8;
+}
+
+.grid-col-4 {
+    grid-column: span 4;
+}
+
+.grid-col-6 {
+    grid-column: span 6;
+}
+
+.grid-col-12 {
+    grid-column: span 12;
+}
+
+@media (max-width: 1100px) {
+    .grid-col-8, .grid-col-4, .grid-col-6 {
+        grid-column: span 12;
+    }
+}
+
+/* Dashboard Cards */
+.dash-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.dash-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dash-card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gunmetal);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dash-card-header .view-all {
+    color: var(--sunglow);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.dash-card-header .view-all:hover {
+    text-decoration: underline;
+}
+
+.dash-card-body {
+    padding: 1.25rem;
+}
+
+.dash-card-body.no-padding {
+    padding: 0;
+}
+
+/* Upcoming Items List */
+.upcoming-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.upcoming-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+
+.upcoming-item:last-child {
+    border-bottom: none;
+}
+
+.upcoming-item:hover {
+    background: #fafafa;
+}
+
+.upcoming-item a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+
+/* Date Block */
+.date-block {
+    min-width: 50px;
+    text-align: center;
+    padding: 0.5rem;
+    background: var(--gunmetal);
+    border-radius: 8px;
+    color: white;
+}
+
+.date-block .month {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+.date-block .day {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.date-block .weekday {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.date-block.today {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.date-block.training {
+    background: var(--keppel);
+}
+
+/* Item Details */
+.item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.item-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-meta {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.item-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.item-time {
+    font-weight: 500;
+    color: var(--gunmetal);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.registered {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.waitlisted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+.empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.empty-state p {
+    margin: 0 0 1rem;
+}
+
+.empty-state .btn-link {
+    color: var(--sunglow);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.empty-state .btn-link:hover {
+    text-decoration: underline;
+}
+
+/* Certifications Grid */
+.certs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.cert-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    position: relative;
+    border-left: 4px solid var(--keppel);
+}
+
+.cert-card.expired {
+    border-left-color: var(--cinnabar);
+    opacity: 0.7;
+}
+
+.cert-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.cert-meta {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.cert-status {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--keppel);
+}
+
+.cert-status.expired {
+    background: var(--cinnabar);
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--gunmetal);
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.quick-action:hover {
+    background: var(--sunglow);
+    transform: translateY(-2px);
+}
+
+.quick-action-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.quick-action-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Hours Card */
+.hours-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+    .hours-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.hours-section h4 {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+}
+
+.hours-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.hours-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.hours-list li:last-child {
+    border-bottom: none;
+}
+
+.hours-list .day {
+    color: #666;
+}
+
+.hours-list .time {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.hours-list .closed {
+    color: var(--cinnabar);
+}
+
+.hours-note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #fef3c7;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #92400e;
+}
+
+/* Training Progress */
+.progress-bar-container {
+    margin-bottom: 1rem;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.progress-label .category {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.progress-label .count {
+    color: #666;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--keppel);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e9ecef;
+    border-top-color: var(--sunglow);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-
-    <!-- PAGE HEADER -->
-    <div class="card">
-        <h2>Welcome, {{ request.user.first_name|default:request.user.email }}</h2>
-        <p>Your certifications and training sessions are displayed below.</p>
+<!-- Welcome Section -->
+<div class="welcome-section">
+    <div class="welcome-text">
+        <h1>Welcome back, {{ request.user.first_name|default:request.user.email }}!</h1>
+        <p>Here's what's happening with your makerspace activity</p>
     </div>
-
-     <!-- CERTIFICATIONS ONLY -->
-    <div class="card">
-        <h2>Your Certifications</h2>
-
-        {% if certifications %}
-            <ul class="machine-list">
-                {% for cert in certifications %}
-                <li class="machine-item">
-                    <div>
-                        <strong>{{ cert.name }}</strong><br>
-                        <small>
-                            Issued: {{ cert.issued_at }}<br>
-
-                            {% if cert.expires_at %}
-                                Expires: {{ cert.expires_at }}
-                            {% else %}
-                                No expiration
-                            {% endif %}
-                        </small>
-                    </div>
-
-                    <!-- Status badge -->
-                    {% if cert.expires_at and cert.expires_at < today %}
-                        <span class="badge badge-danger">Expired</span>
-                    {% else %}
-                        <span class="badge badge-success">Active</span>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">📄</div>
-                <p>No certifications found.</p>
-            </div>
-        {% endif %}
-    </div>
-
-
-    <!-- TRAINING SESSIONS -->
-    <div class="card">
-        <h2>Your Training Sessions</h2>
-
-        {% if training_sessions %}
-            <ul class="machine-list">
-                {% for session in training_sessions %}
-                <li class="machine-item">
-                    <div>
-                        <strong>{{ session.machine_instance.machine.name }}</strong><br>
-                        <small>
-                            With trainer: {{ session.trainer.first_name|default:session.trainer.email }}<br>
-                            Start: {{ session.start_time|date:"M j, Y H:i" }}<br>
-                            End: {{ session.end_time|date:"M j, Y H:i" }}
-                        </small>
-                    </div>
-
-                    {% if session.status == "CANCELED" %}
-                        <span class="badge badge-danger">Canceled</span>
-                    {% elif session.start_time < now %}
-                        <span class="badge badge-secondary">Completed</span>
-                    {% else %}
-                        <span class="badge badge-success">Upcoming</span>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon"></div>
-                <p>No training sessions found.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <div class="card">
-    <h2>Hatchery Open Hours</h2>
-    <p>
-        The Hatchery is open to the Boston College community during our regular open hours,
-        providing access to space and equipment for making and prototyping needs.
-    </p>
-
-    <div style="display: flex; gap: 40px; flex-wrap: wrap;">
-
-        <!-- LEFT COLUMN -->
-        <div style="flex: 1; min-width: 260px;">
-            <h3 style="margin-top: 24px;">Open Hours</h3>
-            <ul class="machine-list">
-                <li class="machine-item"><strong>Monday</strong> 12:00PM – 10:00PM</li>
-                <li class="machine-item"><strong>Tuesday</strong> 12:00PM – 10:00PM</li>
-                <li class="machine-item"><strong>Wednesday</strong> 12:00PM – 10:00PM</li>
-                <li class="machine-item"><strong>Thursday</strong> 12:00PM – 10:00PM</li>
-                <li class="machine-item"><strong>Friday</strong> 12:00PM – 6:00PM</li>
-                <li class="machine-item"><strong>Saturday</strong> CLOSED</li>
-                <li class="machine-item"><strong>Sunday</strong> 12:00PM – 8:00PM</li>
-            </ul>
-
-            <h3 style="margin-top: 24px;">Equipment Training Hours</h3>
-            <p>
-                Equipment trainings are offered <strong>9:00AM – 12:00PM</strong> on weekdays
-                and are available on <strong>Saturdays</strong>. Additional training can be booked during open hours.
-            </p>
+    <div class="welcome-stats">
+        <div class="welcome-stat">
+            <div class="welcome-stat-value" id="statLevel">-</div>
+            <div class="welcome-stat-label">Level</div>
         </div>
-
-        <!-- RIGHT COLUMN -->
-        <div style="flex: 1; min-width: 260px;">
-            <h3 style="margin-top: 24px;">Special Dates & Closures</h3>
-            <ul class="machine-list">
-                <li class="machine-item"><strong>September 1</strong> CLOSED</li>
-                <li class="machine-item"><strong>October 11–14</strong> CLOSED</li>
-                <li class="machine-item"><strong>November 26 – December 1</strong>CLOSED</li>
-                <li class="machine-item"><strong>December 9 –</strong> CLOSED FOR SEMESTER</li>
-
-                <li class="machine-item"><strong>January 12–22</strong>CLOSED</li>
-                <li class="machine-item"><strong>March 1–8</strong>CLOSED</li>
-                <li class="machine-item"><strong>April 2–6</strong>CLOSED</li>
-                <li class="machine-item"><strong>May 1 –</strong> CLOSED FOR SEMESTER</li>
-            </ul>
-
-            <p style="margin-top: 20px;"><em>The space is closed on all university holidays and home football game days.</em></p>
+        <div class="welcome-stat">
+            <div class="welcome-stat-value" id="statXP">-</div>
+            <div class="welcome-stat-label">XP Points</div>
         </div>
-
-    </div>
+        <div class="welcome-stat">
+            <div class="welcome-stat-value" id="statReservations">-</div>
+            <div class="welcome-stat-label">Reservations</div>
+        </div>
+        <div class="welcome-stat">
+            <div class="welcome-stat-value" id="statFriends">-</div>
+            <div class="welcome-stat-label">Friends</div>
+        </div>
     </div>
 </div>
+
+<div class="dashboard-grid">
+    <!-- Upcoming Reservations -->
+    <div class="dash-card grid-col-8">
+        <div class="dash-card-header">
+            <h3>📅 Upcoming Reservations</h3>
+            <a href="{% url 'reservations:my_reservations' %}" class="view-all">View all →</a>
+        </div>
+        <div class="dash-card-body no-padding">
+            <ul class="upcoming-list" id="reservationsList">
+                <li class="loading">Loading reservations</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="dash-card grid-col-4">
+        <div class="dash-card-header">
+            <h3>⚡ Quick Actions</h3>
+        </div>
+        <div class="dash-card-body">
+            <div class="quick-actions">
+                <a href="{% url 'machine_directory' %}" class="quick-action">
+                    <span class="quick-action-icon">🔧</span>
+                    <span class="quick-action-label">Browse Machines</span>
+                </a>
+                <a href="{% url 'social:projects_feed' %}" class="quick-action">
+                    <span class="quick-action-icon">🎨</span>
+                    <span class="quick-action-label">Projects</span>
+                </a>
+                <a href="{% url 'social:friends' %}" class="quick-action">
+                    <span class="quick-action-icon">👥</span>
+                    <span class="quick-action-label">Friends</span>
+                </a>
+                <a href="{% url 'social:leaderboard' %}" class="quick-action">
+                    <span class="quick-action-icon">🏆</span>
+                    <span class="quick-action-label">Leaderboard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Training Sessions -->
+    <div class="dash-card grid-col-6">
+        <div class="dash-card-header">
+            <h3>🎓 Upcoming Training Sessions</h3>
+            <a href="{% url 'reservations:my_training_progress' %}" class="view-all">View all →</a>
+        </div>
+        <div class="dash-card-body no-padding">
+            <ul class="upcoming-list" id="trainingsList">
+                <li class="loading">Loading training sessions</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Training Progress -->
+    <div class="dash-card grid-col-6">
+        <div class="dash-card-header">
+            <h3>📊 Training Progress</h3>
+        </div>
+        <div class="dash-card-body" id="progressContainer">
+            <div class="loading">Loading progress</div>
+        </div>
+    </div>
+
+    <!-- Certifications -->
+    <div class="dash-card grid-col-12">
+        <div class="dash-card-header">
+            <h3>🏆 Your Certifications</h3>
+        </div>
+        <div class="dash-card-body">
+            {% if certifications %}
+            <div class="certs-grid">
+                {% for cert in certifications %}
+                <div class="cert-card {% if cert.expires_at and cert.expires_at < today %}expired{% endif %}">
+                    <div class="cert-status {% if cert.expires_at and cert.expires_at < today %}expired{% endif %}"></div>
+                    <div class="cert-name">{{ cert.name }}</div>
+                    <div class="cert-meta">
+                        Issued: {{ cert.issued_at|date:"M j, Y" }}<br>
+                        {% if cert.expires_at %}
+                            {% if cert.expires_at < today %}
+                                <span style="color: var(--cinnabar);">Expired: {{ cert.expires_at|date:"M j, Y" }}</span>
+                            {% else %}
+                                Expires: {{ cert.expires_at|date:"M j, Y" }}
+                            {% endif %}
+                        {% else %}
+                            No expiration
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🏆</div>
+                <p>No certifications yet</p>
+                <a href="{% url 'reservations:training_browser' %}" class="btn-link">Complete a training to earn certifications →</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Hatchery Hours -->
+    <div class="dash-card grid-col-12">
+        <div class="dash-card-header">
+            <h3>🕐 Hatchery Hours</h3>
+        </div>
+        <div class="dash-card-body">
+            <div class="hours-grid">
+                <div class="hours-section">
+                    <h4>Open Hours</h4>
+                    <ul class="hours-list">
+                        <li><span class="day">Monday</span><span class="time">12:00 PM – 10:00 PM</span></li>
+                        <li><span class="day">Tuesday</span><span class="time">12:00 PM – 10:00 PM</span></li>
+                        <li><span class="day">Wednesday</span><span class="time">12:00 PM – 10:00 PM</span></li>
+                        <li><span class="day">Thursday</span><span class="time">12:00 PM – 10:00 PM</span></li>
+                        <li><span class="day">Friday</span><span class="time">12:00 PM – 6:00 PM</span></li>
+                        <li><span class="day">Saturday</span><span class="time closed">CLOSED</span></li>
+                        <li><span class="day">Sunday</span><span class="time">12:00 PM – 8:00 PM</span></li>
+                    </ul>
+                    <div class="hours-note">
+                        ⚠️ Equipment trainings available 9:00 AM – 12:00 PM weekdays and Saturdays
+                    </div>
+                </div>
+                <div class="hours-section">
+                    <h4>Upcoming Closures</h4>
+                    <ul class="hours-list" id="closuresList">
+                        <!-- Will be populated by JS or static -->
+                        <li><span class="day">Dec 9 onwards</span><span class="time closed">Closed for Semester</span></li>
+                        <li><span class="day">Jan 12–22</span><span class="time closed">Winter Break</span></li>
+                        <li><span class="day">Mar 1–8</span><span class="time closed">Spring Break</span></li>
+                        <li><span class="day">Apr 2–6</span><span class="time closed">Easter Break</span></li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.8rem; color: #666;">
+                        <em>Closed on all university holidays and home football game days.</em>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadUpcomingReservations();
+    loadUpcomingTrainings();
+    loadTrainingProgress();
+    loadSocialStats();
+});
+
+async function loadSocialStats() {
+    try {
+        const response = await fetch('/social/api/my-stats/');
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('statLevel').textContent = data.stats.level;
+            document.getElementById('statXP').textContent = data.stats.xp_points;
+            document.getElementById('statFriends').textContent = data.stats.friends_count;
+        }
+    } catch (err) {
+        console.error('Error loading social stats:', err);
+    }
+}
+
+async function loadUpcomingReservations() {
+    const container = document.getElementById('reservationsList');
+    
+    try {
+        const response = await fetch('/reservations/api/my-reservations/?status=upcoming');
+        const data = await response.json();
+        
+        if (data.success && data.reservations.length > 0) {
+            const reservations = data.reservations.slice(0, 4); // Show max 4
+            document.getElementById('statReservations').textContent = data.reservations.length;
+            
+            container.innerHTML = reservations.map(r => {
+                const date = new Date(r.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isToday = date.getTime() === today.getTime();
+                
+                return `
+                    <li class="upcoming-item">
+                        <a href="/reservations/my-reservations/">
+                            <div class="date-block ${isToday ? 'today' : ''}">
+                                <div class="month">${date.toLocaleDateString('en-US', { month: 'short' })}</div>
+                                <div class="day">${date.getDate()}</div>
+                                <div class="weekday">${date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            </div>
+                            <div class="item-details">
+                                <div class="item-title">${escapeHtml(r.machine_name)}</div>
+                                <div class="item-meta">
+                                    <span>📍 ${escapeHtml(r.location || 'Location TBD')}</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="item-time">${formatTime(r.start_time)} - ${formatTime(r.end_time)}</div>
+                                <span class="status-badge confirmed">Confirmed</span>
+                            </div>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        } else {
+            document.getElementById('statReservations').textContent = '0';
+            container.innerHTML = `
+                <li class="empty-state">
+                    <div class="empty-state-icon">📅</div>
+                    <p>No upcoming reservations</p>
+                    <a href="{% url 'machine_directory' %}" class="btn-link">Browse machines to make a reservation →</a>
+                </li>
+            `;
+        }
+    } catch (err) {
+        console.error('Error loading reservations:', err);
+        container.innerHTML = '<li class="empty-state"><p>Could not load reservations</p></li>';
+    }
+}
+
+async function loadUpcomingTrainings() {
+    const container = document.getElementById('trainingsList');
+    
+    try {
+        const response = await fetch('/reservations/api/my-training-bookings/?status=active');
+        const data = await response.json();
+        
+        if (data.success && data.bookings.length > 0) {
+            const bookings = data.bookings.slice(0, 4); // Show max 4
+            document.getElementById('statTrainings').textContent = data.bookings.length;
+            
+            container.innerHTML = bookings.map(b => {
+                const date = new Date(b.date);
+                const statusClass = b.status === 'waitlisted' ? 'waitlisted' : 'registered';
+                const statusText = b.status === 'waitlisted' ? `Waitlist #${b.waitlist_position}` : 'Registered';
+                
+                return `
+                    <li class="upcoming-item">
+                        <a href="/reservations/my-progress/">
+                            <div class="date-block training">
+                                <div class="month">${date.toLocaleDateString('en-US', { month: 'short' })}</div>
+                                <div class="day">${date.getDate()}</div>
+                                <div class="weekday">${date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            </div>
+                            <div class="item-details">
+                                <div class="item-title">${escapeHtml(b.training_name)}</div>
+                                <div class="item-meta">
+                                    <span>👤 ${escapeHtml(b.trainer_name)}</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="item-time">${formatTime(b.start_time)}</div>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </div>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        } else {
+            document.getElementById('statTrainings').textContent = '0';
+            container.innerHTML = `
+                <li class="empty-state">
+                    <div class="empty-state-icon">🎓</div>
+                    <p>No upcoming training sessions</p>
+                    <a href="{% url 'reservations:training_browser' %}" class="btn-link">Browse available trainings →</a>
+                </li>
+            `;
+        }
+    } catch (err) {
+        console.error('Error loading trainings:', err);
+        container.innerHTML = '<li class="empty-state"><p>Could not load training sessions</p></li>';
+    }
+}
+
+async function loadTrainingProgress() {
+    const container = document.getElementById('progressContainer');
+    
+    try {
+        // Fetch categories and user's completed trainings
+        const [catResponse, bookingsResponse] = await Promise.all([
+            fetch('/api/categories/'),
+            fetch('/reservations/api/my-training-bookings/?status=all')
+        ]);
+        
+        const catData = await catResponse.json();
+        const bookingsData = await bookingsResponse.json();
+        
+        if (catData.categories && catData.categories.length > 0) {
+            // Count completed trainings per category
+            const completedByCategory = {};
+            if (bookingsData.success && bookingsData.bookings) {
+                bookingsData.bookings.forEach(b => {
+                    if (b.status === 'completed') {
+                        const cat = b.category || 'Other';
+                        completedByCategory[cat] = (completedByCategory[cat] || 0) + 1;
+                    }
+                });
+            }
+            
+            // Render progress bars (show top 4 categories)
+            const categories = catData.categories.slice(0, 4);
+            container.innerHTML = categories.map(cat => {
+                const completed = completedByCategory[cat.name] || 0;
+                const total = 3; // Assume 3 levels per category
+                const percent = Math.min((completed / total) * 100, 100);
+                
+                return `
+                    <div class="progress-bar-container">
+                        <div class="progress-label">
+                            <span class="category">${cat.icon || '🔧'} ${escapeHtml(cat.name)}</span>
+                            <span class="count">${completed}/${total} trainings</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percent}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (categories.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center;">No categories available</p>';
+            }
+        } else {
+            container.innerHTML = '<p style="color: #666; text-align: center;">Training progress will appear here</p>';
+        }
+    } catch (err) {
+        console.error('Error loading progress:', err);
+        container.innerHTML = '<p style="color: #666; text-align: center;">Could not load progress</p>';
+    }
+}
+
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+</script>
 {% endblock %}

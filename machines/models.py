@@ -232,16 +232,19 @@ class Machine(models.Model):
     manufacturer = models.CharField(
         max_length=100,
         blank=True,
+        null=True, 
         help_text="Manufacturer name (e.g., Ultimaker, Prusa Research)"
     )
     model_number = models.CharField(
         max_length=100,
         blank=True,
+        null=True, 
         help_text="Model number (e.g., S5, MK3S+)"
     )
     documentation_url = models.URLField(
-        blank=True,
-        help_text="Link to user manual or documentation"
+        max_length=500, 
+        null=True, 
+        blank=True
     )
 
     # Floorplan positioning (stored as percentages 0-100 for responsive positioning)
@@ -276,6 +279,9 @@ class Machine(models.Model):
         null=True,
         help_text="Upload a photo of the machine."
     )
+
+    is_reservable = models.BooleanField(default=True)
+    required_training = models.ForeignKey('Training', on_delete=models.SET_NULL, null=True, blank=True)
 
     # Legacy training level flags (kept for backwards compatibility)
     requires_level_1 = models.BooleanField(default=False)

@@ -1,0 +1,425 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Reservations Management - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Reservations Management</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+.page-header p {
+    margin: 0.5rem 0 0;
+    color: #666;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+    border-top: 3px solid var(--keppel);
+}
+
+.stat-card:nth-child(2) {
+    border-top-color: var(--sunglow);
+}
+
+.stat-card:nth-child(3) {
+    border-top-color: var(--keppel);
+}
+
+.stat-card:nth-child(4) {
+    border-top-color: var(--sunglow);
+}
+
+.stat-card.alert {
+    border-top-color: var(--cinnabar);
+    background: #fef2f2;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.stat-card.alert .stat-value {
+    color: var(--cinnabar);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Navigation Cards */
+.nav-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.nav-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.nav-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    border-color: var(--sunglow);
+}
+
+.nav-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.nav-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.nav-card p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.nav-card-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.nav-card-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.nav-card-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.nav-card-stat-label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+/* Quick Actions */
+.quick-actions {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.quick-actions h2 {
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+    margin: 0 0 1rem;
+}
+
+.quick-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <h1>📅 Reservations Management</h1>
+        <p>Manage machine reservations, training sessions, maintenance, and blackout periods</p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value" id="statTodayRes">-</div>
+            <div class="stat-label">Today's Reservations</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statTodayTrain">-</div>
+            <div class="stat-label">Today's Trainings</div>
+        </div>
+        <div class="stat-card" id="maintenanceCard">
+            <div class="stat-value" id="statMaintenance">-</div>
+            <div class="stat-label">Open Maintenance</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statBlackouts">-</div>
+            <div class="stat-label">Active Blackouts</div>
+        </div>
+    </div>
+
+    <!-- Navigation Cards -->
+    <div class="nav-cards">
+        <a href="{% url 'reservations:staff_reservations_dashboard' %}" class="nav-card">
+            <div class="nav-card-icon">📋</div>
+            <h3>Reservations Dashboard</h3>
+            <p>View and manage all machine reservations. See daily, weekly, or list views of bookings.</p>
+            <div class="nav-card-stats">
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardResToday">-</div>
+                    <div class="nav-card-stat-label">Today</div>
+                </div>
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardResWeek">-</div>
+                    <div class="nav-card-stat-label">This Week</div>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'reservations:staff_training_dashboard' %}" class="nav-card">
+            <div class="nav-card-icon">🎓</div>
+            <h3>Training Dashboard</h3>
+            <p>View all training sessions, track registrations, and monitor trainer schedules.</p>
+            <div class="nav-card-stats">
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardTrainToday">-</div>
+                    <div class="nav-card-stat-label">Today</div>
+                </div>
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardTrainWeek">-</div>
+                    <div class="nav-card-stat-label">This Week</div>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'reservations:maintenance_management' %}" class="nav-card">
+            <div class="nav-card-icon">🔧</div>
+            <h3>Maintenance Queue</h3>
+            <p>Review reported issues, take machines offline, and track repairs.</p>
+            <div class="nav-card-stats">
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardMaintOpen">-</div>
+                    <div class="nav-card-stat-label">Open Issues</div>
+                </div>
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardMaintCritical">-</div>
+                    <div class="nav-card-stat-label">Critical</div>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'reservations:blackout_management' %}" class="nav-card">
+            <div class="nav-card-icon">🚫</div>
+            <h3>Blackout Periods</h3>
+            <p>Create and manage blackout periods to block reservations during closures or events.</p>
+            <div class="nav-card-stats">
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardBlackoutActive">-</div>
+                    <div class="nav-card-stat-label">Active</div>
+                </div>
+                <div class="nav-card-stat">
+                    <div class="nav-card-stat-value" id="cardBlackoutUpcoming">-</div>
+                    <div class="nav-card-stat-label">Upcoming</div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="quick-action-buttons">
+            <a href="{% url 'reservations:blackout_management' %}?action=create" class="btn btn-secondary">
+                ➕ Create Blackout Period
+            </a>
+            <a href="{% url 'reservations:maintenance_management' %}" class="btn btn-secondary">
+                🔧 View Maintenance Queue
+            </a>
+            <a href="{% url 'reservations:staff_reservations_dashboard' %}?view=day" class="btn btn-secondary">
+                📅 Today's Schedule
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+});
+
+async function loadStats() {
+    const today = new Date().toISOString().split('T')[0];
+    const weekStart = getWeekStart(new Date());
+    const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    
+    // Load reservations
+    try {
+        // Today's reservations
+        const resTodayRes = await fetch(`/reservations/api/admin/reservations/?date=${today}&status=confirmed`);
+        const resTodayData = await resTodayRes.json();
+        if (resTodayData.success) {
+            document.getElementById('statTodayRes').textContent = resTodayData.reservations.length;
+            document.getElementById('cardResToday').textContent = resTodayData.reservations.length;
+        }
+        
+        // Week's reservations
+        const resWeekRes = await fetch(`/reservations/api/admin/reservations/?start_date=${formatDate(weekStart)}&end_date=${formatDate(weekEnd)}&status=confirmed`);
+        const resWeekData = await resWeekRes.json();
+        if (resWeekData.success) {
+            document.getElementById('cardResWeek').textContent = resWeekData.reservations.length;
+        }
+    } catch (err) {
+        console.error('Error loading reservations:', err);
+    }
+    
+    // Load trainings
+    try {
+        // Today's trainings
+        const trainTodayRes = await fetch(`/reservations/api/admin/training-sessions/?date=${today}`);
+        const trainTodayData = await trainTodayRes.json();
+        if (trainTodayData.success) {
+            document.getElementById('statTodayTrain').textContent = trainTodayData.sessions.length;
+            document.getElementById('cardTrainToday').textContent = trainTodayData.sessions.length;
+        }
+        
+        // Week's trainings
+        const trainWeekRes = await fetch(`/reservations/api/admin/training-sessions/?start_date=${formatDate(weekStart)}&end_date=${formatDate(weekEnd)}`);
+        const trainWeekData = await trainWeekRes.json();
+        if (trainWeekData.success) {
+            document.getElementById('cardTrainWeek').textContent = trainWeekData.sessions.length;
+        }
+    } catch (err) {
+        console.error('Error loading trainings:', err);
+    }
+    
+    // Load maintenance
+    try {
+        const maintRes = await fetch('/reservations/api/admin/maintenance/?status=all');
+        const maintData = await maintRes.json();
+        if (maintData.success) {
+            const open = maintData.maintenance.filter(m => m.status !== 'resolved');
+            const critical = open.filter(m => m.priority === 'critical');
+            
+            document.getElementById('statMaintenance').textContent = open.length;
+            document.getElementById('cardMaintOpen').textContent = open.length;
+            document.getElementById('cardMaintCritical').textContent = critical.length;
+            
+            // Highlight if there are critical issues
+            if (critical.length > 0) {
+                document.getElementById('maintenanceCard').classList.add('alert');
+            }
+        }
+    } catch (err) {
+        console.error('Error loading maintenance:', err);
+    }
+    
+    // Load blackouts
+    try {
+        const blackoutRes = await fetch('/reservations/api/admin/blackouts/');
+        const blackoutData = await blackoutRes.json();
+        if (blackoutData.success) {
+            const now = new Date();
+            const active = blackoutData.blackouts.filter(b => {
+                const start = new Date(b.start_datetime);
+                const end = new Date(b.end_datetime);
+                return start <= now && end > now;
+            });
+            const upcoming = blackoutData.blackouts.filter(b => {
+                const start = new Date(b.start_datetime);
+                return start > now;
+            });
+            
+            document.getElementById('statBlackouts').textContent = active.length;
+            document.getElementById('cardBlackoutActive').textContent = active.length;
+            document.getElementById('cardBlackoutUpcoming').textContent = upcoming.length;
+        }
+    } catch (err) {
+        console.error('Error loading blackouts:', err);
+    }
+}
+
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+</script>
+{% endblock %}

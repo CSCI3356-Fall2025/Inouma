@@ -881,3 +881,71 @@ def api_delete_blackout(request, blackout_id):
         'success': True,
         'message': 'Blackout period deleted'
     })
+
+
+# ============================================================================
+# PAGE VIEWS (Templates)
+# ============================================================================
+
+@login_required
+def my_reservations(request):
+    """Student's machine reservations page"""
+    return render(request, 'reservations/my_reservations.html')
+
+
+@login_required
+def training_browser(request):
+    """Browse and book training sessions"""
+    return render(request, 'reservations/training_browser.html')
+
+
+@login_required
+def my_training_progress(request):
+    """Student's training progress and history"""
+    return render(request, 'reservations/my_training_progress.html')
+
+
+@login_required
+@user_passes_test(is_staff_or_admin)
+def staff_reservations_hub(request):
+    """Staff hub page for reservations management"""
+    return render(request, 'reservations/staff_reservations_hub.html')
+
+
+@login_required
+@user_passes_test(is_staff_or_admin)
+def staff_reservations_dashboard(request):
+    """Staff dashboard for viewing all reservations"""
+    return render(request, 'reservations/staff_reservations_dashboard.html')
+
+
+@login_required
+@user_passes_test(is_staff_or_admin)
+def staff_training_dashboard(request):
+    """Staff dashboard for viewing all training sessions"""
+    return render(request, 'reservations/staff_training_dashboard.html')
+
+
+@login_required
+@user_passes_test(is_staff_or_admin)
+def maintenance_management(request):
+    """Staff page for managing machine maintenance"""
+    return render(request, 'reservations/maintenance_management.html')
+
+
+@login_required
+@user_passes_test(is_staff_or_admin)
+def blackout_management(request):
+    """Staff page for managing blackout periods"""
+    return render(request, 'reservations/blackout_management.html')
+
+
+@login_required
+def team_my_training_sessions(request):
+    """Team member's training sessions they're conducting"""
+    # Check if user is a team member
+    if not is_team_member(request.user) and not is_staff_or_admin(request.user):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("You must be a team member to access this page")
+    
+    return render(request, 'reservations/team_my_training_sessions.html')

@@ -989,6 +989,19 @@ function getCategoryDisplay(name) {
     return cat?.icon ? `${cat.icon} ${name}` : name;
 }
 
+// Helper function to parse date string without timezone issues
+function parseDateString(dateStr) {
+    // dateStr is 'YYYY-MM-DD', we parse it as local date
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day); // Month is 0-indexed
+}
+
+// Get day index (0=Monday, 6=Sunday) from a date string
+function getDayIndex(dateStr) {
+    const d = parseDateString(dateStr);
+    return d.getDay() === 0 ? 6 : d.getDay() - 1;
+}
+
 function populateTeamFilterChips() {
     const container = document.getElementById('teamFilterChips');
     let html = '<div class="filter-chip team-chip active" data-team="__all__" onclick="toggleTeamFilter(\'__all__\')">All</div>';
@@ -1044,8 +1057,7 @@ function applyFilters() {
     
     filteredShifts = allShifts.filter(shift => {
         if (!activeTypeFilters.has(shift.shift_type)) return false;
-        const date = new Date(shift.date);
-        const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        const dayIndex = getDayIndex(shift.date);
         if (!activeDayFilters.has(dayIndex)) return false;
         if (activeTeamFilters.size > 0 && shift.shift_type === 'training' && !activeTeamFilters.has(shift.team)) return false;
         if (activeUserFilters.size > 0 && !activeUserFilters.has(shift.user_id)) return false;
@@ -1219,8 +1231,7 @@ function renderCalendar() {
     // Group shifts by day
     const shiftsByDay = [[],[],[],[],[],[],[]];
     filteredShifts.forEach(s => { 
-        const d = new Date(s.date); 
-        shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); 
+        shiftsByDay[getDayIndex(s.date)].push(s); 
     });
     
     // Time labels
@@ -1281,7 +1292,15 @@ function createEventElement(shift, colIndex, totalCols, minHour) {
     const widthPct = 100 / totalCols, leftPct = colIndex * widthPct;
     const typeClass = shift.shift_type.replace('_', '-');
     const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
-    let displayName = shift.shift_type === 'training' && shift.team ? `${name} (${getCategoryDisplay(shift.team)})` : name;
+    
+    // Build display name based on shift type
+    let displayName = name;
+    if (shift.shift_type === 'training' && shift.team) {
+        displayName = `${name} (${getCategoryDisplay(shift.team)})`;
+    } else if ((shift.shift_type === 'open_hours' || shift.shift_type === 'floater') && shift.location) {
+        // Show location/space for open hours and floater shifts
+        displayName = `${name} @ ${shift.location}`;
+    }
     
     const div = document.createElement('div');
     div.className = `gcal-event ${typeClass}`;
@@ -1296,7 +1315,7 @@ function renderListView() {
     if (!filteredShifts.length) { content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; return; }
     
     const shiftsByDay = [[],[],[],[],[],[],[]];
-    filteredShifts.forEach(s => { const d = new Date(s.date); shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); });
+    filteredShifts.forEach(s => { shiftsByDay[getDayIndex(s.date)].push(s); });
     
     const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
     const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
@@ -1311,7 +1330,12 @@ function renderListView() {
             html += `<div class="list-section"><div class="list-section-title">${icons[type]} ${labels[type]}</div>`;
             shifts.sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
                 const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
-                const displayName = type === 'training' && s.team ? `${name} <span style="opacity:0.8;">(${getCategoryDisplay(s.team)})</span>` : name;
+                let displayName = name;
+                if (type === 'training' && s.team) {
+                    displayName = `${name} <span style="opacity:0.8;">(${getCategoryDisplay(s.team)})</span>`;
+                } else if ((type === 'open_hours' || type === 'floater') && s.location) {
+                    displayName = `${name} <span style="opacity:0.8;">@ ${s.location}</span>`;
+                }
                 html += `<div class="list-item ${type.replace('_','-')}"><span><strong>${displayName}</strong></span><span>${s.start} – ${s.end}</span></div>`;
             });
             html += '</div>';
@@ -1339,8 +1363,7 @@ function renderBlockView() {
     
     const shiftsByDay = [[],[],[],[],[],[],[]];
     filteredShifts.forEach(s => { 
-        const d = new Date(s.date); 
-        shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); 
+        shiftsByDay[getDayIndex(s.date)].push(s); 
     });
     
     const blocks = [];
@@ -1377,9 +1400,12 @@ function renderBlockView() {
                 html += '<td class="block-cell">';
                 inBlock.forEach(s => {
                     const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
-                    const label = s.shift_type === 'training' && s.team 
-                        ? `${name} <span style="opacity:0.7;">(${getCategoryDisplay(s.team)})</span>` 
-                        : name;
+                    let label = name;
+                    if (s.shift_type === 'training' && s.team) {
+                        label = `${name} <span style="opacity:0.7;">(${getCategoryDisplay(s.team)})</span>`;
+                    } else if ((s.shift_type === 'open_hours' || s.shift_type === 'floater') && s.location) {
+                        label = `${name} <span style="opacity:0.7;">@ ${s.location}</span>`;
+                    }
                     html += `<div class="block-person ${s.shift_type.replace('_','-')}" onclick="viewShiftDetails(${s.id})">${label}</div>`;
                 });
                 html += '</td>';
@@ -1438,9 +1464,9 @@ function exportSchedule(format) {
 function exportCSV() {
     const headers = ['Day','Date','Start Time','End Time','Duration (hrs)','Shift Type','Team Member','Email','Team/Category','Location','Status'];
     const rows = filteredShifts.map(s => {
-        const d = new Date(s.date);
+        const dayIndex = getDayIndex(s.date);
         const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
-        return [DAYS[(d.getDay()+6)%7], d.toISOString().split('T')[0], s.start, s.end, (s.duration_hours||0).toFixed(1), s.shift_type.replace('_',' '), name, s.user.includes('@') ? s.user : '', s.team||'', s.location||'', s.status||'scheduled'].map(v => `"${v}"`).join(',');
+        return [DAYS[dayIndex], s.date, s.start, s.end, (s.duration_hours||0).toFixed(1), s.shift_type.replace('_',' '), name, s.user.includes('@') ? s.user : '', s.team||'', s.location||'', s.status||'scheduled'].map(v => `"${v}"`).join(',');
     });
     const blob = new Blob([[headers.join(','), ...rows].join('\n')], {type: 'text/csv;charset=utf-8;'});
     const link = document.createElement('a');
@@ -1455,7 +1481,14 @@ function exportJSON() {
         semester: document.getElementById('semesterSelect').options[document.getElementById('semesterSelect').selectedIndex].text,
         total_shifts: filteredShifts.length,
         filters: {types: Array.from(activeTypeFilters), days: Array.from(activeDayFilters).map(d => DAYS[d]), teams: Array.from(activeTeamFilters), users: Array.from(activeUserNames.values()), time_range: {start: document.getElementById('filterTimeStart').value, end: document.getElementById('filterTimeEnd').value}},
-        shifts: filteredShifts.map(s => ({id: s.id, user: s.user, user_id: s.user_id, date: s.date, day: DAYS[(new Date(s.date).getDay()+6)%7], start_time: s.start, end_time: s.end, duration_hours: s.duration_hours, shift_type: s.shift_type, team: s.team, location: s.location, status: s.status}))
+        shifts: filteredShifts.map(s => {
+            // Parse date correctly to avoid timezone issues
+            // s.date is 'YYYY-MM-DD', we need to get the day of week
+            const [year, month, day] = s.date.split('-').map(Number);
+            const d = new Date(year, month - 1, day); // Month is 0-indexed
+            const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1; // Convert Sunday=0 to Sunday=6, etc.
+            return {id: s.id, user: s.user, user_id: s.user_id, date: s.date, day: DAYS[dayIndex], start_time: s.start, end_time: s.end, duration_hours: s.duration_hours, shift_type: s.shift_type, team: s.team, location: s.location, status: s.status};
+        })
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
     const link = document.createElement('a');
@@ -1466,7 +1499,13 @@ function exportJSON() {
 
 function exportPrint() {
     const shiftsByDay = [[],[],[],[],[],[],[]];
-    filteredShifts.forEach(s => { const d = new Date(s.date); shiftsByDay[d.getDay() === 0 ? 6 : d.getDay() - 1].push(s); });
+    filteredShifts.forEach(s => { 
+        // Parse date correctly to avoid timezone issues
+        const [year, month, day] = s.date.split('-').map(Number);
+        const d = new Date(year, month - 1, day);
+        const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        shiftsByDay[dayIndex].push(s); 
+    });
     
     let html = `<!DOCTYPE html><html><head><title>Schedule - Print View</title><style>body{font-family:Arial,sans-serif;margin:20px}h1{color:#293242;border-bottom:2px solid #293242;padding-bottom:10px}h2{color:#293242;margin-top:30px}.meta{color:#666;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}.shift-type{display:inline-block;padding:2px 8px;border-radius:4px;color:white;font-size:12px}.open-hours{background:#4CAF50}.training{background:#2196F3}.floater{background:#FF9800}@media print{.no-print{display:none}}</style></head><body>`;
     html += `<h1>📊 Schedule Export</h1><div class="meta"><p><strong>Semester:</strong> ${document.getElementById('semesterSelect').options[document.getElementById('semesterSelect').selectedIndex].text}</p><p><strong>Exported:</strong> ${new Date().toLocaleString()}</p><p><strong>Total Shifts:</strong> ${filteredShifts.length}</p></div><button class="no-print" onclick="window.print()">🖨️ Print</button>`;

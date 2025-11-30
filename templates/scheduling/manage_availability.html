@@ -1,14 +1,14 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}Availability & Hours - The Hatchery{% endblock %}
+{% block title %}Unavailability & Hours - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
 <a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
 <span class="breadcrumb-separator">></span>
 <a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
 <span class="breadcrumb-separator">></span>
-<span class="breadcrumb-item active">Availability & Hours</span>
+<span class="breadcrumb-item active">Unavailability & Hours</span>
 {% endblock %}
 
 {% block extra_head %}
@@ -626,7 +626,7 @@
 }
 
 .no-slots {
-    color: #999;
+    color: #4caf50;
     font-size: 0.9rem;
     font-style: italic;
 }
@@ -820,8 +820,8 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <h1 style="margin: 0; color: var(--gunmetal);">📋 Availability & Hours</h1>
-            <p style="margin: 0.5rem 0 0; color: #666;">Manage team member availability, hours, and team assignments</p>
+            <h1 style="margin: 0; color: var(--gunmetal);">📋 Unavailability & Hours</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage team member unavailability, hours, and team assignments</p>
         </div>
         <div class="form-group" style="margin: 0; min-width: 250px;">
             <select id="semesterSelect" class="form-control" onchange="loadTeamData()">
@@ -887,7 +887,7 @@
         </div>
         
         <div class="filter-group">
-            <label>Min Hrs/Week</label>
+            <label>Min Target Hrs</label>
             <input type="number" id="filterMinHours" class="form-control" placeholder="0" min="0" max="40" 
                    style="width: 90px;" oninput="filterTeam()">
         </div>
@@ -901,13 +901,13 @@
     <div class="advanced-filters" id="advancedFilters">
         <div class="filter-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div class="filter-section-title" style="margin: 0;">Filter by Availability</div>
+                <div class="filter-section-title" style="margin: 0;">Filter by Unavailability</div>
                 <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;" onclick="clearAllAvailabilityFilters()">
                     Clear All Filters
                 </button>
             </div>
             <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
-                Find team members available during specific times. Select days, add time slots, or both. Members must match ALL filter groups.
+                Find team members who are <strong>available</strong> during specific times (i.e., they have NOT marked these times as unavailable).
             </p>
             
             <div id="availabilityFilterGroups">
@@ -915,7 +915,7 @@
             </div>
             
             <button class="btn btn-primary" style="margin-top: 1rem;" onclick="addAvailabilityFilterGroup()">
-                + Add Availability Filter
+                + Add Time Filter
             </button>
         </div>
     </div>
@@ -962,7 +962,7 @@
             
             <div class="modal-tabs">
                 <button class="modal-tab active" onclick="switchModalTab('general')">General</button>
-                <button class="modal-tab" onclick="switchModalTab('availability')">Availability</button>
+                <button class="modal-tab" onclick="switchModalTab('availability')">Unavailability</button>
             </div>
             
             <!-- General Tab -->
@@ -991,15 +991,12 @@
                     </p>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
-                        <label>Weekly Hours (Min)</label>
-                        <input type="number" id="memberMinHours" class="form-control" value="0" min="0" max="40">
-                    </div>
-                    <div class="form-group">
-                        <label>Weekly Hours (Max)</label>
-                        <input type="number" id="memberMaxHours" class="form-control" value="15" min="0" max="40">
-                    </div>
+                <div class="form-group">
+                    <label>Target Hours per Week</label>
+                    <input type="number" id="memberTargetHours" class="form-control" value="10" min="0" max="40" style="max-width: 120px;">
+                    <p style="font-size: 0.85rem; color: #666; margin: 0.25rem 0 0;">
+                        Maximum hours this person can work each week
+                    </p>
                 </div>
                 
                 <div class="form-group">
@@ -1012,10 +1009,11 @@
                 </div>
             </div>
             
-            <!-- Availability Tab -->
+            <!-- Unavailability Tab -->
             <div id="tab-availability" class="tab-panel">
                 <p style="color: #666; margin-bottom: 1rem;">
-                    Set the time slots this team member is available to work each day.
+                    Set the time slots when this team member is <strong>NOT available</strong> to work (classes, other jobs, personal commitments, etc.).
+                    Leave days empty if fully available that day.
                 </p>
                 <div id="availabilityEditor"></div>
             </div>
@@ -1565,18 +1563,18 @@ function renderTeamGrid() {
                 </div>
                 ` : ''}
                 <div class="team-card-row">
-                    <span class="team-card-label">Weekly Hours</span>
+                    <span class="team-card-label">Target Hours</span>
                     <div class="hours-display">
                         <div class="hours-bar">
                             <div class="hours-bar-fill" style="width: ${hoursPercent}%; background: ${hoursColor};"></div>
                         </div>
-                        <span class="team-card-value">${member.min_weekly_hours || 0}-${member.max_weekly_hours || 0}h</span>
+                        <span class="team-card-value">${member.max_weekly_hours || 0}h/wk</span>
                     </div>
                 </div>
                 <div class="team-card-row">
-                    <span class="team-card-label">Availability</span>
+                    <span class="team-card-label">Unavailability</span>
                     <div class="avail-mini">
-                        ${renderMiniAvailability(member.availability)}
+                        ${renderMiniUnavailability(member.unavailability)}
                     </div>
                 </div>
                 <div style="margin-top: 1rem; text-align: right;">
@@ -1592,12 +1590,16 @@ function renderTeamGrid() {
     container.innerHTML = html;
 }
 
-function renderMiniAvailability(availability) {
+function renderMiniUnavailability(unavailability) {
+    // Shows unavailability status per day
+    // Green = fully available (no unavailability blocks)
+    // Yellow = partially unavailable (some blocks)
+    // Red = mostly unavailable (6+ hours blocked)
     const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     
     return dayLabels.map((label, index) => {
-        const slots = availability ? availability[index] : [];
-        let status = 'unavailable';
+        const slots = unavailability ? unavailability[index] : [];
+        let status = 'available'; // No unavailability = available (green)
         
         if (slots && slots.length > 0) {
             let totalMinutes = 0;
@@ -1606,7 +1608,8 @@ function renderMiniAvailability(availability) {
                 const end = parseTime(slot.end);
                 totalMinutes += (end - start);
             });
-            status = totalMinutes >= 360 ? 'available' : 'partial';
+            // More unavailable time = worse
+            status = totalMinutes >= 360 ? 'unavailable' : 'partial';
         }
         
         return `<div class="avail-day ${status}">${label}</div>`;
@@ -1635,8 +1638,7 @@ function editMember(userId) {
         document.getElementById('memberIsTrainer').disabled = false;
     }
     
-    document.getElementById('memberMinHours').value = member.min_weekly_hours || 0;
-    document.getElementById('memberMaxHours').value = member.max_weekly_hours || 15;
+    document.getElementById('memberTargetHours').value = member.max_weekly_hours || 10;
     document.getElementById('memberShiftPref').value = member.shift_preference || 'no_preference';
     
     // Populate team dropdown
@@ -1647,7 +1649,7 @@ function editMember(userId) {
         teamSelect.innerHTML += `<option value="${cat.name}" ${member.team === cat.name ? 'selected' : ''}>${display}</option>`;
     });
     
-    renderAvailabilityEditor(member.availability);
+    renderUnavailabilityEditor(member.unavailability);
     switchModalTab('general');
     
     document.getElementById('memberModal').style.display = 'flex';
@@ -1677,22 +1679,22 @@ function switchModalTab(tabId) {
     document.getElementById('tab-' + tabId).classList.add('active');
 }
 
-function renderAvailabilityEditor(availability) {
+function renderUnavailabilityEditor(unavailability) {
     const container = document.getElementById('availabilityEditor');
     
     let html = '';
     DAYS.forEach((day, index) => {
-        const slots = availability && availability[index] ? availability[index] : [];
+        const slots = unavailability && unavailability[index] ? unavailability[index] : [];
         
         html += `
         <div class="avail-day-section" data-day="${index}">
             <div class="avail-day-header">
                 <span class="avail-day-name">${day}</span>
-                <button type="button" class="btn-add-slot" onclick="addSlot(${index})">+ Add Slot</button>
+                <button type="button" class="btn-add-slot" onclick="addSlot(${index})">+ Add Unavailable Time</button>
             </div>
             <div class="avail-slots" id="slots-${index}">
                 ${slots.length === 0 ? 
-                    '<div class="no-slots">No availability set</div>' :
+                    '<div class="no-slots">✓ Fully available this day</div>' :
                     slots.map((slot, slotIdx) => renderSlotRow(index, slotIdx, slot)).join('')
                 }
             </div>
@@ -1731,14 +1733,14 @@ function removeSlot(dayIndex, button) {
     row.remove();
     
     if (container.querySelectorAll('.avail-slot-row').length === 0) {
-        container.innerHTML = '<div class="no-slots">No availability set</div>';
+        container.innerHTML = '<div class="no-slots">✓ Fully available this day</div>';
     }
 }
 
 function saveMember() {
     const userId = document.getElementById('editUserId').value;
     
-    const availability = {};
+    const unavailability = {};
     DAYS.forEach((day, index) => {
         const container = document.getElementById(`slots-${index}`);
         const slots = [];
@@ -1751,12 +1753,13 @@ function saveMember() {
             }
         });
         
-        availability[index] = slots;
+        unavailability[index] = slots;
     });
     
     // Team lead automatically means trainer
     const isTeamLead = document.getElementById('memberIsTeamLead').checked;
     const isTrainer = isTeamLead || document.getElementById('memberIsTrainer').checked;
+    const targetHours = parseInt(document.getElementById('memberTargetHours').value) || 10;
     
     const payload = {
         user_id: userId,
@@ -1764,10 +1767,10 @@ function saveMember() {
         is_trainer: isTrainer,
         is_team_lead: isTeamLead,
         team: document.getElementById('memberTeam').value,
-        min_weekly_hours: parseInt(document.getElementById('memberMinHours').value) || 0,
-        max_weekly_hours: parseInt(document.getElementById('memberMaxHours').value) || 0,
+        min_weekly_hours: 0,  // Always 0 - we just use target
+        max_weekly_hours: targetHours,
         shift_preference: document.getElementById('memberShiftPref').value,
-        availability: availability
+        unavailability: unavailability
     };
     
     fetch('/scheduling/api/team-members/save/', {

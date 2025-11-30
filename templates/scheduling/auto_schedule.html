@@ -1049,13 +1049,21 @@ function clearSchedule() {
     fetch(`/scheduling/staff/clear/${currentSemester}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) {
+            throw new Error(`HTTP ${r.status}`);
+        }
+        return r.json();
+    })
     .then(result => {
         closeClearModal();
         if (result.success) {
+            alert(`Cleared ${result.deleted_count} shifts`);
             loadSemesterData();
         } else {
             alert('Error: ' + (result.error || 'Failed to clear schedule'));
@@ -1063,7 +1071,7 @@ function clearSchedule() {
     })
     .catch(err => {
         console.error('Error:', err);
-        alert('Failed to clear schedule');
+        alert('Failed to clear schedule: ' + err.message);
     });
 }
 
