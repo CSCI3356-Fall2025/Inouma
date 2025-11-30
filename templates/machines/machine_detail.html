@@ -205,7 +205,7 @@ window.TRAINING_CONTEXT = {
     machineType: '{{ machine.machine_name }}'
 };
 
-const RESERVATION_URL = "{% url 'reservation_create_api' machine.id %}";
+const RESERVATION_URL = "{% url 'reservations:api_create_reservation' machine.id %}";
 
 // Training Modal Functions
 function openTrainingModal() {

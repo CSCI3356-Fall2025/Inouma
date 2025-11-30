@@ -320,16 +320,17 @@ class Machine(models.Model):
         Checks both the new Training system (via machine_type_names) and legacy TrainingType.
         """
         trainings = []
-        
-        # New system: Get trainings that include this machine's type
+
+        # New system: trainings whose machine_type_names list includes this machine's name
         from .models import Training
-        new_trainings = Training.objects.filter(
-            status='active',
-            machine_type_names__contains=self.machine_name
-        )
-        trainings.extend(list(new_trainings))
-        
-        # Legacy system: Get from required_trainings
+        all_trainings = Training.objects.filter(status='active')
+        new_trainings = [
+            t for t in all_trainings
+            if self.machine_name in (t.machine_type_names or [])
+        ]
+        trainings.extend(new_trainings)
+
+        # Legacy system: Get from required_trainings (ManyToMany)
         trainings.extend(list(self.required_trainings.all()))
-        
+
         return trainings

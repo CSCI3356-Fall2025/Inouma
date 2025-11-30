@@ -131,34 +131,42 @@ class ReservationService:
     def check_user_training(cls, machine, user) -> Tuple[bool, List[str]]:
         """
         Check if user has completed required training for this machine.
-        
+
         Returns:
             Tuple of (is_trained, list_of_missing_training_names)
         """
         from machines.models import UserTrainingRecord, Training
-        
-        # Get required trainings for this machine type
-        required_trainings = Training.objects.filter(
-            status='active',
-            machine_type_names__contains=machine.machine_name
-        )
-        
-        if not required_trainings.exists():
+
+        # Get required trainings for this machine type.
+        # We cannot use machine_type_names__contains on SQLite,
+        # so we filter in Python.
+        all_trainings = Training.objects.filter(status='active')
+
+        required_trainings = [
+            t for t in all_trainings
+            if machine.machine_name in (t.machine_type_names or [])
+        ]
+
+        if not required_trainings:
             # No training required
             return True, []
-        
+
         # Check which trainings the user has completed
-        completed_training_ids = UserTrainingRecord.objects.filter(
-            user=user,
-            status='completed'
-        ).values_list('training_id', flat=True)
-        
-        missing = []
-        for training in required_trainings:
-            if training.id not in completed_training_ids:
-                missing.append(training.name)
-        
+        completed_training_ids = set(
+            UserTrainingRecord.objects.filter(
+                user=user,
+                status='completed'
+            ).values_list('training_id', flat=True)
+        )
+
+        missing = [
+            training.name
+            for training in required_trainings
+            if training.id not in completed_training_ids
+        ]
+
         return len(missing) == 0, missing
+
     
     @classmethod
     def create_reservation(
