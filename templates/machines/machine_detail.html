@@ -624,6 +624,7 @@ const RESERVATION_URL = "{{ reservation_api_url }}";
 let availableSlots = [];
 let selectedSlot = null;
 let isTrained = true;
+{% comment %} const RESERVATION_URL = "{% url 'reservations:api_create_reservation' machine.id %}"; {% endcomment %}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Set default date to today
