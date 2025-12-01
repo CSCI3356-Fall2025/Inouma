@@ -1,0 +1,474 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Leaderboard - The Hatchery{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+/* Your Rank Card */
+.your-rank-card {
+    background: linear-gradient(135deg, var(--gunmetal) 0%, #3d4a5c 100%);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.rank-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--sunglow);
+    line-height: 1;
+}
+
+.rank-number span {
+    font-size: 1.25rem;
+    vertical-align: super;
+}
+
+.rank-details h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.rank-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.rank-stat {
+    text-align: center;
+}
+
+.rank-stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--sunglow);
+}
+
+.rank-stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Category Tabs */
+.category-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.category-tab {
+    padding: 0.6rem 1.25rem;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.15s;
+}
+
+.category-tab:hover {
+    background: #e0e0e0;
+}
+
+.category-tab.active {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+/* Leaderboard Table */
+.leaderboard-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-table td {
+    padding: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.leaderboard-table tr:hover {
+    background: #fafafa;
+}
+
+.leaderboard-table tr.current-user {
+    background: rgba(252, 201, 49, 0.1);
+}
+
+.leaderboard-table tr.current-user:hover {
+    background: rgba(252, 201, 49, 0.15);
+}
+
+/* Rank Column */
+.rank-col {
+    width: 60px;
+    text-align: center;
+}
+
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.rank-badge.gold {
+    background: linear-gradient(135deg, #fcc931, #f0a500);
+    color: white;
+}
+
+.rank-badge.silver {
+    background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    color: white;
+}
+
+.rank-badge.bronze {
+    background: linear-gradient(135deg, #cd7f32, #a0522d);
+    color: white;
+}
+
+.rank-badge.normal {
+    background: #f0f0f0;
+    color: #666;
+}
+
+/* User Column */
+.user-col {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--keppel);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.user-name .you-badge {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+    font-weight: 700;
+}
+
+/* Level Column */
+.level-col {
+    text-align: center;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    background: var(--keppel);
+    color: white;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* Stats Columns */
+.stat-col {
+    text-align: center;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+/* XP Bar */
+.xp-col {
+    width: 150px;
+}
+
+.xp-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.xp-bar {
+    flex: 1;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.xp-fill {
+    height: 100%;
+    background: var(--sunglow);
+    border-radius: 4px;
+}
+
+.xp-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🏆 Leaderboard</h1>
+    <p>See how you stack up against other makers</p>
+</div>
+
+<!-- Your Rank -->
+<div class="your-rank-card" id="yourRankCard">
+    <div class="rank-number" id="yourRank">-<span>th</span></div>
+    <div class="rank-details">
+        <h3>Your Global Rank</h3>
+        <div class="rank-stats">
+            <div class="rank-stat">
+                <div class="rank-stat-value" id="yourLevel">-</div>
+                <div class="rank-stat-label">Level</div>
+            </div>
+            <div class="rank-stat">
+                <div class="rank-stat-value" id="yourXP">-</div>
+                <div class="rank-stat-label">XP Points</div>
+            </div>
+            <div class="rank-stat">
+                <div class="rank-stat-value" id="yourProjects">-</div>
+                <div class="rank-stat-label">Projects</div>
+            </div>
+            <div class="rank-stat">
+                <div class="rank-stat-value" id="yourTrainings">-</div>
+                <div class="rank-stat-label">Trainings</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Tabs -->
+<div class="category-tabs">
+    <button class="category-tab active" data-category="xp" onclick="setCategory('xp')">⭐ XP Points</button>
+    <button class="category-tab" data-category="projects" onclick="setCategory('projects')">🎨 Projects</button>
+    <button class="category-tab" data-category="trainings" onclick="setCategory('trainings')">🎓 Trainings</button>
+</div>
+
+<!-- Leaderboard Table -->
+<div class="leaderboard-card">
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th class="rank-col">Rank</th>
+                <th>Maker</th>
+                <th class="level-col">Level</th>
+                <th class="stat-col">🎨</th>
+                <th class="stat-col">🎓</th>
+                <th class="xp-col">XP</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+            <tr>
+                <td colspan="6" class="loading">Loading leaderboard...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+let currentCategory = 'xp';
+let maxXP = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadLeaderboard();
+});
+
+function setCategory(category) {
+    currentCategory = category;
+    
+    document.querySelectorAll('.category-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.category === category);
+    });
+    
+    loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading leaderboard...</td></tr>';
+    
+    try {
+        const response = await fetch(`/social/api/leaderboard/?category=${currentCategory}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update user rank card
+            updateUserRank(data.user_rank, data.user_stats);
+            
+            // Find max XP for progress bars
+            maxXP = Math.max(...data.leaderboard.map(u => u.xp_points), 1);
+            
+            // Render leaderboard
+            renderLeaderboard(data.leaderboard);
+        }
+    } catch (err) {
+        console.error('Error loading leaderboard:', err);
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Could not load leaderboard</td></tr>';
+    }
+}
+
+function updateUserRank(rank, stats) {
+    document.getElementById('yourRank').innerHTML = `${rank}<span>${getOrdinalSuffix(rank)}</span>`;
+    document.getElementById('yourLevel').textContent = stats.level;
+    document.getElementById('yourXP').textContent = stats.xp_points;
+    document.getElementById('yourProjects').textContent = stats.projects_count;
+    document.getElementById('yourTrainings').textContent = stats.trainings_completed;
+}
+
+function renderLeaderboard(users) {
+    const tbody = document.getElementById('leaderboardBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">🏆</div>
+                    <p>No one on the leaderboard yet. Be the first!</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const rankClass = user.rank === 1 ? 'gold' : user.rank === 2 ? 'silver' : user.rank === 3 ? 'bronze' : 'normal';
+        const xpPercent = (user.xp_points / maxXP) * 100;
+        
+        return `
+            <tr class="${user.is_current_user ? 'current-user' : ''}">
+                <td class="rank-col">
+                    <span class="rank-badge ${rankClass}">${user.rank}</span>
+                </td>
+                <td>
+                    <div class="user-col">
+                        <div class="user-avatar">${getInitials(user.name)}</div>
+                        <span class="user-name">
+                            ${escapeHtml(user.name)}
+                            ${user.is_current_user ? '<span class="you-badge">YOU</span>' : ''}
+                        </span>
+                    </div>
+                </td>
+                <td class="level-col">
+                    <span class="level-badge">Lvl ${user.level}</span>
+                </td>
+                <td class="stat-col">${user.projects_count}</td>
+                <td class="stat-col">${user.trainings_completed}</td>
+                <td class="xp-col">
+                    <div class="xp-bar-container">
+                        <div class="xp-bar">
+                            <div class="xp-fill" style="width: ${xpPercent}%;"></div>
+                        </div>
+                        <span class="xp-value">${user.xp_points}</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getOrdinalSuffix(n) {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+function getInitials(name) {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

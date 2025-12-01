@@ -1,0 +1,1162 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Auto-Schedule - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Auto-Schedule</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--gunmetal);
+}
+
+/* Steps layout */
+.scheduler-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.step-card {
+    background: white;
+    border: 2px solid var(--timberwolf);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+}
+
+.step-card.active {
+    border-color: var(--sunglow);
+}
+
+.step-card.completed {
+    border-color: var(--keppel);
+}
+
+.step-number {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--timberwolf);
+    color: var(--gunmetal);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.step-card.active .step-number {
+    background: var(--sunglow);
+}
+
+.step-card.completed .step-number {
+    background: var(--keppel);
+    color: white;
+}
+
+.step-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.5rem;
+}
+
+.step-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+/* Semester selector */
+.semester-select-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.semester-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.semester-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.semester-info-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.semester-info-value {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+/* Requirements summary */
+.requirements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.req-stat {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.req-stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.req-stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.req-stat.warning .req-stat-value {
+    color: var(--cinnabar);
+}
+
+.req-stat.success .req-stat-value {
+    color: var(--keppel);
+}
+
+/* Options checkboxes */
+.option-group {
+    margin-bottom: 1rem;
+}
+
+.option-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.option-item:hover {
+    background: #f0f0f0;
+}
+
+.option-item input {
+    margin-top: 0.2rem;
+}
+
+.option-item-content {
+    flex: 1;
+}
+
+.option-item-title {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.option-item-desc {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Run button */
+.run-section {
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa, #fff);
+    border-radius: 12px;
+    border: 2px dashed var(--timberwolf);
+}
+
+.run-section.ready {
+    border-style: solid;
+    border-color: var(--keppel);
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.05), #fff);
+}
+
+.run-button {
+    background: linear-gradient(135deg, var(--keppel), #00a08a);
+    color: white;
+    border: none;
+    padding: 1rem 3rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s;
+}
+
+.run-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 181, 156, 0.3);
+}
+
+.run-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.run-button .spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Progress section */
+.progress-section {
+    display: none;
+    margin-top: 2rem;
+}
+
+.progress-section.show {
+    display: block;
+}
+
+.progress-bar-container {
+    background: #e0e0e0;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--keppel), var(--sunglow));
+    border-radius: 6px;
+    transition: width 0.3s;
+}
+
+.progress-status {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Results section */
+.results-section {
+    display: none;
+    margin-top: 2rem;
+}
+
+.results-section.show {
+    display: block;
+}
+
+.results-card {
+    background: white;
+    border-radius: 12px;
+    border: 2px solid var(--timberwolf);
+    overflow: hidden;
+}
+
+.results-card.success {
+    border-color: var(--keppel);
+}
+
+.results-card.warning {
+    border-color: var(--sunglow);
+}
+
+.results-card.error {
+    border-color: var(--cinnabar);
+}
+
+.results-header {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.results-card.success .results-header {
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.1), rgba(0, 181, 156, 0.05));
+}
+
+.results-card.warning .results-header {
+    background: linear-gradient(135deg, rgba(252, 201, 49, 0.2), rgba(252, 201, 49, 0.1));
+}
+
+.results-card.error .results-header {
+    background: linear-gradient(135deg, rgba(240, 82, 62, 0.1), rgba(240, 82, 62, 0.05));
+}
+
+.results-icon {
+    font-size: 2.5rem;
+}
+
+.results-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0;
+}
+
+.results-subtitle {
+    color: #666;
+    margin: 0.25rem 0 0;
+}
+
+.results-body {
+    padding: 1.5rem;
+}
+
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.result-stat {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.result-stat-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.result-stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Conflicts list */
+.conflicts-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.conflicts-title {
+    font-weight: 600;
+    color: var(--cinnabar);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.conflict-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #fff5f5;
+    border-left: 3px solid var(--cinnabar);
+    margin-bottom: 0.5rem;
+    border-radius: 0 6px 6px 0;
+}
+
+.conflict-icon {
+    color: var(--cinnabar);
+}
+
+.conflict-details {
+    flex: 1;
+}
+
+.conflict-type {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.conflict-info {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Actions after results */
+.results-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Warning banner */
+.warning-banner {
+    background: #fff8e1;
+    border: 1px solid #ffcc02;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.warning-banner-icon {
+    font-size: 1.25rem;
+}
+
+.warning-banner-content {
+    flex: 1;
+}
+
+.warning-banner-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.warning-banner-text {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Empty state */
+.empty-prereq {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.empty-prereq-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🤖 Auto-Schedule</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Automatically generate the weekly schedule based on requirements and availability</p>
+        </div>
+    </div>
+</div>
+
+<!-- Warning if existing shifts -->
+<div class="warning-banner" id="existingShiftsWarning" style="display: none;">
+    <div class="warning-banner-icon">⚠️</div>
+    <div class="warning-banner-content">
+        <div class="warning-banner-title">Existing Schedule Found</div>
+        <div class="warning-banner-text">
+            This semester already has <strong id="existingShiftCount">0</strong> shifts scheduled. 
+            Running the auto-scheduler will <strong>add to</strong> the existing schedule. 
+            <a href="#" onclick="confirmClearSchedule()">Clear existing schedule first</a> if you want to start fresh.
+        </div>
+    </div>
+</div>
+
+<!-- Steps -->
+<div class="scheduler-steps">
+    <!-- Step 1: Select Semester -->
+    <div class="step-card active" id="step1">
+        <div class="step-number">1</div>
+        <div class="step-title">Select Semester</div>
+        <div class="step-description">Choose which semester to generate the schedule for</div>
+        
+        <div class="semester-select-card">
+            <select id="semesterSelect" class="form-control" onchange="loadSemesterData()">
+                <option value="">-- Select Semester --</option>
+                {% for semester in semesters %}
+                <option value="{{ semester.id }}" {% if semester.is_active %}selected{% endif %}>
+                    {{ semester.name }} {% if semester.is_active %}(Active){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <div class="semester-info" id="semesterInfo" style="display: none;">
+                <div class="semester-info-item">
+                    <span class="semester-info-label">Start Date</span>
+                    <span class="semester-info-value" id="infoStartDate">-</span>
+                </div>
+                <div class="semester-info-item">
+                    <span class="semester-info-label">End Date</span>
+                    <span class="semester-info-value" id="infoEndDate">-</span>
+                </div>
+                <div class="semester-info-item">
+                    <span class="semester-info-label">Duration</span>
+                    <span class="semester-info-value" id="infoDuration">-</span>
+                </div>
+                <div class="semester-info-item">
+                    <span class="semester-info-label">Holidays</span>
+                    <span class="semester-info-value" id="infoHolidays">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 2: Check Requirements -->
+    <div class="step-card" id="step2">
+        <div class="step-number">2</div>
+        <div class="step-title">Review Requirements</div>
+        <div class="step-description">Verify shift requirements and team availability</div>
+        
+        <div id="requirementsContent">
+            <div class="empty-prereq">
+                <div class="empty-prereq-icon">📋</div>
+                <div>Select a semester first</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: Configure Options -->
+    <div class="step-card" id="step3">
+        <div class="step-number">3</div>
+        <div class="step-title">Scheduling Options</div>
+        <div class="step-description">Configure how the schedule should be generated</div>
+        
+        <div id="optionsContent">
+            <div class="empty-prereq">
+                <div class="empty-prereq-icon">⚙️</div>
+                <div>Select a semester first</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Run Section -->
+<div class="card">
+    <div class="run-section" id="runSection">
+        <p style="color: #666; margin-bottom: 1rem;">Select a semester and review requirements before running the scheduler</p>
+        <button class="run-button" id="runButton" disabled onclick="runScheduler()">
+            <span class="button-text">🤖 Generate Schedule</span>
+        </button>
+    </div>
+    
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">Initializing...</div>
+    </div>
+    
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+        <div class="results-card" id="resultsCard">
+            <div class="results-header">
+                <div class="results-icon" id="resultsIcon">✅</div>
+                <div>
+                    <h2 class="results-title" id="resultsTitle">Schedule Generated Successfully</h2>
+                    <p class="results-subtitle" id="resultsSubtitle">All shifts have been created</p>
+                </div>
+            </div>
+            <div class="results-body">
+                <div class="results-stats">
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultShifts">0</div>
+                        <div class="result-stat-label">Shifts Created</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultWeeks">0</div>
+                        <div class="result-stat-label">Weeks Covered</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultHours">0</div>
+                        <div class="result-stat-label">Total Hours</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultMembers">0</div>
+                        <div class="result-stat-label">Team Members</div>
+                    </div>
+                </div>
+                
+                <!-- Conflicts -->
+                <div class="conflicts-section" id="conflictsSection" style="display: none;">
+                    <div class="conflicts-title">
+                        <span>⚠️</span> Coverage Gaps Found
+                    </div>
+                    <div id="conflictsList"></div>
+                </div>
+            </div>
+            <div class="results-actions">
+                <a href="{% url 'scheduling:view_schedule' %}" class="btn btn-primary">View Schedule</a>
+                <button class="btn btn-secondary" onclick="resetScheduler()">Run Again</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Clear Modal -->
+<div id="clearModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2>Clear Existing Schedule?</h2>
+            <button class="modal-close" onclick="closeClearModal()">&times;</button>
+        </div>
+        <div style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🗑️</div>
+            <p style="color: var(--gunmetal); margin-bottom: 0.5rem;">
+                This will delete all <strong id="clearShiftCount">0</strong> existing shifts for this semester.
+            </p>
+            <p style="color: #666; font-size: 0.9rem;">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeClearModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="clearSchedule()">Clear Schedule</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentSemester = null;
+let semesterData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('semesterSelect');
+    if (select && select.value) {
+        loadSemesterData();
+    }
+});
+
+function loadSemesterData() {
+    const semesterId = document.getElementById('semesterSelect').value;
+    
+    if (!semesterId) {
+        resetSteps();
+        return;
+    }
+    
+    currentSemester = semesterId;
+    
+    // Load semester config first (most important)
+    fetch(`/scheduling/api/semester/${semesterId}/config/`)
+        .then(r => r.json())
+        .then(configData => {
+            semesterData = {
+                config: configData,
+                stats: {},
+                team: []
+            };
+            
+            updateSemesterInfo(configData);
+            
+            // Load stats (optional - don't block on failure)
+            fetch(`/scheduling/api/stats/?semester_id=${semesterId}`)
+                .then(r => r.json())
+                .then(statsData => {
+                    semesterData.stats = statsData.stats || {};
+                    checkExistingShifts(semesterData.stats);
+                })
+                .catch(err => console.log('Stats API not available:', err));
+            
+            // Load team members
+            fetch(`/scheduling/api/team-members/?semester_id=${semesterId}`)
+                .then(r => r.json())
+                .then(teamData => {
+                    semesterData.team = teamData.members || [];
+                    updateRequirements(configData, semesterData.stats, semesterData.team);
+                })
+                .catch(err => {
+                    console.log('Team API error:', err);
+                    updateRequirements(configData, {}, []);
+                });
+            
+            updateOptions();
+            
+            // Enable run button
+            document.getElementById('runButton').disabled = false;
+            document.getElementById('runSection').classList.add('ready');
+            
+            // Update step states
+            document.getElementById('step1').classList.add('completed');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step3').classList.add('active');
+        })
+        .catch(err => {
+            console.error('Error loading semester config:', err);
+            alert('Error loading semester data. Please check the console for details.');
+            resetSteps();
+        });
+}
+
+function updateSemesterInfo(config) {
+    const info = document.getElementById('semesterInfo');
+    info.style.display = 'grid';
+    
+    if (config && config.semester) {
+        const startDate = new Date(config.semester.start_date);
+        const endDate = new Date(config.semester.end_date);
+        const weeks = Math.round((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
+        
+        document.getElementById('infoStartDate').textContent = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        document.getElementById('infoEndDate').textContent = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        document.getElementById('infoDuration').textContent = `${weeks} weeks`;
+        document.getElementById('infoHolidays').textContent = `${(config.holidays || []).length} days`;
+    } else {
+        document.getElementById('infoStartDate').textContent = '-';
+        document.getElementById('infoEndDate').textContent = '-';
+        document.getElementById('infoDuration').textContent = '-';
+        document.getElementById('infoHolidays').textContent = '-';
+    }
+}
+
+function updateRequirements(config, stats, team) {
+    const container = document.getElementById('requirementsContent');
+    
+    // Handle missing data
+    config = config || {};
+    stats = stats || {};
+    team = team || [];
+    
+    // Calculate requirements
+    const requirements = config.shift_requirements || [];
+    const operatingHours = config.operating_hours || {};
+    const operatingDays = Object.values(operatingHours).filter(h => !h.is_closed).length;
+    const totalTeamHours = team.reduce((sum, m) => sum + (m.max_weekly_hours || 0), 0);
+    const trainers = team.filter(m => m.is_trainer || m.is_team_lead).length;
+    
+    // Calculate required hours (rough estimate)
+    let requiredHours = 0;
+    requirements.forEach(req => {
+        const hours = calculateHours(req.time_start, req.time_end);
+        requiredHours += hours * (req.hosts_required || 0);
+    });
+    
+    const hoursStatus = totalTeamHours >= requiredHours ? 'success' : 'warning';
+    
+    container.innerHTML = `
+        <div class="requirements-grid">
+            <div class="req-stat">
+                <div class="req-stat-value">${team.length}</div>
+                <div class="req-stat-label">Team Members</div>
+            </div>
+            <div class="req-stat">
+                <div class="req-stat-value">${trainers}</div>
+                <div class="req-stat-label">Trainers</div>
+            </div>
+            <div class="req-stat ${hoursStatus}">
+                <div class="req-stat-value">${totalTeamHours}h</div>
+                <div class="req-stat-label">Available/Week</div>
+            </div>
+            <div class="req-stat">
+                <div class="req-stat-value">${operatingDays}</div>
+                <div class="req-stat-label">Operating Days</div>
+            </div>
+        </div>
+        ${team.length === 0 ? `
+            <div style="margin-top: 1rem; padding: 1rem; background: #fff5f5; border-radius: 8px; color: var(--cinnabar);">
+                ⚠️ No team members found! <a href="{% url 'scheduling:manage_availability' %}">Add team members</a> before scheduling.
+            </div>
+        ` : ''}
+        ${requirements.length === 0 ? `
+            <div style="margin-top: 1rem; padding: 1rem; background: #fff8e1; border-radius: 8px; color: #b8860b;">
+                ℹ️ No shift requirements configured. <a href="{% url 'scheduling:configure_semester' %}">Configure requirements</a> for better scheduling.
+            </div>
+        ` : ''}
+    `;
+}
+
+function updateOptions() {
+    const container = document.getElementById('optionsContent');
+    
+    container.innerHTML = `
+        <div class="option-group">
+            <label class="option-item">
+                <input type="checkbox" id="optRespectAvailability" checked>
+                <div class="option-item-content">
+                    <div class="option-item-title">Respect Availability</div>
+                    <div class="option-item-desc">Only schedule team members during their available times</div>
+                </div>
+            </label>
+            
+            <label class="option-item">
+                <input type="checkbox" id="optBalanceHours" checked>
+                <div class="option-item-content">
+                    <div class="option-item-title">Balance Hours</div>
+                    <div class="option-item-desc">Distribute shifts evenly among team members</div>
+                </div>
+            </label>
+            
+            <label class="option-item">
+                <input type="checkbox" id="optFillCapacity" checked>
+                <div class="option-item-content">
+                    <div class="option-item-title">Fill to Capacity</div>
+                    <div class="option-item-desc">Schedule team members up to their weekly hour limit</div>
+                </div>
+            </label>
+            
+            <label class="option-item">
+                <input type="checkbox" id="optPrioritizeTraining">
+                <div class="option-item-content">
+                    <div class="option-item-title">Prioritize Training</div>
+                    <div class="option-item-desc">Schedule training shifts before open hours hosting</div>
+                </div>
+            </label>
+        </div>
+    `;
+}
+
+function checkExistingShifts(stats) {
+    const existingCount = stats.total_shifts || 0;
+    const warning = document.getElementById('existingShiftsWarning');
+    
+    if (existingCount > 0) {
+        document.getElementById('existingShiftCount').textContent = existingCount;
+        document.getElementById('clearShiftCount').textContent = existingCount;
+        warning.style.display = 'flex';
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
+function resetSteps() {
+    currentSemester = null;
+    semesterData = null;
+    
+    document.getElementById('semesterInfo').style.display = 'none';
+    document.getElementById('requirementsContent').innerHTML = `
+        <div class="empty-prereq">
+            <div class="empty-prereq-icon">📋</div>
+            <div>Select a semester first</div>
+        </div>
+    `;
+    document.getElementById('optionsContent').innerHTML = `
+        <div class="empty-prereq">
+            <div class="empty-prereq-icon">⚙️</div>
+            <div>Select a semester first</div>
+        </div>
+    `;
+    
+    document.getElementById('runButton').disabled = true;
+    document.getElementById('runSection').classList.remove('ready');
+    document.getElementById('existingShiftsWarning').style.display = 'none';
+    
+    // Reset step states
+    document.querySelectorAll('.step-card').forEach(card => {
+        card.classList.remove('completed', 'active');
+    });
+    document.getElementById('step1').classList.add('active');
+}
+
+function runScheduler() {
+    if (!currentSemester) return;
+    
+    // Show progress
+    document.getElementById('runSection').style.display = 'none';
+    document.getElementById('progressSection').classList.add('show');
+    document.getElementById('resultsSection').classList.remove('show');
+    
+    // Simulate progress
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const progressStatus = document.getElementById('progressStatus');
+    
+    const progressSteps = [
+        { pct: 10, msg: 'Loading team members...' },
+        { pct: 25, msg: 'Analyzing availability...' },
+        { pct: 40, msg: 'Scheduling open hours...' },
+        { pct: 55, msg: 'Scheduling training sessions...' },
+        { pct: 70, msg: 'Assigning floater shifts...' },
+        { pct: 85, msg: 'Replicating across semester...' },
+        { pct: 95, msg: 'Saving to database...' }
+    ];
+    
+    let stepIndex = 0;
+    const progressInterval = setInterval(() => {
+        if (stepIndex < progressSteps.length) {
+            progressBar.style.width = progressSteps[stepIndex].pct + '%';
+            progressStatus.textContent = progressSteps[stepIndex].msg;
+            stepIndex++;
+        }
+    }, 500);
+    
+    // Collect options
+    const options = {
+        semester_id: currentSemester,
+        respect_availability: document.getElementById('optRespectAvailability')?.checked ?? true,
+        balance_hours: document.getElementById('optBalanceHours')?.checked ?? true,
+        fill_capacity: document.getElementById('optFillCapacity')?.checked ?? true,
+        prioritize_training: document.getElementById('optPrioritizeTraining')?.checked ?? false
+    };
+    
+    // Run scheduler
+    fetch('/scheduling/staff/auto-schedule/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(options)
+    })
+    .then(r => r.json())
+    .then(result => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressStatus.textContent = 'Complete!';
+        
+        setTimeout(() => {
+            showResults(result);
+        }, 500);
+    })
+    .catch(err => {
+        clearInterval(progressInterval);
+        console.error('Error:', err);
+        showResults({
+            success: false,
+            message: 'An error occurred while running the scheduler',
+            shifts_created: 0,
+            conflicts: []
+        });
+    });
+}
+
+function showResults(result) {
+    document.getElementById('progressSection').classList.remove('show');
+    document.getElementById('resultsSection').classList.add('show');
+    
+    const card = document.getElementById('resultsCard');
+    const hasConflicts = result.conflicts && result.conflicts.length > 0;
+    
+    // Set card style
+    card.className = 'results-card ' + (result.success ? (hasConflicts ? 'warning' : 'success') : 'error');
+    
+    // Set header
+    document.getElementById('resultsIcon').textContent = result.success ? (hasConflicts ? '⚠️' : '✅') : '❌';
+    document.getElementById('resultsTitle').textContent = result.success ? 
+        (hasConflicts ? 'Schedule Generated with Warnings' : 'Schedule Generated Successfully') :
+        'Scheduling Failed';
+    document.getElementById('resultsSubtitle').textContent = result.success ?
+        `${result.shifts_created} shifts have been created` :
+        result.message || 'An error occurred';
+    
+    // Set stats
+    document.getElementById('resultShifts').textContent = result.shifts_created || 0;
+    
+    // Estimate weeks and hours
+    const shiftsPerWeek = semesterData?.config?.shift_requirements?.length || 1;
+    const weeks = shiftsPerWeek > 0 ? Math.round((result.shifts_created || 0) / (shiftsPerWeek * 7)) : 0;
+    document.getElementById('resultWeeks').textContent = weeks || '-';
+    
+    // Rough hours estimate (assuming 4 hour average)
+    document.getElementById('resultHours').textContent = Math.round((result.shifts_created || 0) * 4);
+    document.getElementById('resultMembers').textContent = semesterData?.team?.length || 0;
+    
+    // Show conflicts
+    const conflictsSection = document.getElementById('conflictsSection');
+    const conflictsList = document.getElementById('conflictsList');
+    
+    if (hasConflicts) {
+        conflictsSection.style.display = 'block';
+        conflictsList.innerHTML = result.conflicts.slice(0, 10).map(c => `
+            <div class="conflict-item">
+                <div class="conflict-icon">⚠️</div>
+                <div class="conflict-details">
+                    <div class="conflict-type">${formatConflictType(c.type)}</div>
+                    <div class="conflict-info">${formatDay(c.day)} ${c.time || ''} ${c.location ? '@ ' + c.location : ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        if (result.conflicts.length > 10) {
+            conflictsList.innerHTML += `<div style="padding: 0.5rem; color: #666; font-size: 0.9rem;">...and ${result.conflicts.length - 10} more</div>`;
+        }
+    } else {
+        conflictsSection.style.display = 'none';
+    }
+}
+
+function formatConflictType(type) {
+    const types = {
+        'open_hours_gap': 'Open Hours Gap',
+        'training_gap': 'Training Gap',
+        'floater_gap': 'Floater Gap',
+        'no_available_person': 'No Available Person'
+    };
+    return types[type] || type;
+}
+
+function formatDay(dayNum) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[dayNum] || '';
+}
+
+function resetScheduler() {
+    document.getElementById('runSection').style.display = 'block';
+    document.getElementById('progressSection').classList.remove('show');
+    document.getElementById('resultsSection').classList.remove('show');
+    document.getElementById('progressBar').style.width = '0%';
+    
+    // Reload data to update existing shifts warning
+    loadSemesterData();
+}
+
+function confirmClearSchedule() {
+    document.getElementById('clearModal').style.display = 'flex';
+}
+
+function closeClearModal() {
+    document.getElementById('clearModal').style.display = 'none';
+}
+
+function clearSchedule() {
+    if (!currentSemester) return;
+    
+    fetch(`/scheduling/staff/clear/${currentSemester}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => {
+        if (!r.ok) {
+            throw new Error(`HTTP ${r.status}`);
+        }
+        return r.json();
+    })
+    .then(result => {
+        closeClearModal();
+        if (result.success) {
+            alert(`Cleared ${result.deleted_count} shifts`);
+            loadSemesterData();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to clear schedule'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to clear schedule: ' + err.message);
+    });
+}
+
+function calculateHours(start, end) {
+    if (!start || !end) return 0;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    return (eh + em/60) - (sh + sm/60);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.btn-danger {
+    background: var(--cinnabar);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d94535;
+}
+</style>
+
+{% endblock %}

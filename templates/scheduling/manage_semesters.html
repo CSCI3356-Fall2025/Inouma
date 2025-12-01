@@ -1,0 +1,854 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Manage Semesters - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Manage Semesters</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--gunmetal);
+}
+
+/* Semester cards */
+.semester-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.semester-card {
+    background: white;
+    border: 2px solid var(--timberwolf);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.semester-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.semester-card.active {
+    border-color: var(--keppel);
+}
+
+.semester-card.archived {
+    opacity: 0.7;
+    background: #f9f9f9;
+}
+
+.semester-card-header {
+    padding: 1.25rem;
+    background: #fafafa;
+    border-bottom: 1px solid var(--timberwolf);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.semester-card.active .semester-card-header {
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.1), rgba(0, 181, 156, 0.05));
+}
+
+.semester-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0 0 0.25rem 0;
+}
+
+.semester-type {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.semester-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+}
+
+.badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background: var(--keppel);
+    color: white;
+}
+
+.badge-upcoming {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.badge-past {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.badge-archived {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.semester-card-body {
+    padding: 1.25rem;
+}
+
+.semester-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.semester-info-row:last-child {
+    border-bottom: none;
+}
+
+.semester-info-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.semester-info-value {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.semester-card-actions {
+    padding: 1rem 1.25rem;
+    background: #fafafa;
+    border-top: 1px solid var(--timberwolf);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.semester-card-actions .btn {
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Stats in card */
+.semester-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.semester-stat {
+    text-align: center;
+}
+
+.semester-stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.semester-stat-label {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+}
+
+/* Form styles */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--sunglow);
+    box-shadow: 0 0 0 2px rgba(252, 201, 49, 0.2);
+}
+
+.form-help {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Section divider */
+.section-divider {
+    margin: 2rem 0 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--timberwolf);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+/* Toggle archived */
+.toggle-archived {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.toggle-archived input {
+    cursor: pointer;
+}
+
+/* Confirmation modal */
+.confirm-modal-body {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.confirm-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.confirm-icon.warning {
+    color: var(--cinnabar);
+}
+
+.confirm-icon.success {
+    color: var(--keppel);
+}
+
+.confirm-message {
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+    margin-bottom: 0.5rem;
+}
+
+.confirm-details {
+    color: #666;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>📚 Manage Semesters</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Create, edit, and manage academic semesters</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+            + New Semester
+        </button>
+    </div>
+    
+    <label class="toggle-archived">
+        <input type="checkbox" id="showArchived" onchange="toggleArchivedVisibility()">
+        Show archived semesters
+    </label>
+</div>
+
+<!-- Active & Current Semesters -->
+<div class="card" id="activeSemestersCard">
+    <h2 style="margin: 0 0 1rem; color: var(--gunmetal);">Active & Upcoming Semesters</h2>
+    <div id="activeSemestersGrid" class="semester-grid">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<!-- Past Semesters -->
+<div class="card" id="pastSemestersCard" style="display: none;">
+    <h2 style="margin: 0 0 1rem; color: var(--gunmetal);">Past Semesters</h2>
+    <div id="pastSemestersGrid" class="semester-grid">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<!-- Archived Semesters -->
+<div class="card" id="archivedSemestersCard" style="display: none;">
+    <h2 style="margin: 0 0 1rem; color: #666;">📦 Archived Semesters</h2>
+    <div id="archivedSemestersGrid" class="semester-grid">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<!-- Empty State -->
+<div class="card" id="emptyState" style="display: none;">
+    <div class="empty-state">
+        <div class="empty-state-icon">📚</div>
+        <h2>No Semesters Yet</h2>
+        <p>Create your first semester to start scheduling.</p>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ Create Semester</button>
+    </div>
+</div>
+
+<!-- Create/Edit Semester Modal -->
+<div id="semesterModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Create New Semester</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editSemesterId">
+            
+            <div class="form-group">
+                <label>Semester Name</label>
+                <input type="text" id="semesterName" placeholder="e.g., Fall 2025">
+                <div class="form-help">This will be displayed throughout the system</div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Semester Type</label>
+                    <select id="semesterType">
+                        <option value="fall">Fall</option>
+                        <option value="spring">Spring</option>
+                        <option value="summer">Summer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" id="semesterYear" min="2020" max="2050">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="semesterStartDate">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="semesterEndDate">
+                </div>
+            </div>
+            
+            <div class="form-group" 
+                style="text-align: left; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;">
+
+                <label 
+                    style="display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; margin-bottom: 0.3rem;">
+                    
+                    <input type="checkbox" id="semesterIsActive" style="margin: 0;">
+                    <span style="white-space: nowrap;">Set as Active Semester</span>
+                </label>
+
+                <div class="form-help" style="margin-left: 1.5rem;">
+                    Only one semester can be active at a time. This will deactivate other semesters.
+                </div>
+
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveSemester()">Save Semester</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2 id="confirmModalTitle">Confirm Action</h2>
+            <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div class="confirm-modal-body">
+            <div id="confirmIcon" class="confirm-icon">⚠️</div>
+            <div id="confirmMessage" class="confirm-message">Are you sure?</div>
+            <div id="confirmDetails" class="confirm-details"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn" id="confirmButton" onclick="executeConfirmedAction()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let semesters = [];
+let pendingAction = null;
+
+// Load semesters on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSemesters();
+    
+    // Set default year
+    document.getElementById('semesterYear').value = new Date().getFullYear();
+});
+
+function loadSemesters() {
+    fetch('/scheduling/api/semesters/')
+        .then(r => r.ok ? r.json() : { semesters: [] })
+        .then(data => {
+            semesters = data.semesters || [];
+            renderSemesters();
+        })
+        .catch(err => {
+            console.error('Error loading semesters:', err);
+            semesters = [];
+            renderSemesters();
+        });
+}
+
+function renderSemesters() {
+    const today = new Date().toISOString().split('T')[0];
+    const showArchived = document.getElementById('showArchived').checked;
+    
+    const activeSemesters = semesters.filter(s => !s.is_archived && (s.is_active || s.end_date >= today));
+    const pastSemesters = semesters.filter(s => !s.is_archived && !s.is_active && s.end_date < today);
+    const archivedSemesters = semesters.filter(s => s.is_archived);
+    
+    // Show/hide sections
+    document.getElementById('activeSemestersCard').style.display = activeSemesters.length > 0 ? 'block' : 'none';
+    document.getElementById('pastSemestersCard').style.display = pastSemesters.length > 0 ? 'block' : 'none';
+    document.getElementById('archivedSemestersCard').style.display = showArchived && archivedSemesters.length > 0 ? 'block' : 'none';
+    document.getElementById('emptyState').style.display = semesters.length === 0 ? 'block' : 'none';
+    
+    // Render each section
+    document.getElementById('activeSemestersGrid').innerHTML = activeSemesters.map(s => renderSemesterCard(s, 'active')).join('');
+    document.getElementById('pastSemestersGrid').innerHTML = pastSemesters.map(s => renderSemesterCard(s, 'past')).join('');
+    document.getElementById('archivedSemestersGrid').innerHTML = archivedSemesters.map(s => renderSemesterCard(s, 'archived')).join('');
+}
+
+function renderSemesterCard(semester, section) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Determine status badges
+    let badges = '';
+    if (semester.is_active) {
+        badges += '<span class="badge badge-active">Active</span>';
+    }
+    if (semester.is_archived) {
+        badges += '<span class="badge badge-archived">Archived</span>';
+    } else if (semester.start_date > today) {
+        badges += '<span class="badge badge-upcoming">Upcoming</span>';
+    } else if (semester.end_date < today && !semester.is_active) {
+        badges += '<span class="badge badge-past">Past</span>';
+    }
+    
+    // Format dates
+    const startDate = new Date(semester.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const endDate = new Date(semester.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    // Calculate duration
+    const start = new Date(semester.start_date);
+    const end = new Date(semester.end_date);
+    const weeks = Math.round((end - start) / (7 * 24 * 60 * 60 * 1000));
+    
+    // Action buttons
+    let actions = '';
+    if (semester.is_archived) {
+        actions = `
+            <button class="btn btn-secondary" onclick="unarchiveSemester(${semester.id})">Restore</button>
+            <button class="btn btn-danger" onclick="confirmDeleteSemester(${semester.id}, '${semester.name}')">Delete</button>
+        `;
+    } else {
+        actions = `
+            <button class="btn btn-secondary" onclick="editSemester(${semester.id})">Edit</button>
+            ${!semester.is_active ? `<button class="btn btn-primary" onclick="setActiveSemester(${semester.id})">Set Active</button>` : ''}
+            <button class="btn btn-secondary" onclick="confirmArchiveSemester(${semester.id}, '${semester.name}')">Archive</button>
+        `;
+    }
+    
+    return `
+        <div class="semester-card ${semester.is_active ? 'active' : ''} ${semester.is_archived ? 'archived' : ''}">
+            <div class="semester-card-header">
+                <div>
+                    <h3 class="semester-name">${semester.name}</h3>
+                    <div class="semester-type">${semester.semester_type.charAt(0).toUpperCase() + semester.semester_type.slice(1)} ${semester.year}</div>
+                </div>
+                <div class="semester-badges">
+                    ${badges}
+                </div>
+            </div>
+            <div class="semester-card-body">
+                <div class="semester-info-row">
+                    <span class="semester-info-label">Start Date</span>
+                    <span class="semester-info-value">${startDate}</span>
+                </div>
+                <div class="semester-info-row">
+                    <span class="semester-info-label">End Date</span>
+                    <span class="semester-info-value">${endDate}</span>
+                </div>
+                <div class="semester-info-row">
+                    <span class="semester-info-label">Duration</span>
+                    <span class="semester-info-value">${weeks} weeks</span>
+                </div>
+                <div class="semester-info-row">
+                    <span class="semester-info-label">Holidays</span>
+                    <span class="semester-info-value">${semester.holidays_count || 0} days</span>
+                </div>
+                
+                <div class="semester-stats">
+                    <div class="semester-stat">
+                        <div class="semester-stat-value">${semester.team_members_count || 0}</div>
+                        <div class="semester-stat-label">Team Members</div>
+                    </div>
+                    <div class="semester-stat">
+                        <div class="semester-stat-value">${semester.shifts_count || 0}</div>
+                        <div class="semester-stat-label">Shifts</div>
+                    </div>
+                    <div class="semester-stat">
+                        <div class="semester-stat-value">${semester.total_hours || 0}</div>
+                        <div class="semester-stat-label">Total Hours</div>
+                    </div>
+                </div>
+            </div>
+            <div class="semester-card-actions">
+                ${actions}
+            </div>
+        </div>
+    `;
+}
+
+function toggleArchivedVisibility() {
+    renderSemesters();
+}
+
+// Modal functions
+function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'Create New Semester';
+    document.getElementById('editSemesterId').value = '';
+    document.getElementById('semesterName').value = '';
+    document.getElementById('semesterType').value = 'fall';
+    document.getElementById('semesterYear').value = new Date().getFullYear();
+    document.getElementById('semesterStartDate').value = '';
+    document.getElementById('semesterEndDate').value = '';
+    document.getElementById('semesterIsActive').checked = false;
+    
+    document.getElementById('semesterModal').style.display = 'flex';
+}
+
+function editSemester(semesterId) {
+    const semester = semesters.find(s => s.id === semesterId);
+    if (!semester) return;
+    
+    document.getElementById('modalTitle').textContent = 'Edit Semester';
+    document.getElementById('editSemesterId').value = semester.id;
+    document.getElementById('semesterName').value = semester.name;
+    document.getElementById('semesterType').value = semester.semester_type;
+    document.getElementById('semesterYear').value = semester.year;
+    document.getElementById('semesterStartDate').value = semester.start_date;
+    document.getElementById('semesterEndDate').value = semester.end_date;
+    document.getElementById('semesterIsActive').checked = semester.is_active;
+    
+    document.getElementById('semesterModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('semesterModal').style.display = 'none';
+}
+
+function saveSemester() {
+    const payload = {
+        id: document.getElementById('editSemesterId').value || null,
+        name: document.getElementById('semesterName').value.trim(),
+        semester_type: document.getElementById('semesterType').value,
+        year: parseInt(document.getElementById('semesterYear').value),
+        start_date: document.getElementById('semesterStartDate').value,
+        end_date: document.getElementById('semesterEndDate').value,
+        is_active: document.getElementById('semesterIsActive').checked
+    };
+    
+    // Validation
+    if (!payload.name) {
+        alert('Please enter a semester name');
+        return;
+    }
+    if (!payload.start_date || !payload.end_date) {
+        alert('Please enter start and end dates');
+        return;
+    }
+    if (payload.start_date >= payload.end_date) {
+        alert('End date must be after start date');
+        return;
+    }
+    
+    fetch('/scheduling/api/semesters/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeModal();
+            loadSemesters();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to save semester');
+    });
+}
+
+function setActiveSemester(semesterId) {
+    fetch('/scheduling/api/semesters/set-active/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ id: semesterId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            loadSemesters();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to set active semester');
+    });
+}
+
+// Confirmation modal functions
+function confirmArchiveSemester(semesterId, name) {
+    pendingAction = { type: 'archive', id: semesterId };
+    
+    document.getElementById('confirmModalTitle').textContent = 'Archive Semester';
+    document.getElementById('confirmIcon').textContent = '📦';
+    document.getElementById('confirmIcon').className = 'confirm-icon warning';
+    document.getElementById('confirmMessage').textContent = `Archive "${name}"?`;
+    document.getElementById('confirmDetails').textContent = 'This semester will be hidden but can be restored later.';
+    document.getElementById('confirmButton').className = 'btn btn-warning';
+    document.getElementById('confirmButton').textContent = 'Archive';
+    
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function confirmDeleteSemester(semesterId, name) {
+    pendingAction = { type: 'delete', id: semesterId };
+    
+    document.getElementById('confirmModalTitle').textContent = 'Delete Semester';
+    document.getElementById('confirmIcon').textContent = '⚠️';
+    document.getElementById('confirmIcon').className = 'confirm-icon warning';
+    document.getElementById('confirmMessage').textContent = `Permanently delete "${name}"?`;
+    document.getElementById('confirmDetails').textContent = 'This action cannot be undone. All associated data will be lost.';
+    document.getElementById('confirmButton').className = 'btn btn-danger';
+    document.getElementById('confirmButton').textContent = 'Delete';
+    
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    pendingAction = null;
+}
+
+function executeConfirmedAction() {
+    if (!pendingAction) return;
+    
+    let url = '';
+    if (pendingAction.type === 'archive') {
+        url = '/scheduling/api/semesters/archive/';
+    } else if (pendingAction.type === 'delete') {
+        url = '/scheduling/api/semesters/delete/';
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ id: pendingAction.id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeConfirmModal();
+            loadSemesters();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to complete action');
+    });
+}
+
+function unarchiveSemester(semesterId) {
+    fetch('/scheduling/api/semesters/unarchive/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ id: semesterId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            loadSemesters();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to restore semester');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+{% endblock %}

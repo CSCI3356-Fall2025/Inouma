@@ -1,0 +1,1519 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Training Management - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'machine_management' %}" class="breadcrumb-item">Machine Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Training Management</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Filters */
+.filters-bar {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.search-box input {
+    width: 100%;
+}
+
+/* Cards Grid */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.training-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.15s;
+}
+
+.training-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.training-card.selected {
+    border-color: var(--sunglow);
+    box-shadow: 0 0 0 2px rgba(252,201,49,0.3);
+}
+
+.card-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.card-header-left {
+    flex: 1;
+}
+
+.card-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+}
+
+.card-subtitle {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.card-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-description {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.meta-tag.level-1 { background: #d1fae5; color: #065f46; }
+.meta-tag.level-2 { background: #fef3c7; color: #92400e; }
+.meta-tag.level-3 { background: #fee2e2; color: #dc2626; }
+.meta-tag.category { background: #e0e7ff; color: #3730a3; }
+.meta-tag.duration { background: #f3f4f6; color: #374151; }
+.meta-tag.status-archived { background: #f3f4f6; color: #6b7280; }
+.meta-tag.status-draft { background: #fef3c7; color: #92400e; }
+.meta-tag.users { background: #dbeafe; color: #1e40af; }
+
+.machine-types-section {
+    margin-top: 0.75rem;
+}
+
+.machine-types-label {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 0.35rem;
+}
+
+.machine-types-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.machine-type-chip {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #555;
+}
+
+.card-footer {
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Bulk Action Bar */
+.bulk-bar {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gunmetal);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 100;
+}
+
+.bulk-bar.show {
+    display: flex;
+}
+
+.bulk-bar select {
+    background: white;
+    border: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #888;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--cinnabar);
+}
+
+.modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Form */
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-section h3 {
+    font-size: 0.85rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.35rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--sunglow);
+    box-shadow: 0 0 0 3px rgba(252,201,49,0.1);
+}
+
+.form-hint {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 0.25rem;
+}
+
+/* Machine Type Selector */
+.machine-type-selector {
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.machine-type-selector.empty {
+    padding: 1rem;
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.machine-type-option {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.machine-type-option:last-child {
+    border-bottom: none;
+}
+
+.machine-type-option:hover {
+    background: #f8f9fa;
+}
+
+.machine-type-option input {
+    margin: 0;
+}
+
+.machine-type-option label {
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+.machine-type-count {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+/* Prerequisites Selector */
+.prereq-search {
+    margin-bottom: 0.75rem;
+}
+
+.prereq-search input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.prereq-list {
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.prereq-item {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.prereq-item:last-child {
+    border-bottom: none;
+}
+
+.prereq-item:hover {
+    background: #f8f9fa;
+}
+
+.prereq-item.hidden {
+    display: none;
+}
+
+.prereq-item input {
+    margin: 0;
+}
+
+.prereq-item-info {
+    flex: 1;
+}
+
+.prereq-item-name {
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+}
+
+.prereq-item-meta {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.prereq-auto-hint {
+    font-size: 0.75rem;
+    color: var(--keppel);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Duplicate warning */
+.duplicate-warning {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #92400e;
+    display: none;
+}
+
+.duplicate-warning.show {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>📚 Training Management</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Create and manage training requirements for machines</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+            ➕ Create Training
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row" id="statsRow">
+    <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total Trainings</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="statActive">0</div>
+        <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="statLevel1">0</div>
+        <div class="stat-label">Level 1</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="statLevel2">0</div>
+        <div class="stat-label">Level 2</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="statLevel3">0</div>
+        <div class="stat-label">Level 3</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="statArchived">0</div>
+        <div class="stat-label">Archived</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="filter-group">
+        <label for="filterStatus">Status:</label>
+        <select id="filterStatus" onchange="applyFilters()">
+            <option value="">All</option>
+            <option value="active" selected>Active</option>
+            <option value="draft">Draft</option>
+            <option value="archived">Archived</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="filterCategory">Category:</label>
+        <select id="filterCategory" onchange="applyFilters()">
+            <option value="">All Categories</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="filterLevel">Level:</label>
+        <select id="filterLevel" onchange="applyFilters()">
+            <option value="">All Levels</option>
+            <option value="1">Level 1 - Introduction</option>
+            <option value="2">Level 2 - Intermediate</option>
+            <option value="3">Level 3 - Advanced</option>
+        </select>
+    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Search trainings..." oninput="applyFilters()">
+    </div>
+</div>
+
+<!-- Training Cards -->
+<div id="trainingsContainer">
+    <div class="cards-grid" id="cardsGrid"></div>
+    <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-state-icon">📚</div>
+        <h2>No Trainings Found</h2>
+        <p>Create your first training to get started.</p>
+        <button class="btn btn-primary" onclick="openCreateModal()">➕ Create Training</button>
+    </div>
+</div>
+
+<!-- Bulk Action Bar -->
+<div class="bulk-bar" id="bulkBar">
+    <span id="selectedCount">0 selected</span>
+    <select id="bulkAction">
+        <option value="">Choose action...</option>
+        <option value="archive">Archive Selected</option>
+        <option value="restore">Restore Selected</option>
+        <option value="delete">Delete Selected</option>
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="executeBulkAction()">Apply</button>
+    <button class="btn btn-secondary btn-sm" onclick="clearSelection()">Cancel</button>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal-overlay" id="trainingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Create Training</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="trainingForm">
+                <input type="hidden" id="trainingId">
+                
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="trainingName">Training Name *</label>
+                            <input type="text" id="trainingName" required placeholder="e.g., Introduction to 3D Printing">
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingCategory">Category *</label>
+                            <select id="trainingCategory" required onchange="onCategoryChange()">
+                                <option value="">Select category...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingLevel">Level *</label>
+                            <select id="trainingLevel" required onchange="onLevelChange()">
+                                <option value="1">Level 1 - Introduction</option>
+                                <option value="2">Level 2 - Intermediate</option>
+                                <option value="3">Level 3 - Advanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <div class="duplicate-warning" id="duplicateWarning">
+                                ⚠️ A training with this category and level already exists.
+                            </div>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="trainingDescription">Description</label>
+                            <textarea id="trainingDescription" placeholder="Describe what this training covers..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Machine Types -->
+                <div class="form-section">
+                    <h3>Applicable Machine Types</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">
+                        Select which machine types this training qualifies users to operate. Only machines from the selected category are shown.
+                    </p>
+                    <div class="machine-type-selector" id="machineTypeSelector">
+                        <div class="empty">Select a category first</div>
+                    </div>
+                </div>
+                
+                <!-- Prerequisites -->
+                <div class="form-section">
+                    <h3>Prerequisites</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">
+                        Select trainings that must be completed before this one. Lower-level trainings in the same category are auto-selected.
+                    </p>
+                    <div class="prereq-search">
+                        <input type="text" id="prereqSearch" placeholder="🔍 Search trainings..." oninput="filterPrerequisites()">
+                    </div>
+                    <div class="prereq-list" id="prereqList">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div class="prereq-auto-hint" id="prereqAutoHint"></div>
+                </div>
+                
+                <!-- Details -->
+                <div class="form-section">
+                    <h3>Training Details</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="trainingDuration">Duration (minutes)</label>
+                            <input type="number" id="trainingDuration" value="60" min="15" step="15">
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingMaxParticipants">Max Participants</label>
+                            <input type="number" id="trainingMaxParticipants" value="1" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingMaterialsUrl">Materials URL</label>
+                            <input type="url" id="trainingMaterialsUrl" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingVideoUrl">Video URL</label>
+                            <input type="url" id="trainingVideoUrl" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="trainingStatus">Status</label>
+                            <select id="trainingStatus">
+                                <option value="active">Active</option>
+                                <option value="draft">Draft</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" id="saveBtn" onclick="saveTraining()">Save Training</button>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal-overlay" id="viewModal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2 id="viewModalTitle">Training Details</h2>
+            <button class="modal-close" onclick="closeViewModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="viewModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+            <button class="btn btn-primary" id="viewModalEditBtn">✏️ Edit</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// State
+let allTrainings = [];
+let filteredTrainings = [];
+let selectedIds = new Set();
+let categories = [];
+let allMachineTypes = [];
+let machineTypesByCategory = {};
+let categoryInfo = {};
+let editingTrainingId = null;
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadCategories();
+    await loadMachineTypes();
+    await loadTrainings();
+});
+
+// API Functions
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories/');
+        const data = await response.json();
+        categories = data.categories || [];
+        populateCategoryDropdowns();
+    } catch (err) {
+        console.error('Failed to load categories:', err);
+    }
+}
+
+async function loadMachineTypes() {
+    try {
+        const response = await fetch('/api/existing-machine-types/');
+        const data = await response.json();
+        allMachineTypes = data.machine_types || [];
+        machineTypesByCategory = data.by_category || {};
+        categoryInfo = data.category_info || {};
+    } catch (err) {
+        console.error('Failed to load machine types:', err);
+    }
+}
+
+async function loadTrainings() {
+    try {
+        const response = await fetch('/api/trainings/?status=all');
+        const data = await response.json();
+        allTrainings = data.trainings || [];
+        applyFilters();
+        updateStats();
+    } catch (err) {
+        console.error('Failed to load trainings:', err);
+        showToast('Failed to load trainings', 'error');
+    }
+}
+
+function populateCategoryDropdowns() {
+    const filterSelect = document.getElementById('filterCategory');
+    const formSelect = document.getElementById('trainingCategory');
+    
+    // Clear and populate filter dropdown
+    filterSelect.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(cat => {
+        const icon = cat.icon ? cat.icon + ' ' : '';
+        filterSelect.innerHTML += `<option value="${cat.name}">${icon}${cat.name}</option>`;
+    });
+    
+    // Clear and populate form dropdown
+    formSelect.innerHTML = '<option value="">Select category...</option>';
+    categories.forEach(cat => {
+        const icon = cat.icon ? cat.icon + ' ' : '';
+        formSelect.innerHTML += `<option value="${cat.name}">${icon}${cat.name}</option>`;
+    });
+}
+
+function onCategoryChange() {
+    const category = document.getElementById('trainingCategory').value;
+    updateMachineTypeSelector(category);
+    updatePrerequisitesForCategory();
+    checkDuplicate();
+}
+
+function onLevelChange() {
+    updatePrerequisitesForCategory();
+    checkDuplicate();
+}
+
+function updateMachineTypeSelector(category) {
+    const container = document.getElementById('machineTypeSelector');
+    
+    if (!category) {
+        container.innerHTML = '<div class="empty">Select a category first</div>';
+        container.classList.add('empty');
+        return;
+    }
+    
+    const types = machineTypesByCategory[category] || [];
+    
+    if (types.length === 0) {
+        container.innerHTML = '<div class="empty">No machines found in this category</div>';
+        container.classList.add('empty');
+        return;
+    }
+    
+    container.classList.remove('empty');
+    
+    let html = '';
+    types.forEach(type => {
+        const id = `mt_${type.name}`.replace(/[^a-zA-Z0-9]/g, '_');
+        html += `
+            <div class="machine-type-option">
+                <input type="checkbox" id="${id}" value="${type.name}" checked>
+                <label for="${id}">${type.name}</label>
+                <span class="machine-type-count">(${type.count} machines)</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function updatePrerequisitesForCategory() {
+    const category = document.getElementById('trainingCategory').value;
+    const level = parseInt(document.getElementById('trainingLevel').value);
+    const container = document.getElementById('prereqList');
+    const hintEl = document.getElementById('prereqAutoHint');
+    
+    // Get all active trainings except the one being edited
+    const availableTrainings = allTrainings.filter(t => 
+        t.status === 'active' && t.id !== editingTrainingId
+    );
+    
+    if (availableTrainings.length === 0) {
+        container.innerHTML = '<div style="padding: 1rem; text-align: center; color: #888;">No other trainings available</div>';
+        hintEl.textContent = '';
+        return;
+    }
+    
+    // Determine which should be auto-selected (same category, lower level)
+    const autoSelectIds = new Set();
+    if (category && level > 1) {
+        availableTrainings.forEach(t => {
+            if (t.category === category && t.level < level) {
+                autoSelectIds.add(t.id);
+            }
+        });
+    }
+    
+    // Sort: same category first, then by level, then by name
+    const sorted = [...availableTrainings].sort((a, b) => {
+        const aSameCategory = a.category === category ? 0 : 1;
+        const bSameCategory = b.category === category ? 0 : 1;
+        if (aSameCategory !== bSameCategory) return aSameCategory - bSameCategory;
+        if (a.level !== b.level) return a.level - b.level;
+        return a.name.localeCompare(b.name);
+    });
+    
+    let html = '';
+    sorted.forEach(t => {
+        const catInfo = categoryInfo[t.category] || {};
+        const icon = catInfo.icon || '';
+        const isAutoSelected = autoSelectIds.has(t.id);
+        
+        html += `
+            <div class="prereq-item" data-name="${t.name.toLowerCase()}" data-category="${t.category.toLowerCase()}">
+                <input type="checkbox" id="prereq_${t.id}" value="${t.id}" ${isAutoSelected ? 'checked' : ''}>
+                <div class="prereq-item-info">
+                    <div class="prereq-item-name">${escapeHtml(t.name)}</div>
+                    <div class="prereq-item-meta">${icon} ${t.category} • Level ${t.level}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Update hint
+    if (autoSelectIds.size > 0) {
+        hintEl.textContent = `✓ ${autoSelectIds.size} prerequisite(s) auto-selected based on category and level`;
+    } else if (category && level === 1) {
+        hintEl.textContent = 'Level 1 trainings typically have no prerequisites';
+    } else {
+        hintEl.textContent = '';
+    }
+}
+
+function filterPrerequisites() {
+    const search = document.getElementById('prereqSearch').value.toLowerCase();
+    const items = document.querySelectorAll('.prereq-item');
+    
+    items.forEach(item => {
+        const name = item.dataset.name;
+        const category = item.dataset.category;
+        const matches = name.includes(search) || category.includes(search);
+        item.classList.toggle('hidden', !matches);
+    });
+}
+
+function checkDuplicate() {
+    const category = document.getElementById('trainingCategory').value;
+    const level = parseInt(document.getElementById('trainingLevel').value);
+    const warningEl = document.getElementById('duplicateWarning');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    if (!category) {
+        warningEl.classList.remove('show');
+        saveBtn.disabled = false;
+        return;
+    }
+    
+    // Check if a training with this category and level already exists
+    const duplicate = allTrainings.find(t => 
+        t.category === category && 
+        t.level === level && 
+        t.status !== 'archived' &&
+        t.id !== editingTrainingId
+    );
+    
+    if (duplicate) {
+        warningEl.textContent = `⚠️ A training already exists for ${category} Level ${level}: "${duplicate.name}"`;
+        warningEl.classList.add('show');
+        saveBtn.disabled = true;
+    } else {
+        warningEl.classList.remove('show');
+        saveBtn.disabled = false;
+    }
+}
+
+function applyFilters() {
+    const status = document.getElementById('filterStatus').value;
+    const category = document.getElementById('filterCategory').value;
+    const level = document.getElementById('filterLevel').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    
+    filteredTrainings = allTrainings.filter(t => {
+        if (status && t.status !== status) return false;
+        if (category && t.category !== category) return false;
+        if (level && t.level !== parseInt(level)) return false;
+        if (search) {
+            const searchStr = `${t.name} ${t.description} ${t.category}`.toLowerCase();
+            if (!searchStr.includes(search)) return false;
+        }
+        return true;
+    });
+    
+    renderCards();
+}
+
+function updateStats() {
+    const active = allTrainings.filter(t => t.status === 'active');
+    const archived = allTrainings.filter(t => t.status === 'archived');
+    
+    document.getElementById('statTotal').textContent = allTrainings.length;
+    document.getElementById('statActive').textContent = active.length;
+    document.getElementById('statLevel1').textContent = active.filter(t => t.level === 1).length;
+    document.getElementById('statLevel2').textContent = active.filter(t => t.level === 2).length;
+    document.getElementById('statLevel3').textContent = active.filter(t => t.level === 3).length;
+    document.getElementById('statArchived').textContent = archived.length;
+}
+
+function renderCards() {
+    const grid = document.getElementById('cardsGrid');
+    const empty = document.getElementById('emptyState');
+    
+    if (filteredTrainings.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    
+    grid.innerHTML = filteredTrainings.map(t => {
+        const levelClass = `level-${t.level}`;
+        const isSelected = selectedIds.has(t.id);
+        const catInfo = categoryInfo[t.category] || {};
+        const catIcon = catInfo.icon || '';
+        
+        const machineTypesHtml = t.machine_type_names && t.machine_type_names.length > 0 
+            ? `<div class="machine-types-section">
+                <div class="machine-types-label">Applies to:</div>
+                <div class="machine-types-list">
+                    ${t.machine_type_names.slice(0, 3).map(mt => `<span class="machine-type-chip">${mt}</span>`).join('')}
+                    ${t.machine_type_names.length > 3 ? `<span class="machine-type-chip">+${t.machine_type_names.length - 3} more</span>` : ''}
+                </div>
+               </div>`
+            : '';
+        
+        return `
+            <div class="training-card ${isSelected ? 'selected' : ''}" data-id="${t.id}">
+                <div class="card-header">
+                    <div class="card-header-left">
+                        <h3 class="card-title">${escapeHtml(t.name)}</h3>
+                        <div class="card-subtitle">${catIcon} ${t.category}</div>
+                    </div>
+                    <input type="checkbox" class="card-checkbox" 
+                           ${isSelected ? 'checked' : ''} 
+                           onchange="toggleSelection(${t.id})">
+                </div>
+                <div class="card-body">
+                    ${t.description ? `<p class="card-description">${escapeHtml(t.description)}</p>` : ''}
+                    <div class="card-meta">
+                        <span class="meta-tag ${levelClass}">Level ${t.level}</span>
+                        <span class="meta-tag duration">⏱️ ${t.duration_minutes} min</span>
+                        ${t.user_count > 0 ? `<span class="meta-tag users">👥 ${t.user_count} trained</span>` : ''}
+                        ${t.status !== 'active' ? `<span class="meta-tag status-${t.status}">${t.status}</span>` : ''}
+                    </div>
+                    ${machineTypesHtml}
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary btn-sm" onclick="viewTraining(${t.id})">View</button>
+                    <button class="btn btn-primary btn-sm" onclick="editTraining(${t.id})">Edit</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Selection
+function toggleSelection(id) {
+    if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+    } else {
+        selectedIds.add(id);
+    }
+    updateBulkBar();
+    renderCards();
+}
+
+function clearSelection() {
+    selectedIds.clear();
+    updateBulkBar();
+    renderCards();
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('bulkBar');
+    const count = document.getElementById('selectedCount');
+    
+    if (selectedIds.size > 0) {
+        bar.classList.add('show');
+        count.textContent = `${selectedIds.size} selected`;
+    } else {
+        bar.classList.remove('show');
+    }
+}
+
+async function executeBulkAction() {
+    const action = document.getElementById('bulkAction').value;
+    if (!action) {
+        showToast('Please select an action', 'error');
+        return;
+    }
+    
+    if (action === 'delete' && !confirm('Are you sure you want to permanently delete the selected trainings?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/trainings/bulk/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                training_ids: Array.from(selectedIds),
+                action: action,
+            }),
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            clearSelection();
+            await loadTrainings();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to perform action', 'error');
+    }
+}
+
+// Modal Functions
+function openCreateModal() {
+    editingTrainingId = null;
+    document.getElementById('modalTitle').textContent = 'Create Training';
+    document.getElementById('trainingForm').reset();
+    document.getElementById('trainingId').value = '';
+    document.getElementById('trainingStatus').value = 'active';
+    document.getElementById('trainingMaxParticipants').value = '1';
+    document.getElementById('duplicateWarning').classList.remove('show');
+    document.getElementById('saveBtn').disabled = false;
+    
+    // Reset machine type selector
+    document.getElementById('machineTypeSelector').innerHTML = '<div class="empty">Select a category first</div>';
+    document.getElementById('machineTypeSelector').classList.add('empty');
+    
+    // Reset prerequisites
+    updatePrerequisitesForCategory();
+    document.getElementById('prereqSearch').value = '';
+    
+    document.getElementById('trainingModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('trainingModal').classList.remove('active');
+    editingTrainingId = null;
+}
+
+function editTraining(id) {
+    const training = allTrainings.find(t => t.id === id);
+    if (!training) return;
+    
+    editingTrainingId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Training';
+    document.getElementById('trainingId').value = training.id;
+    document.getElementById('trainingName').value = training.name;
+    document.getElementById('trainingCategory').value = training.category;
+    document.getElementById('trainingLevel').value = training.level;
+    document.getElementById('trainingDescription').value = training.description || '';
+    document.getElementById('trainingDuration').value = training.duration_minutes;
+    document.getElementById('trainingMaxParticipants').value = training.max_participants;
+    document.getElementById('trainingMaterialsUrl').value = training.materials_url || '';
+    document.getElementById('trainingVideoUrl').value = training.video_url || '';
+    document.getElementById('trainingStatus').value = training.status;
+    document.getElementById('duplicateWarning').classList.remove('show');
+    document.getElementById('saveBtn').disabled = false;
+    
+    // Update machine type selector for the category
+    updateMachineTypeSelector(training.category);
+    
+    // Set machine type checkboxes
+    setTimeout(() => {
+        document.querySelectorAll('#machineTypeSelector input[type="checkbox"]').forEach(cb => {
+            cb.checked = training.machine_type_names && training.machine_type_names.includes(cb.value);
+        });
+    }, 0);
+    
+    // Update prerequisites list
+    updatePrerequisitesForCategory();
+    
+    // Set prerequisite checkboxes (after list is built)
+    setTimeout(() => {
+        document.querySelectorAll('#prereqList input[type="checkbox"]').forEach(cb => {
+            cb.checked = training.prerequisites && training.prerequisites.some(p => p.id === parseInt(cb.value));
+        });
+    }, 0);
+    
+    document.getElementById('prereqSearch').value = '';
+    
+    document.getElementById('trainingModal').classList.add('active');
+}
+
+async function saveTraining() {
+    const id = document.getElementById('trainingId').value;
+    const name = document.getElementById('trainingName').value.trim();
+    const category = document.getElementById('trainingCategory').value;
+    const level = parseInt(document.getElementById('trainingLevel').value);
+    
+    if (!name) {
+        showToast('Training name is required', 'error');
+        return;
+    }
+    if (!category) {
+        showToast('Category is required', 'error');
+        return;
+    }
+    
+    // Check for duplicate
+    const duplicate = allTrainings.find(t => 
+        t.category === category && 
+        t.level === level && 
+        t.status !== 'archived' &&
+        t.id !== editingTrainingId
+    );
+    
+    if (duplicate) {
+        showToast(`A training already exists for ${category} Level ${level}`, 'error');
+        return;
+    }
+    
+    // Get selected machine types
+    const machineTypeNames = [];
+    document.querySelectorAll('#machineTypeSelector input[type="checkbox"]:checked').forEach(cb => {
+        machineTypeNames.push(cb.value);
+    });
+    
+    // Get selected prerequisites
+    const prerequisiteIds = [];
+    document.querySelectorAll('#prereqList input[type="checkbox"]:checked').forEach(cb => {
+        prerequisiteIds.push(parseInt(cb.value));
+    });
+    
+    const payload = {
+        name: name,
+        description: document.getElementById('trainingDescription').value,
+        category: category,
+        level: level,
+        machine_type_names: machineTypeNames,
+        duration_minutes: parseInt(document.getElementById('trainingDuration').value) || 60,
+        max_participants: parseInt(document.getElementById('trainingMaxParticipants').value) || 1,
+        materials_url: document.getElementById('trainingMaterialsUrl').value,
+        video_url: document.getElementById('trainingVideoUrl').value,
+        status: document.getElementById('trainingStatus').value,
+        prerequisite_ids: prerequisiteIds,
+    };
+    
+    const url = id 
+        ? `/api/trainings/${id}/update/`
+        : '/api/trainings/create/';
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify(payload),
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message || 'Training saved successfully', 'success');
+            closeModal();
+            await loadTrainings();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to save training', 'error');
+    }
+}
+
+// View Modal
+function viewTraining(id) {
+    const training = allTrainings.find(t => t.id === id);
+    if (!training) return;
+    
+    const catInfo = categoryInfo[training.category] || {};
+    const catIcon = catInfo.icon || '';
+    
+    const levelLabels = {1: 'Introduction', 2: 'Intermediate', 3: 'Advanced'};
+    
+    let html = `
+        <div style="margin-bottom: 1.5rem;">
+            <span class="meta-tag level-${training.level}" style="font-size: 0.9rem; padding: 0.4rem 0.75rem;">
+                Level ${training.level} - ${levelLabels[training.level]}
+            </span>
+            <span class="meta-tag category" style="font-size: 0.9rem; padding: 0.4rem 0.75rem; margin-left: 0.5rem;">
+                ${catIcon} ${training.category}
+            </span>
+        </div>
+        
+        ${training.description ? `<p style="color: #666; margin-bottom: 1.5rem;">${escapeHtml(training.description)}</p>` : ''}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <strong style="color: #666; font-size: 0.85rem;">Duration</strong>
+                <div>${training.duration_minutes} minutes</div>
+            </div>
+            <div>
+                <strong style="color: #666; font-size: 0.85rem;">Max Participants</strong>
+                <div>${training.max_participants}</div>
+            </div>
+            <div>
+                <strong style="color: #666; font-size: 0.85rem;">Users Trained</strong>
+                <div>${training.user_count || 0}</div>
+            </div>
+            <div>
+                <strong style="color: #666; font-size: 0.85rem;">Status</strong>
+                <div style="text-transform: capitalize;">${training.status}</div>
+            </div>
+        </div>
+    `;
+    
+    if (training.machine_type_names && training.machine_type_names.length > 0) {
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <strong style="color: #666; font-size: 0.85rem;">Applicable Machine Types</strong>
+                <div class="machine-types-list" style="margin-top: 0.5rem;">
+                    ${training.machine_type_names.map(mt => `<span class="machine-type-chip">${mt}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    if (training.prerequisites && training.prerequisites.length > 0) {
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <strong style="color: #666; font-size: 0.85rem;">Prerequisites</strong>
+                <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem;">
+                    ${training.prerequisites.map(p => `<li>${escapeHtml(p.name)} (Level ${p.level})</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (training.materials_url || training.video_url) {
+        html += `<div style="margin-bottom: 1rem;"><strong style="color: #666; font-size: 0.85rem;">Resources</strong></div>`;
+        if (training.materials_url) {
+            html += `<a href="${training.materials_url}" target="_blank" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">📄 Materials</a>`;
+        }
+        if (training.video_url) {
+            html += `<a href="${training.video_url}" target="_blank" class="btn btn-secondary btn-sm">🎥 Video</a>`;
+        }
+    }
+    
+    document.getElementById('viewModalTitle').textContent = training.name;
+    document.getElementById('viewModalBody').innerHTML = html;
+    document.getElementById('viewModalEditBtn').onclick = () => {
+        closeViewModal();
+        editTraining(id);
+    };
+    document.getElementById('viewModal').classList.add('active');
+}
+
+function closeViewModal() {
+    document.getElementById('viewModal').classList.remove('active');
+}
+
+// Utilities
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('trainingModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+document.getElementById('viewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeViewModal();
+});
+
+// Close modals on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+        closeViewModal();
+    }
+});
+</script>
+
+{% endblock %}

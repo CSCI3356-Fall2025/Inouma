@@ -1,0 +1,774 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Maintenance Queue - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'reservations:staff_reservations_hub' %}" class="breadcrumb-item">Reservations Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Maintenance Queue</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+.tab-badge {
+    background: var(--cinnabar);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-card.critical {
+    border-color: var(--cinnabar);
+    background: #fef2f2;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.stat-card.critical .stat-value {
+    color: var(--cinnabar);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Maintenance Card */
+.maintenance-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.maintenance-card.priority-critical {
+    border-left: 4px solid var(--cinnabar);
+}
+
+.maintenance-card.priority-high {
+    border-left: 4px solid #f59e0b;
+}
+
+.maintenance-card.priority-medium {
+    border-left: 4px solid var(--sunglow);
+}
+
+.maintenance-card.priority-low {
+    border-left: 4px solid #94a3b8;
+}
+
+.maintenance-header {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+}
+
+.maintenance-info h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.maintenance-meta {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.maintenance-issue {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+}
+
+.maintenance-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+/* Priority Badge */
+.priority-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.priority-badge.critical {
+    background: #fef2f2;
+    color: var(--cinnabar);
+}
+
+.priority-badge.high {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.priority-badge.medium {
+    background: #fefce8;
+    color: #a16207;
+}
+
+.priority-badge.low {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge.reported {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-badge.acknowledged {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.in_progress {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.resolved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Offline indicator */
+.offline-badge {
+    background: var(--cinnabar);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.btn-success:hover {
+    background: #a7f3d0;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🔧 Maintenance Queue</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage machine maintenance issues</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card critical">
+            <div class="stat-value" id="statCritical">0</div>
+            <div class="stat-label">Critical Issues</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statOpen">0</div>
+            <div class="stat-label">Open Issues</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statOffline">0</div>
+            <div class="stat-label">Machines Offline</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statResolved">0</div>
+            <div class="stat-label">Resolved Today</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="open">
+            Open <span class="tab-badge" id="openCount">0</span>
+        </button>
+        <button class="tab" data-tab="all">All Issues</button>
+        <button class="tab" data-tab="resolved">Resolved</button>
+    </div>
+
+    <!-- Maintenance List -->
+    <div id="maintenanceContainer"></div>
+</div>
+
+<!-- Resolve Modal -->
+<div class="modal-overlay" id="resolveModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Resolve Maintenance Issue</h2>
+        </div>
+        <div class="modal-body">
+            <p id="resolveDetails"></p>
+            <div class="form-group">
+                <label>Resolution Notes</label>
+                <textarea id="resolutionNotes" placeholder="Describe what was done to fix the issue..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeResolveModal()">Cancel</button>
+            <button class="btn btn-success" onclick="confirmResolve()">Mark Resolved</button>
+        </div>
+    </div>
+</div>
+
+<!-- Take Offline Modal -->
+<div class="modal-overlay" id="offlineModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚠️ Take Machine Offline</h2>
+        </div>
+        <div class="modal-body">
+            <p id="offlineDetails"></p>
+            <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <strong>Warning:</strong> Taking this machine offline will cancel all upcoming reservations for this machine.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeOfflineModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmOffline()">Take Offline</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allMaintenance = [];
+let currentTab = 'open';
+let resolvingId = null;
+let offlineId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadMaintenance();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.dataset.tab;
+            renderMaintenance();
+        });
+    });
+});
+
+async function loadMaintenance() {
+    try {
+        const response = await fetch('/reservations/api/admin/maintenance/?status=all');
+        const data = await response.json();
+        
+        if (data.success) {
+            allMaintenance = data.maintenance;
+            updateStats();
+            renderMaintenance();
+        }
+    } catch (err) {
+        console.error('Error loading maintenance:', err);
+        showToast('Failed to load maintenance queue', 'error');
+    }
+}
+
+function updateStats() {
+    const open = allMaintenance.filter(m => m.status !== 'resolved');
+    const critical = open.filter(m => m.priority === 'critical');
+    const offline = allMaintenance.filter(m => m.machine_offline);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const resolvedToday = allMaintenance.filter(m => 
+        m.status === 'resolved' && m.resolved_at && m.resolved_at.startsWith(today)
+    );
+    
+    document.getElementById('statCritical').textContent = critical.length;
+    document.getElementById('statOpen').textContent = open.length;
+    document.getElementById('statOffline').textContent = offline.length;
+    document.getElementById('statResolved').textContent = resolvedToday.length;
+    document.getElementById('openCount').textContent = open.length;
+}
+
+function renderMaintenance() {
+    const container = document.getElementById('maintenanceContainer');
+    
+    let filtered = [];
+    
+    if (currentTab === 'open') {
+        filtered = allMaintenance.filter(m => m.status !== 'resolved');
+    } else if (currentTab === 'resolved') {
+        filtered = allMaintenance.filter(m => m.status === 'resolved');
+    } else {
+        filtered = allMaintenance;
+    }
+    
+    // Sort by priority then date
+    const priorityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+    filtered.sort((a, b) => {
+        if (a.status === 'resolved' && b.status !== 'resolved') return 1;
+        if (a.status !== 'resolved' && b.status === 'resolved') return -1;
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }
+        return new Date(b.reported_at) - new Date(a.reported_at);
+    });
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">✅</div>
+                <h3>${currentTab === 'open' ? 'No Open Issues' : 'No Issues Found'}</h3>
+                <p>${currentTab === 'open' ? 'All maintenance issues have been resolved!' : 'No maintenance issues match this filter.'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map(m => {
+        const reportedDate = new Date(m.reported_at);
+        const timeAgo = getTimeAgo(reportedDate);
+        
+        return `
+            <div class="maintenance-card priority-${m.priority}">
+                <div class="maintenance-header">
+                    <div class="maintenance-info">
+                        <h3>
+                            ${escapeHtml(m.machine_name)}
+                            ${m.machine_offline ? '<span class="offline-badge">OFFLINE</span>' : ''}
+                        </h3>
+                        <div class="maintenance-meta">
+                            ${escapeHtml(m.machine_type)} • ${escapeHtml(m.location || 'No location')}
+                            <br>
+                            Reported by ${escapeHtml(m.reported_by)} • ${timeAgo}
+                        </div>
+                        <div class="maintenance-issue">
+                            ${escapeHtml(m.issue)}
+                        </div>
+                        ${m.resolution_notes ? `
+                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: #d1fae5; border-radius: 6px; font-size: 0.9rem;">
+                                <strong>Resolution:</strong> ${escapeHtml(m.resolution_notes)}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="maintenance-actions">
+                        <span class="priority-badge ${m.priority}">${m.priority}</span>
+                        <span class="status-badge ${m.status}">${formatStatus(m.status)}</span>
+                        ${m.status !== 'resolved' ? `
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                                ${!m.machine_offline ? `
+                                    <button class="btn btn-danger btn-sm" onclick="openOfflineModal(${m.id}, '${escapeHtml(m.machine_name)}')">
+                                        Take Offline
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-success btn-sm" onclick="openResolveModal(${m.id}, '${escapeHtml(m.machine_name)}')">
+                                    Resolve
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatStatus(status) {
+    const labels = {
+        'reported': 'Reported',
+        'acknowledged': 'Acknowledged',
+        'in_progress': 'In Progress',
+        'resolved': 'Resolved'
+    };
+    return labels[status] || status;
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
+}
+
+// Resolve Modal
+function openResolveModal(id, machineName) {
+    resolvingId = id;
+    document.getElementById('resolveDetails').textContent = `Resolving issue for: ${machineName}`;
+    document.getElementById('resolutionNotes').value = '';
+    document.getElementById('resolveModal').classList.add('active');
+}
+
+function closeResolveModal() {
+    document.getElementById('resolveModal').classList.remove('active');
+    resolvingId = null;
+}
+
+async function confirmResolve() {
+    if (!resolvingId) return;
+    
+    const notes = document.getElementById('resolutionNotes').value;
+    
+    try {
+        const formData = new FormData();
+        formData.append('resolution_notes', notes);
+        
+        const response = await fetch(`/reservations/api/admin/maintenance/${resolvingId}/resolve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeResolveModal();
+            await loadMaintenance();
+        } else {
+            showToast(data.error || 'Failed to resolve', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to resolve issue', 'error');
+    }
+}
+
+// Offline Modal
+function openOfflineModal(id, machineName) {
+    offlineId = id;
+    document.getElementById('offlineDetails').textContent = `Take "${machineName}" offline for maintenance?`;
+    document.getElementById('offlineModal').classList.add('active');
+}
+
+function closeOfflineModal() {
+    document.getElementById('offlineModal').classList.remove('active');
+    offlineId = null;
+}
+
+async function confirmOffline() {
+    if (!offlineId) return;
+    
+    try {
+        const response = await fetch(`/reservations/api/admin/maintenance/${offlineId}/offline/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeOfflineModal();
+            await loadMaintenance();
+        } else {
+            showToast(data.error || 'Failed to take offline', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to take machine offline', 'error');
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('resolveModal').addEventListener('click', function(e) {
+    if (e.target === this) closeResolveModal();
+});
+document.getElementById('offlineModal').addEventListener('click', function(e) {
+    if (e.target === this) closeOfflineModal();
+});
+</script>
+{% endblock %}

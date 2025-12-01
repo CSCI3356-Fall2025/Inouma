@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 from accounts.models import Certification, TrainingReservation
 from machines.models import Machine
-from scheduling.models import Reservation
+# from scheduling.models import Reservation
 
 
 
@@ -45,7 +45,6 @@ def staff_dashboard(request):
 @login_required
 def user_dashboard(request):
     certifications = Certification.objects.filter(user=request.user)
-
     training_sessions = TrainingReservation.objects.filter(
         student=request.user
     ).order_by('start_time')
@@ -77,19 +76,19 @@ def create_reservation_api(request, machine_id):
             status=400,
         )
 
-    reservation = Reservation.objects.create(
-        machine=machine,
-        user=request.user,
-        reservation_date=reservation_date,
-        start_time=start_time,
-        end_time=end_time,
-        purpose=purpose,
-    )
+    # reservation = Reservation.objects.create(
+    #     machine=machine,
+    #     user=request.user,
+    #     reservation_date=reservation_date,
+    #     start_time=start_time,
+    #     end_time=end_time,
+    #     purpose=purpose,
+    # )
 
     return JsonResponse(
         {
             "success": True,
             "message": "Reservation created.",
-            "reservation_id": reservation.id,
+            # "reservation_id": reservation.id,
         }
     )

@@ -1,0 +1,1545 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Configure Semester - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Configure Semester</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+/* Tabs */
+.config-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--timberwolf);
+    margin-bottom: 1.5rem;
+}
+
+.config-tab {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.config-tab:hover {
+    color: var(--gunmetal);
+    background: #f9f9f9;
+}
+
+.config-tab.active {
+    color: var(--gunmetal);
+    border-bottom-color: var(--sunglow);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Weekly Grid for Operating Hours */
+.weekly-grid {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    gap: 1px;
+    background: var(--timberwolf);
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.grid-header {
+    background: var(--gunmetal);
+    color: white;
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.grid-cell {
+    background: white;
+    padding: 0.5rem;
+    min-height: 80px;
+}
+
+.time-label {
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.day-config {
+    padding: 1rem;
+    background: white;
+}
+
+.day-header {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.closed-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.time-inputs {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.time-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.time-row label {
+    width: 80px;
+    font-weight: 500;
+    color: #666;
+}
+
+.time-row input[type="time"] {
+    padding: 0.4rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.time-row span {
+    color: #999;
+}
+
+/* Color indicators */
+.indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 0.5rem;
+}
+
+.indicator.open-hours { background: #4CAF50; }
+.indicator.training { background: #2196F3; }
+
+/* Holiday Calendar */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: var(--timberwolf);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.calendar-header {
+    background: var(--gunmetal);
+    color: white;
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.calendar-day {
+    background: white;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.calendar-day:hover {
+    background: #f0f0f0;
+}
+
+.calendar-day.other-month {
+    color: #ccc;
+    background: #fafafa;
+}
+
+.calendar-day.holiday {
+    background: var(--cinnabar);
+    color: white;
+    font-weight: 600;
+}
+
+.calendar-day.today {
+    border: 2px solid var(--sunglow);
+}
+
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.calendar-nav h3 {
+    font-size: 1.3rem;
+    color: var(--gunmetal);
+}
+
+.calendar-nav button {
+    background: white;
+    border: 1px solid var(--timberwolf);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.calendar-nav button:hover {
+    background: #f0f0f0;
+}
+
+/* Holiday list */
+.holiday-list {
+    margin-top: 1.5rem;
+}
+
+.holiday-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #fff3e0;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--cinnabar);
+}
+
+.holiday-item .remove {
+    cursor: pointer;
+    color: var(--cinnabar);
+    font-weight: bold;
+}
+
+/* Shift Requirements */
+.requirements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.requirement-card {
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.requirement-card h4 {
+    margin: 0 0 1rem 0;
+    color: var(--gunmetal);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.req-time-slot {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.req-time-slot:last-child {
+    border-bottom: none;
+}
+
+.req-time {
+    font-weight: 500;
+    min-width: 120px;
+}
+
+.req-inputs {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.req-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.req-input-group label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.req-input-group input {
+    width: 50px;
+    padding: 0.4rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* Save bar */
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid var(--timberwolf);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin: 1rem -1.5rem -1.5rem -1.5rem;
+}
+
+/* Day checkboxes */
+.day-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 1rem;
+    background: #f5f5f5;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.day-checkbox:hover {
+    background: #e8e8e8;
+}
+
+.day-checkbox:has(input:checked) {
+    background: var(--sunglow);
+    border-color: var(--gunmetal);
+}
+
+.day-checkbox input {
+    margin: 0;
+}
+
+/* Location checkboxes */
+.location-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.8rem;
+    background: #f5f5f5;
+    border: 1px solid var(--timberwolf);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.location-checkbox:hover {
+    background: #e8e8e8;
+}
+
+.location-checkbox:has(input:checked) {
+    background: #e3f2fd;
+    border-color: #90caf9;
+}
+
+.location-checkbox.group:has(input:checked) {
+    background: #fff3e0;
+    border-color: #ffcc80;
+}
+
+.location-checkbox input {
+    margin: 0;
+}
+
+/* Group card */
+.group-card {
+    background: white;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.group-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--gunmetal);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.group-locations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.group-location-tag {
+    background: #f0f0f0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--gunmetal);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.btn-link:hover {
+    color: var(--keppel);
+}
+
+/* Time slot rows */
+.time-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.btn-remove-slot {
+    background: none;
+    border: none;
+    color: var(--cinnabar);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.btn-remove-slot:hover {
+    background: #ffebee;
+    border-radius: 4px;
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--cinnabar);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; color: var(--gunmetal);">⚙️ Configure Semester</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Set up operating hours, requirements, and holidays</p>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 250px;">
+            <select id="semesterSelect" class="form-control" onchange="loadSemesterConfig()">
+                <option value="">-- Select Semester --</option>
+                {% for semester in semesters %}
+                <option value="{{ semester.id }}" {% if semester.is_active %}selected{% endif %}>
+                    {{ semester.name }} {% if semester.is_active %}(Active){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="card" id="configContent" style="display: none;">
+    <!-- Tabs -->
+    <div class="config-tabs">
+        <button class="config-tab active" onclick="switchTab('operating-hours')">🕐 Operating Hours</button>
+        <button class="config-tab" onclick="switchTab('groups')">📦 Location Groups</button>
+        <button class="config-tab" onclick="switchTab('requirements')">📋 Shift Requirements</button>
+        <button class="config-tab" onclick="switchTab('holidays')">📅 Holidays</button>
+    </div>
+    
+    <!-- Tab 1: Operating Hours -->
+    <div id="tab-operating-hours" class="tab-content active">
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Configure when the space is open and when training sessions can be scheduled for each day of the week.
+        </p>
+        
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <span><span class="indicator open-hours"></span>Open Hours</span>
+            <span style="margin-left: 1rem;"><span class="indicator training"></span>Training Hours</span>
+        </div>
+        
+        <div id="operatingHoursGrid">
+            <!-- Generated by JS -->
+        </div>
+    </div>
+    
+    <!-- Tab 2: Location Groups -->
+    <div id="tab-groups" class="tab-content">
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Group multiple locations together so one host can cover them all. For example, group "Woodshop A" and "Woodshop B" into "Woodshop Combined".
+        </p>
+        
+        <div style="margin-bottom: 1rem;">
+            <button class="btn btn-primary" onclick="openAddGroupModal()">+ Create Group</button>
+        </div>
+        
+        <div id="groupsList" class="requirements-grid">
+            <p style="color: #999;">Loading groups...</p>
+        </div>
+    </div>
+    
+    <!-- Tab 3: Shift Requirements -->
+    <div id="tab-requirements" class="tab-content">
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Define how many hosts and floaters are needed for each time slot. These requirements guide the auto-scheduler.
+        </p>
+        
+        <div style="margin-bottom: 1rem;">
+            <button class="btn btn-primary" onclick="openAddRequirementModal()">+ Add Requirement</button>
+        </div>
+        
+        <div id="requirementsGrid" class="requirements-grid">
+            <!-- Generated by JS -->
+        </div>
+    </div>
+    
+    <!-- Tab 4: Holidays -->
+    <div id="tab-holidays" class="tab-content">
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Click on dates to mark them as holidays. The scheduler will skip these days.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <div>
+                <div class="calendar-nav">
+                    <button onclick="prevMonth()">← Prev</button>
+                    <h3 id="calendarMonth" style="margin: 0;">January 2026</h3>
+                    <button onclick="nextMonth()">Next →</button>
+                </div>
+                <div id="holidayCalendar" class="calendar-grid" style="max-width: none;">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+            
+            <div>
+                <h3 style="margin-top: 0;">Selected Holidays (<span id="holidayCount">0</span>)</h3>
+                <div id="holidayList" class="holiday-list">
+                    <p style="color: #999;">No holidays selected</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Save Bar -->
+    <div class="save-bar">
+        <button class="btn btn-secondary" onclick="resetChanges()">Reset</button>
+        <button class="btn btn-primary" onclick="saveConfig()">💾 Save Changes</button>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div class="card" id="emptyState" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">📝</div>
+    <h2 style="color: var(--gunmetal); margin-bottom: 1rem;">Select a Semester</h2>
+    <p style="color: #666;">Choose a semester from the dropdown above to configure its schedule settings.</p>
+</div>
+
+<!-- Add Requirement Modal -->
+<div id="requirementModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h2>Add Shift Requirements</h2>
+            <button class="modal-close" onclick="closeRequirementModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Days Selection -->
+            <div class="form-group">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Select Days</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay0" value="0"> Mon
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay1" value="1"> Tue
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay2" value="2"> Wed
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay3" value="3"> Thu
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay4" value="4"> Fri
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay5" value="5"> Sat
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" id="reqDay6" value="6"> Sun
+                    </label>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <button type="button" class="btn-link" onclick="selectAllDays()">Select All</button>
+                    <button type="button" class="btn-link" onclick="selectWeekdays()">Weekdays</button>
+                    <button type="button" class="btn-link" onclick="clearDays()">Clear</button>
+                </div>
+            </div>
+            
+            <!-- Time Slots -->
+            <div class="form-group">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Time Slots</label>
+                <div id="timeSlotsContainer">
+                    <div class="time-slot-row" data-slot="0">
+                        <input type="time" class="form-control slot-start" value="09:00" style="width: auto;">
+                        <span>to</span>
+                        <input type="time" class="form-control slot-end" value="12:00" style="width: auto;">
+                        <button type="button" class="btn-remove-slot" onclick="removeTimeSlot(this)" style="display: none;">×</button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addTimeSlot()" style="margin-top: 0.5rem;">
+                    + Add Time Slot
+                </button>
+            </div>
+            
+            <!-- Locations & Groups Selection -->
+            <div class="form-group">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Select Locations/Groups <span style="color: var(--cinnabar);">*</span></label>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">Select at least one location or group that needs coverage</p>
+                
+                {% if location_groups %}
+                <div style="margin-bottom: 0.75rem;">
+                    <label style="font-size: 0.9rem; color: var(--gunmetal); font-weight: 500;">Groups</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;">
+                        {% for group in location_groups %}
+                        <label class="location-checkbox group">
+                            <input type="checkbox" name="reqGroup" value="{{ group.id }}" data-name="{{ group.name }}">
+                            📦 {{ group.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label style="font-size: 0.9rem; color: var(--gunmetal); font-weight: 500;">Individual Locations</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;">
+                        {% for location in locations %}
+                        <label class="location-checkbox">
+                            <input type="checkbox" name="reqLocation" value="{{ location.id }}" data-name="{{ location.name }}">
+                            {{ location.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Staffing -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>🟢 Hosts Required (per location)</label>
+                    <input type="number" id="reqHosts" class="form-control" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>🟠 Floaters Required</label>
+                    <input type="number" id="reqFloaters" class="form-control" value="0" min="0">
+                </div>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: #666; margin-top: 1rem; padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                💡 This creates requirements for each combination of: <strong>days × time slots × locations/groups</strong>
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeRequirementModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="addRequirements()">Add Requirements</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Location Group Modal -->
+<div id="groupModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2 id="groupModalTitle">Create Location Group</h2>
+            <button class="modal-close" onclick="closeGroupModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editGroupId" value="">
+            
+            <div class="form-group">
+                <label>Group Name <span style="color: var(--cinnabar);">*</span></label>
+                <input type="text" id="groupName" class="form-control" placeholder="e.g., Woodshop Combined">
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="groupDescription" class="form-control" rows="2" placeholder="Optional description"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Locations <span style="color: var(--cinnabar);">*</span></label>
+                <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--timberwolf); border-radius: 4px; padding: 0.5rem;">
+                    {% for location in locations %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="groupLocation" value="{{ location.id }}">
+                        {{ location.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeGroupModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveGroup()">Save Group</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+let currentSemester = null;
+let operatingHours = {};
+let shiftRequirements = [];
+let holidays = [];
+let locationGroups = [];
+let calendarDate = new Date();
+
+// Load semester configuration
+function loadSemesterConfig() {
+    const semesterId = document.getElementById('semesterSelect').value;
+    
+    if (!semesterId) {
+        document.getElementById('configContent').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+    }
+    
+    // Load semester config and location groups in parallel
+    Promise.all([
+        fetch(`/scheduling/api/semester/${semesterId}/config/`).then(r => r.json()),
+        fetch('/scheduling/api/location-groups/').then(r => r.json())
+    ])
+    .then(([configData, groupsData]) => {
+        currentSemester = configData.semester;
+        operatingHours = configData.operating_hours || {};
+        shiftRequirements = configData.shift_requirements || [];
+        holidays = configData.holidays || [];
+        locationGroups = groupsData.groups || [];
+        
+        // Set calendar to semester start
+        if (currentSemester.start_date) {
+            calendarDate = new Date(currentSemester.start_date);
+        }
+        
+        renderOperatingHours();
+        renderLocationGroups();
+        renderRequirements();
+        renderHolidayCalendar();
+        renderHolidayList();
+        
+        document.getElementById('configContent').style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+    })
+    .catch(err => {
+        console.error('Error loading config:', err);
+        alert('Failed to load semester configuration');
+    });
+}
+
+// Tab switching
+function switchTab(tabId) {
+    document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    
+    document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+// Render Operating Hours
+function renderOperatingHours() {
+    const container = document.getElementById('operatingHoursGrid');
+    
+    let html = '<div style="display: grid; gap: 1rem;">';
+    
+    DAYS.forEach((day, index) => {
+        const dayData = operatingHours[index] || {};
+        const isClosed = dayData.is_closed || false;
+        const trainingDisabled = dayData.training_disabled || false;
+        
+        html += `
+        <div class="day-config" style="border: 1px solid var(--timberwolf); border-radius: 8px;">
+            <div class="day-header">
+                <span style="font-size: 1.1rem;">${day}</span>
+                <label class="closed-toggle">
+                    <input type="checkbox" id="closed-${index}" ${isClosed ? 'checked' : ''} 
+                           onchange="toggleDayClosed(${index}, this.checked)">
+                    Space Closed
+                </label>
+            </div>
+            <div class="time-inputs" style="margin-top: 1rem;">
+                <!-- Open Hours Row -->
+                <div class="time-row" id="open-hours-row-${index}" style="${isClosed ? 'opacity: 0.4; pointer-events: none;' : ''}">
+                    <label><span class="indicator open-hours"></span>Open Hours</label>
+                    <input type="time" id="open-start-${index}" value="${dayData.open_hours_start || '09:00'}" onchange="updateOperatingHours()">
+                    <span>to</span>
+                    <input type="time" id="open-end-${index}" value="${dayData.open_hours_end || '17:00'}" onchange="updateOperatingHours()">
+                    ${isClosed ? '<span style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(Disabled - space closed)</span>' : ''}
+                </div>
+                
+                <!-- Training Row -->
+                <div class="time-row" id="training-row-${index}" style="${trainingDisabled ? 'opacity: 0.4;' : ''}">
+                    <label><span class="indicator training"></span>Training</label>
+                    <input type="time" id="training-start-${index}" value="${dayData.training_start || '09:00'}" 
+                           ${trainingDisabled ? 'disabled' : ''} onchange="updateOperatingHours()">
+                    <span>to</span>
+                    <input type="time" id="training-end-${index}" value="${dayData.training_end || '17:00'}" 
+                           ${trainingDisabled ? 'disabled' : ''} onchange="updateOperatingHours()">
+                    <label id="training-disable-label-${index}" style="margin-left: 1rem; display: ${isClosed ? 'flex' : 'none'}; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #666;">
+                        <input type="checkbox" id="training-disabled-${index}" ${trainingDisabled ? 'checked' : ''} 
+                               onchange="toggleTrainingDisabled(${index}, this.checked)">
+                        Disable Training
+                    </label>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function toggleDayClosed(dayIndex, isClosed) {
+    operatingHours[dayIndex] = operatingHours[dayIndex] || {};
+    operatingHours[dayIndex].is_closed = isClosed;
+    
+    const openHoursRow = document.getElementById(`open-hours-row-${dayIndex}`);
+    openHoursRow.style.opacity = isClosed ? '0.4' : '1';
+    openHoursRow.style.pointerEvents = isClosed ? 'none' : 'auto';
+    
+    // Show/hide the disable training option
+    const trainingDisableLabel = document.getElementById(`training-disable-label-${dayIndex}`);
+    trainingDisableLabel.style.display = isClosed ? 'flex' : 'none';
+    
+    // If space is reopened, re-enable training
+    if (!isClosed) {
+        operatingHours[dayIndex].training_disabled = false;
+        document.getElementById(`training-disabled-${dayIndex}`).checked = false;
+        toggleTrainingDisabled(dayIndex, false);
+    }
+}
+
+function toggleTrainingDisabled(dayIndex, isDisabled) {
+    operatingHours[dayIndex] = operatingHours[dayIndex] || {};
+    operatingHours[dayIndex].training_disabled = isDisabled;
+    
+    const trainingRow = document.getElementById(`training-row-${dayIndex}`);
+    trainingRow.style.opacity = isDisabled ? '0.4' : '1';
+    
+    document.getElementById(`training-start-${dayIndex}`).disabled = isDisabled;
+    document.getElementById(`training-end-${dayIndex}`).disabled = isDisabled;
+}
+
+function updateOperatingHours() {
+    DAYS.forEach((day, index) => {
+        if (!operatingHours[index]) operatingHours[index] = {};
+        
+        operatingHours[index].open_hours_start = document.getElementById(`open-start-${index}`).value;
+        operatingHours[index].open_hours_end = document.getElementById(`open-end-${index}`).value;
+        operatingHours[index].training_start = document.getElementById(`training-start-${index}`).value;
+        operatingHours[index].training_end = document.getElementById(`training-end-${index}`).value;
+    });
+}
+
+// Render Shift Requirements
+function renderRequirements() {
+    const container = document.getElementById('requirementsGrid');
+    
+    if (shiftRequirements.length === 0) {
+        container.innerHTML = '<p style="color: #999; grid-column: 1/-1;">No shift requirements defined. Click "Add Requirement" to create one.</p>';
+        return;
+    }
+    
+    // Group by day
+    const byDay = {};
+    shiftRequirements.forEach(req => {
+        if (!byDay[req.day_of_week]) byDay[req.day_of_week] = [];
+        byDay[req.day_of_week].push(req);
+    });
+    
+    let html = '';
+    
+    Object.keys(byDay).sort((a, b) => a - b).forEach(day => {
+        const reqs = byDay[day];
+        
+        html += `
+        <div class="requirement-card">
+            <h4>
+                ${DAYS[day]}
+                <span style="font-weight: normal; color: #666; font-size: 0.9rem;">${reqs.length} slot${reqs.length !== 1 ? 's' : ''}</span>
+            </h4>
+        `;
+        
+        reqs.forEach(req => {
+            const targetName = req.location_group_name ? `📦 ${req.location_group_name}` : (req.location_name || 'General');
+            html += `
+            <div class="req-time-slot">
+                <div class="req-time">
+                    ${req.time_start} - ${req.time_end}
+                    <div style="font-size: 0.8rem; color: #666;">${targetName}</div>
+                </div>
+                <div class="req-inputs">
+                    <div class="req-input-group">
+                        <label>🟢</label>
+                        <input type="number" value="${req.hosts_required}" min="0" 
+                               onchange="updateRequirement(${req.id}, 'hosts', this.value)">
+                    </div>
+                    <div class="req-input-group">
+                        <label>🟠</label>
+                        <input type="number" value="${req.floaters_required}" min="0"
+                               onchange="updateRequirement(${req.id}, 'floaters', this.value)">
+                    </div>
+                    <button onclick="deleteRequirement(${req.id})" style="background: none; border: none; color: var(--cinnabar); cursor: pointer; font-size: 1.2rem;">×</button>
+                </div>
+            </div>
+            `;
+        });
+        
+        html += '</div>';
+    });
+    
+    container.innerHTML = html;
+}
+
+// Location Groups
+function renderLocationGroups() {
+    const container = document.getElementById('groupsList');
+    
+    if (locationGroups.length === 0) {
+        container.innerHTML = '<p style="color: #999; grid-column: 1/-1;">No location groups defined. Click "Create Group" to make one.</p>';
+        return;
+    }
+    
+    let html = '';
+    locationGroups.forEach(group => {
+        html += `
+        <div class="group-card">
+            <h4>
+                📦 ${group.name}
+                <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+                    <button onclick="editGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Edit</button>
+                    <button onclick="deleteGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; color: var(--cinnabar);">Delete</button>
+                </div>
+            </h4>
+            ${group.description ? `<p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">${group.description}</p>` : ''}
+            <div class="group-locations">
+                ${group.locations.map(loc => `<span class="group-location-tag">${loc.name}</span>`).join('')}
+            </div>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function openAddGroupModal() {
+    document.getElementById('groupModalTitle').textContent = 'Create Location Group';
+    document.getElementById('editGroupId').value = '';
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupDescription').value = '';
+    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => cb.checked = false);
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+function editGroup(groupId) {
+    const group = locationGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    document.getElementById('groupModalTitle').textContent = 'Edit Location Group';
+    document.getElementById('editGroupId').value = group.id;
+    document.getElementById('groupName').value = group.name;
+    document.getElementById('groupDescription').value = group.description || '';
+    
+    // Check the locations
+    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => {
+        cb.checked = group.locations.some(loc => loc.id == cb.value);
+    });
+    
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+function closeGroupModal() {
+    document.getElementById('groupModal').style.display = 'none';
+}
+
+function saveGroup() {
+    const groupId = document.getElementById('editGroupId').value;
+    const name = document.getElementById('groupName').value.trim();
+    const description = document.getElementById('groupDescription').value.trim();
+    
+    const locationIds = [];
+    document.querySelectorAll('input[name="groupLocation"]:checked').forEach(cb => {
+        locationIds.push(parseInt(cb.value));
+    });
+    
+    if (!name) {
+        alert('Please enter a group name');
+        return;
+    }
+    
+    if (locationIds.length === 0) {
+        alert('Please select at least one location');
+        return;
+    }
+    
+    fetch('/scheduling/api/location-groups/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            id: groupId || null,
+            name: name,
+            description: description,
+            location_ids: locationIds
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (groupId) {
+                // Update existing
+                const index = locationGroups.findIndex(g => g.id == groupId);
+                if (index > -1) locationGroups[index] = data.group;
+            } else {
+                // Add new
+                locationGroups.push(data.group);
+            }
+            renderLocationGroups();
+            closeGroupModal();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to save group');
+    });
+}
+
+function deleteGroup(groupId) {
+    if (!confirm('Delete this location group? Any shift requirements using this group will need to be updated.')) return;
+    
+    fetch(`/scheduling/api/location-groups/${groupId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            locationGroups = locationGroups.filter(g => g.id !== groupId);
+            renderLocationGroups();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to delete group');
+    });
+}
+
+function openAddRequirementModal() {
+    // Reset the form
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`reqDay${i}`).checked = false;
+    }
+    document.getElementById('timeSlotsContainer').innerHTML = `
+        <div class="time-slot-row" data-slot="0">
+            <input type="time" class="form-control slot-start" value="09:00" style="width: auto;">
+            <span>to</span>
+            <input type="time" class="form-control slot-end" value="12:00" style="width: auto;">
+            <button type="button" class="btn-remove-slot" onclick="removeTimeSlot(this)" style="display: none;">×</button>
+        </div>
+    `;
+    // Reset location/group checkboxes
+    document.querySelectorAll('input[name="reqLocation"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="reqGroup"]').forEach(cb => cb.checked = false);
+    document.getElementById('reqHosts').value = '1';
+    document.getElementById('reqFloaters').value = '0';
+    
+    document.getElementById('requirementModal').style.display = 'flex';
+}
+
+function closeRequirementModal() {
+    document.getElementById('requirementModal').style.display = 'none';
+}
+
+// Day selection helpers
+function selectAllDays() {
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`reqDay${i}`).checked = true;
+    }
+}
+
+function selectWeekdays() {
+    for (let i = 0; i < 5; i++) {
+        document.getElementById(`reqDay${i}`).checked = true;
+    }
+    for (let i = 5; i < 7; i++) {
+        document.getElementById(`reqDay${i}`).checked = false;
+    }
+}
+
+function clearDays() {
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`reqDay${i}`).checked = false;
+    }
+}
+
+// Time slot management
+let slotCounter = 1;
+
+function addTimeSlot() {
+    const container = document.getElementById('timeSlotsContainer');
+    const slotHtml = `
+        <div class="time-slot-row" data-slot="${slotCounter}">
+            <input type="time" class="form-control slot-start" value="12:00" style="width: auto;">
+            <span>to</span>
+            <input type="time" class="form-control slot-end" value="17:00" style="width: auto;">
+            <button type="button" class="btn-remove-slot" onclick="removeTimeSlot(this)">×</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', slotHtml);
+    slotCounter++;
+    
+    // Show remove buttons if more than one slot
+    updateRemoveButtons();
+}
+
+function removeTimeSlot(button) {
+    const row = button.closest('.time-slot-row');
+    row.remove();
+    updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+    const rows = document.querySelectorAll('.time-slot-row');
+    rows.forEach((row, index) => {
+        const btn = row.querySelector('.btn-remove-slot');
+        btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
+    });
+}
+
+function addRequirements() {
+    // Get selected days
+    const selectedDays = [];
+    for (let i = 0; i < 7; i++) {
+        if (document.getElementById(`reqDay${i}`).checked) {
+            selectedDays.push(i);
+        }
+    }
+    
+    if (selectedDays.length === 0) {
+        alert('Please select at least one day');
+        return;
+    }
+    
+    // Get time slots
+    const timeSlots = [];
+    document.querySelectorAll('.time-slot-row').forEach(row => {
+        const start = row.querySelector('.slot-start').value;
+        const end = row.querySelector('.slot-end').value;
+        if (start && end) {
+            timeSlots.push({ start, end });
+        }
+    });
+    
+    if (timeSlots.length === 0) {
+        alert('Please add at least one time slot');
+        return;
+    }
+    
+    // Validate time slots
+    for (const slot of timeSlots) {
+        if (slot.end <= slot.start) {
+            alert('End time must be after start time');
+            return;
+        }
+    }
+    
+    const hosts = parseInt(document.getElementById('reqHosts').value) || 0;
+    const floaters = parseInt(document.getElementById('reqFloaters').value) || 0;
+    
+    if (hosts === 0 && floaters === 0) {
+        alert('Please specify at least one host or floater');
+        return;
+    }
+    
+    // Get selected locations and groups
+    const selectedLocations = [];
+    document.querySelectorAll('input[name="reqLocation"]:checked').forEach(cb => {
+        selectedLocations.push({
+            type: 'location',
+            id: parseInt(cb.value),
+            name: cb.dataset.name
+        });
+    });
+    
+    const selectedGroups = [];
+    document.querySelectorAll('input[name="reqGroup"]:checked').forEach(cb => {
+        selectedGroups.push({
+            type: 'group',
+            id: parseInt(cb.value),
+            name: cb.dataset.name
+        });
+    });
+    
+    const allTargets = [...selectedGroups, ...selectedLocations];
+    
+    if (allTargets.length === 0) {
+        alert('Please select at least one location or group');
+        return;
+    }
+    
+    // Create requirements for each day/slot/target combination
+    let addedCount = 0;
+    selectedDays.forEach(day => {
+        timeSlots.forEach(slot => {
+            allTargets.forEach(target => {
+                // Check for duplicates
+                const exists = shiftRequirements.some(r => 
+                    r.day_of_week === day && 
+                    r.time_start === slot.start && 
+                    r.time_end === slot.end &&
+                    ((target.type === 'location' && r.location_id == target.id) ||
+                     (target.type === 'group' && r.location_group_id == target.id))
+                );
+                
+                if (!exists) {
+                    const newReq = {
+                        id: Date.now() + addedCount,
+                        day_of_week: day,
+                        time_start: slot.start,
+                        time_end: slot.end,
+                        hosts_required: hosts,
+                        floaters_required: floaters,
+                        isNew: true
+                    };
+                    
+                    if (target.type === 'location') {
+                        newReq.location_id = target.id;
+                        newReq.location_name = target.name;
+                    } else {
+                        newReq.location_group_id = target.id;
+                        newReq.location_group_name = target.name;
+                    }
+                    
+                    shiftRequirements.push(newReq);
+                    addedCount++;
+                }
+            });
+        });
+    });
+    
+    if (addedCount > 0) {
+        alert(`Added ${addedCount} requirement(s)`);
+        renderRequirements();
+        closeRequirementModal();
+    } else {
+        alert('All selected combinations already exist');
+    }
+}
+
+function updateRequirement(reqId, field, value) {
+    const req = shiftRequirements.find(r => r.id === reqId);
+    if (req) {
+        if (field === 'hosts') req.hosts_required = parseInt(value) || 0;
+        if (field === 'floaters') req.floaters_required = parseInt(value) || 0;
+    }
+}
+
+function deleteRequirement(reqId) {
+    if (!confirm('Delete this requirement?')) return;
+    shiftRequirements = shiftRequirements.filter(r => r.id !== reqId);
+    renderRequirements();
+}
+
+// Holiday Calendar
+function renderHolidayCalendar() {
+    const container = document.getElementById('holidayCalendar');
+    const monthLabel = document.getElementById('calendarMonth');
+    
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    
+    monthLabel.textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    // Day headers
+    let html = '';
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
+        html += `<div class="calendar-header">${d}</div>`;
+    });
+    
+    // Get first day of month and total days
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Previous month days
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = firstDay - 1; i >= 0; i--) {
+        html += `<div class="calendar-day other-month">${prevMonthDays - i}</div>`;
+    }
+    
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isHoliday = holidays.includes(dateStr);
+        const isToday = dateStr === today;
+        
+        html += `<div class="calendar-day ${isHoliday ? 'holiday' : ''} ${isToday ? 'today' : ''}" 
+                     onclick="toggleHoliday('${dateStr}')">${d}</div>`;
+    }
+    
+    // Next month days
+    const totalCells = firstDay + daysInMonth;
+    const remaining = 7 - (totalCells % 7);
+    if (remaining < 7) {
+        for (let i = 1; i <= remaining; i++) {
+            html += `<div class="calendar-day other-month">${i}</div>`;
+        }
+    }
+    
+    container.innerHTML = html;
+}
+
+function prevMonth() {
+    calendarDate.setMonth(calendarDate.getMonth() - 1);
+    renderHolidayCalendar();
+}
+
+function nextMonth() {
+    calendarDate.setMonth(calendarDate.getMonth() + 1);
+    renderHolidayCalendar();
+}
+
+function toggleHoliday(dateStr) {
+    const index = holidays.indexOf(dateStr);
+    if (index > -1) {
+        holidays.splice(index, 1);
+    } else {
+        holidays.push(dateStr);
+        holidays.sort();
+    }
+    renderHolidayCalendar();
+    renderHolidayList();
+}
+
+function renderHolidayList() {
+    const container = document.getElementById('holidayList');
+    document.getElementById('holidayCount').textContent = holidays.length;
+    
+    if (holidays.length === 0) {
+        container.innerHTML = '<p style="color: #999;">No holidays selected</p>';
+        return;
+    }
+    
+    let html = '';
+    holidays.forEach(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00');
+        const formatted = date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+        });
+        
+        html += `
+        <div class="holiday-item">
+            <span>${formatted}</span>
+            <span class="remove" onclick="toggleHoliday('${dateStr}')">×</span>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Save configuration
+function saveConfig() {
+    if (!currentSemester) {
+        alert('No semester selected');
+        return;
+    }
+    
+    // Update operating hours from inputs
+    updateOperatingHours();
+    
+    const payload = {
+        semester_id: currentSemester.id,
+        operating_hours: operatingHours,
+        shift_requirements: shiftRequirements,
+        holidays: holidays
+    };
+    
+    fetch('/scheduling/api/semester/config/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('Configuration saved successfully!');
+            loadSemesterConfig(); // Reload to get updated IDs
+        } else {
+            alert('Error saving: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to save configuration');
+    });
+}
+
+function resetChanges() {
+    if (!confirm('Discard all unsaved changes?')) return;
+    loadSemesterConfig();
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('semesterSelect');
+    if (select && select.value) {
+        loadSemesterConfig();
+    }
+});
+</script>
+
+{% endblock %}

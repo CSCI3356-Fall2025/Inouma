@@ -1,0 +1,892 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Staff Machine Directory - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > 
+    <a href="{% url 'machine_management' %}" style="color: #666; text-decoration: none;">Machine Management</a> > 
+    <span class="breadcrumb-item active">Machine Directory</span>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h2 style="margin: 0;">🔍 Staff Machine Directory</h2>
+            <p style="color: #666; margin: 0.5rem 0 0 0;">Browse, search, and manage all makerspace equipment</p>
+        </div>
+        <button onclick="window.location.href='{% url 'add_machine' %}'" 
+                style="padding: 0.75rem 1.5rem; background-color: var(--gold); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+            ➕ Add New Machine
+        </button>
+    </div>
+    
+    <!-- Advanced Search Bar with Autocomplete -->
+    <div class="search-container" style="position: relative; margin-bottom: 1.5rem;">
+        <span class="search-icon">🔍</span>
+        <input type="text" 
+            class="search-input" 
+            id="searchInput"
+            placeholder="Search by machine type, name, ID, location, or category..."
+            autocomplete="off"
+            style="padding-right: 100px;">
+        
+        <!-- Search Options Button -->
+        <button id="toggleFiltersBtn" 
+                onclick="toggleAdvancedFilters()"
+                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); 
+                       background: none; border: 1px solid #ddd; padding: 0.5rem 1rem; 
+                       border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: #666;">
+            ⚙️ Filters
+        </button>
+        
+        <div id="searchSuggestions" 
+            style="display: none; 
+                    position: absolute; 
+                    background: white; 
+                    border: 1px solid #ddd; 
+                    border-radius: 8px; 
+                    max-height: 300px; 
+                    overflow-y: auto; 
+                    width: 100%; 
+                    z-index: 1000; 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    top: 100%;
+                    margin-top: 0.5rem;">
+        </div>
+    </div>
+
+    <!-- Advanced Filters Panel (Initially Hidden) -->
+    <div id="advancedFilters" style="display: none; background: #f8f9fa; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Advanced Filters</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            
+            <!-- Category Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Category</label>
+                <select id="categoryFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Categories</option>
+                    <option value="Laser">Laser Cutting</option>
+                    <option value="Vinyl">Vinyl Cutting</option>
+                    <option value="Woodworking">Woodworking</option>
+                    <option value="Textile">Textile</option>
+                    <option value="Metalworking">Metalworking</option>
+                    <option value="3D Printing">3D Printing</option>
+                    <option value="Electronics">Electronics</option>
+                </select>
+            </div>
+
+            <!-- Location Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Location</label>
+                <select id="locationFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Locations</option>
+                    {% for location in locations %}
+                        <option value="{{ location.name }}">{{ location.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Training Level Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Training Required</label>
+                <select id="trainingFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Levels</option>
+                    <option value="none">No Training Required</option>
+                    <option value="level1">Level 1</option>
+                    <option value="level2">Level 2</option>
+                    <option value="level3">Level 3</option>
+                    <option value="custom">Custom Training</option>
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Machine Status</label>
+                <select id="statusFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Statuses</option>
+                    <option value="operational">Operational</option>
+                    <option value="maintenance">Under Maintenance</option>
+                    <option value="out-of-service">Out of Service</option>
+                    <option value="new">New Machines (Last 30 Days)</option>
+                </select>
+            </div>
+
+            <!-- Date Added Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Added Date Range</label>
+                <select id="dateFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Time</option>
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last Year</option>
+                </select>
+            </div>
+
+            <!-- Machine Type Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Machine Type</label>
+                <input type="text" 
+                       id="machineTypeFilter" 
+                       placeholder="e.g., Ultimaker, Glowforge..."
+                       onkeyup="applyFilters()"
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+            </div>
+
+            <!-- Has Image Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Image Status</label>
+                <select id="imageFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Machines</option>
+                    <option value="with-image">With Image</option>
+                    <option value="without-image">Missing Image</option>
+                </select>
+            </div>
+
+            <!-- Location Mapped Filter -->
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Floorplan Status</label>
+                <select id="mappedFilter" onchange="applyFilters()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">All Machines</option>
+                    <option value="mapped">Mapped on Floorplan</option>
+                    <option value="unmapped">Not Mapped</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Filter Actions -->
+        <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+            <button onclick="clearAllFilters()" 
+                    style="padding: 0.5rem 1.5rem; background: white; border: 1px solid #ddd; 
+                           border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Clear All Filters
+            </button>
+            <div id="activeFiltersCount" style="padding: 0.5rem 1rem; color: #666; font-size: 0.9rem;"></div>
+        </div>
+    </div>
+
+    <!-- Quick Category Filters (Visible by default) -->
+    <div class="filters" id="filterBar" style="margin-bottom: 1.5rem;">
+        <div class="filter-chip active" data-filter="all" onclick="quickFilter('all')">All Machines</div>
+        <div class="filter-chip" data-filter="Laser" onclick="quickFilter('Laser')">Laser</div>
+        <div class="filter-chip" data-filter="Vinyl" onclick="quickFilter('Vinyl')">Vinyl</div>
+        <div class="filter-chip" data-filter="Woodworking" onclick="quickFilter('Woodworking')">Woodworking</div>
+        <div class="filter-chip" data-filter="Textile" onclick="quickFilter('Textile')">Textile</div>
+        <div class="filter-chip" data-filter="Metalworking" onclick="quickFilter('Metalworking')">Metalworking</div>
+        <div class="filter-chip" data-filter="3D Printing" onclick="quickFilter('3D Printing')">3D Printing</div>
+        <div class="filter-chip" data-filter="Electronics" onclick="quickFilter('Electronics')">Electronics</div>
+    </div>
+
+    <!-- Results Summary -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px;">
+        <div>
+            <span id="resultsCount" style="font-weight: 600; color: #333;">{{ machines|length }} machines</span>
+            <span style="color: #666; margin-left: 0.5rem;">found</span>
+        </div>
+        <div>
+            <label style="margin-right: 0.5rem; color: #666;">Sort by:</label>
+            <select id="sortSelect" onchange="sortMachines()" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="date-new">Newest First</option>
+                <option value="date-old">Oldest First</option>
+                <option value="category">Category</option>
+                <option value="location">Location</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Machine Grid -->
+    <div class="machine-grid" id="machineGrid">
+        {% if machines %}
+            {% for machine in machines %}
+            <div class="machine-card" 
+                data-category="{{ machine.category }}" 
+                data-machine-type="{{ machine.machine_name|lower }}"
+                data-machine-name="{{ machine.name|lower }}"
+                data-location="{% if machine.location %}{{ machine.location.name|lower }}{% else %}unassigned{% endif %}"
+                data-machine-id="{{ machine.id }}"
+                data-has-image="{% if machine.image %}true{% else %}false{% endif %}"
+                data-is-mapped="{% if machine.map_position_x and machine.map_position_y %}true{% else %}false{% endif %}"
+                data-created="{{ machine.created_at|date:'Y-m-d' }}"
+                data-level1="{{ machine.requires_level_1|yesno:'true,false' }}"
+                data-level2="{{ machine.requires_level_2|yesno:'true,false' }}"
+                data-level3="{{ machine.requires_level_3|yesno:'true,false' }}"
+                data-has-custom-training="{% if machine.required_trainings.all %}true{% else %}false{% endif %}"
+                onclick="openMachineModal('{{ machine.id }}')">
+       
+                <!-- Staff Actions Overlay -->
+                <div class="staff-actions" style="position: absolute; top: 10px; right: 10px; display: flex; gap: 0.5rem; z-index: 10;">
+                    <button onclick="event.stopPropagation(); editMachine('{{ machine.id }}')" 
+                            style="padding: 0.4rem 0.8rem; background: white; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                        ✏️ Edit
+                    </button>
+                    <button onclick="event.stopPropagation(); deleteMachine('{{ machine.id }}')" 
+                            style="padding: 0.4rem 0.8rem; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                        🗑️
+                    </button>
+                </div>
+
+                <!-- Status Badge -->
+                {% if machine.created_at %}
+                    {% now "Y-m-d" as today %}
+                    {% if machine.created_at|timesince|slice:":2" == "0 " or machine.created_at|timesince|slice:":2" == "1 " %}
+                        <div style="position: absolute; top: 10px; left: 10px; background: var(--gold); color: white; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; z-index: 5;">
+                            NEW
+                        </div>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- Machine Image -->
+                <div class="machine-thumb">
+                    {% if machine.image %}
+                        <img src="{{ machine.image.url }}" 
+                             alt="{{ machine.name }}" 
+                             loading="lazy">
+                    {% else %}
+                        <img src="{% static 'images/machines/default-machine.png' %}" 
+                             alt="Default machine image" 
+                             loading="lazy"
+                             style="opacity: 0.5;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #999; font-size: 0.9rem;">
+                            No Image
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Machine Info -->
+                <h3>{{ machine.machine_name }}</h3>
+                <p class="machine-category">{{ machine.name }}</p>
+                <p class="machine-category">Category: {{ machine.category }}</p>
+                <p class="machine-location">📍 {% if machine.location %}{{ machine.location.name }}{% else %}Not assigned{% endif %}</p>
+                
+                <!-- Machine Metadata for Staff -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 0.8rem;">
+                    <span style="background: #e9ecef; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                        ID: {{ machine.id }}
+                    </span>
+                    {% if machine.map_position_x and machine.map_position_y %}
+                        <span style="background: #d4edda; padding: 0.2rem 0.5rem; border-radius: 4px; color: #155724;">
+                            📍 Mapped
+                        </span>
+                    {% endif %}
+                    {% if machine.mac_address %}
+                        <span style="background: #cce5ff; padding: 0.2rem 0.5rem; border-radius: 4px; color: #004085;">
+                            🔌 Connected
+                        </span>
+                    {% endif %}
+                </div>
+                
+                {% if machine.description %}
+                    <p style="font-size: 0.9rem; color: #666; margin: 0.5rem 0;">{{ machine.description|truncatewords:15 }}</p>
+                {% endif %}
+                
+                <!-- Training Requirements -->
+                <div class="training-required">
+                    <h4>⚠️ Training Required:</h4>
+
+                    {% with trainings=machine.required_trainings.all %}
+                        {% if trainings %}
+                            <div class="training-badges">
+                                {% for t in trainings %}
+                                    <span class="training-badge">{{ t.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% elif machine.requires_level_1 or machine.requires_level_2 or machine.requires_level_3 %}
+                            {% if machine.requires_level_1 %}
+                                <span class="training-badge">Level 1</span>
+                            {% endif %}
+                            {% if machine.requires_level_2 %}
+                                <span class="training-badge">Level 2</span>
+                            {% endif %}
+                            {% if machine.requires_level_3 %}
+                                <span class="training-badge">Level 3</span>
+                            {% endif %}
+                        {% else %}
+                            <p style="color: #666; font-size: 0.9rem;">No training required</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <!-- Added Date -->
+                <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">
+                    Added: {{ machine.created_at|date:"M d, Y" }}
+                </p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                <p style="color: #999; font-size: 1.1rem;">No machines available yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Machine Modal -->
+<div id="machineModal" class="modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow: auto;">
+    <div class="modal-content" style="background-color: white; margin: 2% auto; padding: 0; width: 90%; max-width: 1200px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid #dee2e6;">
+            <h2 id="modalTitle" style="color: var(--maroon); margin: 0;">Machine Details</h2>
+            <button class="close-btn" onclick="closeMachineModal()" style="background: none; border: none; font-size: 2rem; cursor: pointer; color: #999; line-height: 1; padding: 0; width: 40px; height: 40px;">×</button>
+        </div>
+        <div id="modalBody" style="padding: 2rem;">
+            <!-- Content loaded by JavaScript -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+</style>
+
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>
+// Advanced Filters Toggle
+function toggleAdvancedFilters() {
+    const panel = document.getElementById('advancedFilters');
+    const btn = document.getElementById('toggleFiltersBtn');
+    
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+        btn.textContent = '⚙️ Hide Filters';
+    } else {
+        panel.style.display = 'none';
+        btn.textContent = '⚙️ Filters';
+    }
+}
+
+// Quick Filter for Category Chips
+function quickFilter(category) {
+    // Update UI
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Set category filter
+    if (category !== 'all') {
+        document.getElementById('categoryFilter').value = category;
+    } else {
+        document.getElementById('categoryFilter').value = '';
+    }
+    
+    applyFilters();
+}
+
+// Apply All Filters
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const category = document.getElementById('categoryFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    const training = document.getElementById('trainingFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const dateRange = document.getElementById('dateFilter').value;
+    const machineType = document.getElementById('machineTypeFilter').value.toLowerCase();
+    const imageFilter = document.getElementById('imageFilter').value;
+    const mappedFilter = document.getElementById('mappedFilter').value;
+    
+    const cards = document.querySelectorAll('.machine-card');
+    let visibleCount = 0;
+    let activeFilters = 0;
+    
+    // Count active filters
+    if (category) activeFilters++;
+    if (location) activeFilters++;
+    if (training) activeFilters++;
+    if (status) activeFilters++;
+    if (dateRange) activeFilters++;
+    if (machineType) activeFilters++;
+    if (imageFilter) activeFilters++;
+    if (mappedFilter) activeFilters++;
+    
+    cards.forEach(card => {
+        let shouldShow = true;
+        
+        // Search term
+        if (searchTerm) {
+            const cardText = (
+                card.dataset.category + ' ' +
+                card.dataset.machineType + ' ' +
+                card.dataset.machineName + ' ' +
+                card.dataset.location + ' ' +
+                card.dataset.machineId
+            ).toLowerCase();
+            
+            if (!cardText.includes(searchTerm)) {
+                shouldShow = false;
+            }
+        }
+        
+        // Category filter
+        if (category && card.dataset.category !== category) {
+            shouldShow = false;
+        }
+        
+        // Location filter
+        if (location && !card.dataset.location.includes(location.toLowerCase())) {
+            shouldShow = false;
+        }
+        
+        // Training filter
+        if (training) {
+            if (training === 'none' && (card.dataset.level1 === 'true' || card.dataset.level2 === 'true' || card.dataset.level3 === 'true' || card.dataset.hasCustomTraining === 'true')) {
+                shouldShow = false;
+            } else if (training === 'level1' && card.dataset.level1 !== 'true') {
+                shouldShow = false;
+            } else if (training === 'level2' && card.dataset.level2 !== 'true') {
+                shouldShow = false;
+            } else if (training === 'level3' && card.dataset.level3 !== 'true') {
+                shouldShow = false;
+            } else if (training === 'custom' && card.dataset.hasCustomTraining !== 'true') {
+                shouldShow = false;
+            }
+        }
+        
+        // Date filter
+        if (dateRange && status !== 'new') {
+            const createdDate = new Date(card.dataset.created);
+            const now = new Date();
+            const daysDiff = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff > parseInt(dateRange)) {
+                shouldShow = false;
+            }
+        }
+        
+        // Status filter (new machines)
+        if (status === 'new') {
+            const createdDate = new Date(card.dataset.created);
+            const now = new Date();
+            const daysDiff = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff > 30) {
+                shouldShow = false;
+            }
+        }
+        
+        // Machine type filter
+        if (machineType && !card.dataset.machineType.includes(machineType)) {
+            shouldShow = false;
+        }
+        
+        // Image filter
+        if (imageFilter === 'with-image' && card.dataset.hasImage !== 'true') {
+            shouldShow = false;
+        } else if (imageFilter === 'without-image' && card.dataset.hasImage === 'true') {
+            shouldShow = false;
+        }
+        
+        // Mapped filter
+        if (mappedFilter === 'mapped' && card.dataset.isMapped !== 'true') {
+            shouldShow = false;
+        } else if (mappedFilter === 'unmapped' && card.dataset.isMapped === 'true') {
+            shouldShow = false;
+        }
+        
+        card.style.display = shouldShow ? 'block' : 'none';
+        if (shouldShow) visibleCount++;
+    });
+    
+    // Update results count
+    document.getElementById('resultsCount').textContent = visibleCount + ' machines';
+    
+    // Update active filters display
+    const filterCountEl = document.getElementById('activeFiltersCount');
+    if (activeFilters > 0) {
+        filterCountEl.textContent = `${activeFilters} active filter${activeFilters !== 1 ? 's' : ''}`;
+        filterCountEl.style.color = 'var(--gold)';
+        filterCountEl.style.fontWeight = '600';
+    } else {
+        filterCountEl.textContent = '';
+    }
+}
+
+// Clear all filters
+function clearAllFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('categoryFilter').value = '';
+    document.getElementById('locationFilter').value = '';
+    document.getElementById('trainingFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    document.getElementById('machineTypeFilter').value = '';
+    document.getElementById('imageFilter').value = '';
+    document.getElementById('mappedFilter').value = '';
+    
+    // Reset quick filters
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+    });
+    document.querySelector('.filter-chip[data-filter="all"]').classList.add('active');
+    
+    applyFilters();
+}
+
+// Sort machines
+function sortMachines() {
+    const sortBy = document.getElementById('sortSelect').value;
+    const grid = document.getElementById('machineGrid');
+    const cards = Array.from(grid.querySelectorAll('.machine-card'));
+    
+    cards.sort((a, b) => {
+        switch(sortBy) {
+            case 'name-asc':
+                return a.dataset.machineType.localeCompare(b.dataset.machineType);
+            case 'name-desc':
+                return b.dataset.machineType.localeCompare(a.dataset.machineType);
+            case 'date-new':
+                return new Date(b.dataset.created) - new Date(a.dataset.created);
+            case 'date-old':
+                return new Date(a.dataset.created) - new Date(b.dataset.created);
+            case 'category':
+                return a.dataset.category.localeCompare(b.dataset.category);
+            case 'location':
+                return a.dataset.location.localeCompare(b.dataset.location);
+            default:
+                return 0;
+        }
+    });
+    
+    cards.forEach(card => grid.appendChild(card));
+}
+
+// Search input with debounce
+let searchTimeout;
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        applyFilters();
+        fetchSearchSuggestions(this.value);
+    }, 300);
+});
+
+// Fetch search suggestions
+function fetchSearchSuggestions(query) {
+    if (query.length < 2) {
+        document.getElementById('searchSuggestions').style.display = 'none';
+        return;
+    }
+    
+    fetch(`/api/search-suggestions/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displaySuggestions(data.suggestions);
+        })
+        .catch(error => console.error('Error fetching suggestions:', error));
+}
+
+// Display search suggestions
+function displaySuggestions(suggestions) {
+    const container = document.getElementById('searchSuggestions');
+    
+    if (!suggestions || suggestions.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.innerHTML = suggestions.map(item => `
+        <div style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #eee;" 
+             onmouseover="this.style.background='#f8f9fa'" 
+             onmouseout="this.style.background='white'"
+             onclick="selectSuggestion('${item.text}', '${item.type}')">
+            <div style="font-weight: 600;">${item.text}</div>
+            <div style="font-size: 0.85rem; color: #666;">${item.type}</div>
+        </div>
+    `).join('');
+    
+    container.style.display = 'block';
+}
+
+// Select a suggestion
+function selectSuggestion(text, type) {
+    document.getElementById('searchInput').value = text;
+    document.getElementById('searchSuggestions').style.display = 'none';
+    applyFilters();
+}
+
+// Staff action functions
+function editMachine(machineId) {
+    window.location.href = `/staff/machines/edit/${machineId}/`;
+}
+
+function deleteMachine(machineId) {
+    if (confirm('Are you sure you want to delete this machine? This action cannot be undone.')) {
+        fetch(`/staff/remove-machine/${machineId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the card from the DOM
+                const card = document.querySelector(`[data-machine-id="${machineId}"]`);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s ease';
+                    card.style.opacity = '0';
+                    setTimeout(() => {
+                        card.remove();
+                        applyFilters(); // Update the count
+                    }, 300);
+                }
+                
+                // Show success message
+                showNotification(data.message, 'success');
+            } else {
+                showNotification(data.message || 'Error deleting machine', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error deleting machine', 'error');
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification system
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Machine Modal Functions
+function openMachineModal(machineId) {
+    const modal = document.getElementById('machineModal');
+    const modalBody = document.getElementById('modalBody');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    // Show modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    
+    // Show loading state
+    modalTitle.textContent = 'Loading...';
+    modalBody.innerHTML = '<div style="text-align: center; padding: 3rem;"><div style="font-size: 3rem;">⏳</div><p>Loading machine details...</p></div>';
+    
+    // Fetch machine details
+    fetch(`/staff/machines/detail/${machineId}/`)
+        .then(response => response.json())
+        .then(data => {
+            modalTitle.textContent = data.machine_name;
+            modalBody.innerHTML = generateMachineDetailHTML(data);
+        })
+        .catch(error => {
+            console.error('Error loading machine details:', error);
+            modalBody.innerHTML = '<div style="text-align: center; padding: 3rem; color: #dc3545;"><div style="font-size: 3rem;">⚠️</div><p>Error loading machine details</p></div>';
+        });
+}
+
+function generateMachineDetailHTML(machine) {
+    return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Left Column: Image and Basic Info -->
+            <div>
+                ${machine.image_url ? `
+                    <img src="${machine.image_url}" 
+                         alt="${machine.machine_name}" 
+                         style="width: 100%; border-radius: 12px; margin-bottom: 1.5rem;">
+                ` : `
+                    <div style="width: 100%; height: 300px; background: #f8f9fa; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; color: #999;">
+                            <div style="font-size: 4rem;">📷</div>
+                            <p>No image available</p>
+                        </div>
+                    </div>
+                `}
+                
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px;">
+                    <h3 style="margin: 0 0 1rem 0; color: #333;">Basic Information</h3>
+                    <table style="width: 100%; font-size: 0.95rem;">
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">Machine ID:</td>
+                            <td style="padding: 0.5rem 0;">${machine.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">Category:</td>
+                            <td style="padding: 0.5rem 0;">${machine.category}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">Location:</td>
+                            <td style="padding: 0.5rem 0;">📍 ${machine.location}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">Year Bought:</td>
+                            <td style="padding: 0.5rem 0;">${machine.year_bought || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">MAC Address:</td>
+                            <td style="padding: 0.5rem 0;">${machine.mac_address}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem 0; color: #666; font-weight: 600;">Database ID:</td>
+                            <td style="padding: 0.5rem 0;">#${machine.id}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Right Column: Details -->
+            <div>
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #333;">Description</h3>
+                    <p style="color: #666; line-height: 1.6;">${machine.description}</p>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #333;">Training Requirements</h3>
+                    ${machine.trainings.length > 0 ? `
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${machine.trainings.map(t => `
+                                <span style="background: #fff3cd; color: #856404; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.9rem;">
+                                    ⚠️ ${t.name}
+                                </span>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <p style="color: #28a745;">✅ No training required</p>
+                    `}
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #333;">Location Details</h3>
+                    ${machine.map_position_x && machine.map_position_y ? `
+                        <div style="background: #d4edda; padding: 1rem; border-radius: 8px; color: #155724;">
+                            <p style="margin: 0;"><strong>✓ Mapped on Floorplan</strong></p>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                                Position: (${machine.map_position_x.toFixed(2)}%, ${machine.map_position_y.toFixed(2)}%)
+                            </p>
+                        </div>
+                    ` : `
+                        <div style="background: #f8d7da; padding: 1rem; border-radius: 8px; color: #721c24;">
+                            <p style="margin: 0;">⚠️ Not mapped on floorplan</p>
+                        </div>
+                    `}
+                </div>
+                
+                ${machine.reservations.length > 0 ? `
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="margin: 0 0 1rem 0; color: #333;">Recent Reservations</h3>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+                            ${machine.reservations.map(r => `
+                                <div style="padding: 0.5rem 0; border-bottom: 1px solid #dee2e6;">
+                                    <div style="font-weight: 600;">${r.user}</div>
+                                    <div style="font-size: 0.85rem; color: #666;">${r.date}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="background: #e9ecef; padding: 1rem; border-radius: 8px; font-size: 0.85rem; color: #666;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Created:</span>
+                        <span>${machine.created_at}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Last Updated:</span>
+                        <span>${machine.updated_at}</span>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button onclick="event.stopPropagation(); closeMachineModal(); editMachine(${machine.id});" 
+                            style="flex: 1; padding: 0.75rem; background: var(--gold); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                        ✏️ Edit Machine
+                    </button>
+                    <button onclick="event.stopPropagation(); closeMachineModal(); deleteMachine(${machine.id});" 
+                            style="flex: 1; padding: 0.75rem; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                        🗑️ Delete Machine
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function closeMachineModal() {
+    const modal = document.getElementById('machineModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto'; // Re-enable background scrolling
+}
+
+// Close modal when clicking outside
+document.getElementById('machineModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeMachineModal();
+    }
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-container')) {
+        document.getElementById('searchSuggestions').style.display = 'none';
+    }
+});
+</script>
+
+{% endblock %}

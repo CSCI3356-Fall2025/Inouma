@@ -1,0 +1,689 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Training Sessions - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'team_dashboard' %}" class="breadcrumb-item">Team Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Training Sessions</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+.tab-badge {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-card.highlight {
+    background: linear-gradient(135deg, var(--sunglow), #f5d54a);
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Session Card */
+.session-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.session-card.today {
+    border-color: var(--sunglow);
+    box-shadow: 0 0 0 2px rgba(252, 201, 49, 0.2);
+}
+
+.session-header {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    cursor: pointer;
+}
+
+.session-header:hover {
+    background: #fafafa;
+}
+
+.date-block {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-width: 70px;
+}
+
+.date-block .month {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.date-block .day {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.date-block .weekday {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.session-info h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+}
+
+.session-meta {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.session-stats {
+    text-align: right;
+}
+
+.participant-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.participant-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Level Badge */
+.level-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.level-badge.level-1 { background: #d1fae5; color: #065f46; }
+.level-badge.level-2 { background: #fef3c7; color: #92400e; }
+.level-badge.level-3 { background: #fee2e2; color: #dc2626; }
+
+/* Participants Panel */
+.participants-panel {
+    display: none;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem;
+    background: #fafafa;
+}
+
+.participants-panel.open {
+    display: block;
+}
+
+.participant-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.participant-item:last-child {
+    margin-bottom: 0;
+}
+
+.participant-info {
+    flex: 1;
+}
+
+.participant-name {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.participant-email {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.participant-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge.registered { background: #dbeafe; color: #1e40af; }
+.status-badge.confirmed { background: #d1fae5; color: #065f46; }
+.status-badge.completed { background: #d1fae5; color: #065f46; }
+.status-badge.waitlisted { background: #fef3c7; color: #92400e; }
+.status-badge.no_show { background: #fee2e2; color: #dc2626; }
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.btn-success:hover {
+    background: #a7f3d0;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Waitlist indicator */
+.waitlist-indicator {
+    font-size: 0.8rem;
+    color: #92400e;
+    margin-top: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🎓 My Training Sessions</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage the training sessions you're conducting</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card highlight">
+            <div class="stat-value" id="statToday">0</div>
+            <div class="stat-label">Today's Sessions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statUpcoming">0</div>
+            <div class="stat-label">Upcoming</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statStudents">0</div>
+            <div class="stat-label">Students This Week</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-label">Completed This Month</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="upcoming">
+            Upcoming <span class="tab-badge" id="upcomingCount">0</span>
+        </button>
+        <button class="tab" data-tab="today">
+            Today
+        </button>
+        <button class="tab" data-tab="past">
+            Past Sessions
+        </button>
+    </div>
+
+    <!-- Sessions List -->
+    <div id="sessionsContainer"></div>
+</div>
+
+<script>
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+let allSessions = [];
+let currentTab = 'upcoming';
+let expandedSessions = new Set();
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSessions();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.dataset.tab;
+            renderSessions();
+        });
+    });
+});
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/reservations/api/my-training-sessions/?status=all');
+        const data = await response.json();
+        
+        if (data.success) {
+            allSessions = data.sessions;
+            updateStats();
+            renderSessions();
+        } else {
+            showToast('Failed to load sessions', 'error');
+        }
+    } catch (err) {
+        console.error('Error loading sessions:', err);
+        showToast('Failed to load sessions', 'error');
+    }
+}
+
+function updateStats() {
+    const today = new Date().toISOString().split('T')[0];
+    const todaySessions = allSessions.filter(s => s.date === today);
+    const upcomingSessions = allSessions.filter(s => s.date >= today && s.status !== 'completed');
+    
+    // Students this week
+    const weekStart = getWeekStart(new Date());
+    const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const weekSessions = allSessions.filter(s => {
+        const d = new Date(s.date);
+        return d >= weekStart && d <= weekEnd;
+    });
+    const weekStudents = weekSessions.reduce((sum, s) => sum + s.current_participants, 0);
+    
+    // Completed this month
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    const completedThisMonth = allSessions.filter(s => 
+        s.status === 'completed' && new Date(s.date) >= monthStart
+    ).length;
+    
+    document.getElementById('statToday').textContent = todaySessions.length;
+    document.getElementById('statUpcoming').textContent = upcomingSessions.length;
+    document.getElementById('statStudents').textContent = weekStudents;
+    document.getElementById('statCompleted').textContent = completedThisMonth;
+    document.getElementById('upcomingCount').textContent = upcomingSessions.length;
+}
+
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+}
+
+function renderSessions() {
+    const container = document.getElementById('sessionsContainer');
+    const today = new Date().toISOString().split('T')[0];
+    
+    let filtered = [];
+    
+    if (currentTab === 'upcoming') {
+        filtered = allSessions.filter(s => s.date >= today && s.status !== 'completed');
+        filtered.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+    } else if (currentTab === 'today') {
+        filtered = allSessions.filter(s => s.date === today);
+        filtered.sort((a, b) => a.start_time.localeCompare(b.start_time));
+    } else if (currentTab === 'past') {
+        filtered = allSessions.filter(s => s.date < today || s.status === 'completed');
+        filtered.sort((a, b) => b.date.localeCompare(a.date) || b.start_time.localeCompare(a.start_time));
+    }
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🎓</div>
+                <h3>No Sessions</h3>
+                <p>${currentTab === 'upcoming' ? 'You have no upcoming training sessions.' : 
+                    currentTab === 'today' ? 'You have no training sessions today.' : 
+                    'No past sessions found.'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map(s => {
+        const date = new Date(s.date + 'T00:00:00');
+        const isToday = s.date === today;
+        const isExpanded = expandedSessions.has(s.id);
+        const hasWaitlist = s.participants && s.participants.some(p => p.status === 'waitlisted');
+        
+        return `
+            <div class="session-card ${isToday ? 'today' : ''}">
+                <div class="session-header" onclick="toggleSession(${s.id})">
+                    <div class="date-block">
+                        <div class="month">${MONTHS[date.getMonth()]}</div>
+                        <div class="day">${date.getDate()}</div>
+                        <div class="weekday">${WEEKDAYS[date.getDay()]}</div>
+                    </div>
+                    <div class="session-info">
+                        <h3>
+                            <span class="level-badge level-${s.training_level}">L${s.training_level}</span>
+                            ${escapeHtml(s.training_name)}
+                        </h3>
+                        <div class="session-meta">
+                            ${formatTime(s.start_time)} - ${formatTime(s.end_time)} • ${escapeHtml(s.category)}
+                            ${s.location ? ' • ' + escapeHtml(s.location) : ''}
+                        </div>
+                        ${hasWaitlist ? '<div class="waitlist-indicator">⚠️ Has waitlisted students</div>' : ''}
+                    </div>
+                    <div class="session-stats">
+                        <div class="participant-count">${s.current_participants}/${s.max_participants}</div>
+                        <div class="participant-label">participants</div>
+                    </div>
+                </div>
+                
+                <div class="participants-panel ${isExpanded ? 'open' : ''}" id="panel-${s.id}">
+                    ${renderParticipants(s)}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderParticipants(session) {
+    if (!session.participants || session.participants.length === 0) {
+        return `
+            <div style="text-align: center; padding: 1rem; color: #888;">
+                No participants registered yet
+            </div>
+        `;
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const canMarkComplete = session.date <= today && session.status !== 'completed';
+    
+    return session.participants.map(p => `
+        <div class="participant-item">
+            <div class="participant-info">
+                <div class="participant-name">${escapeHtml(p.name)}</div>
+                <div class="participant-email">${escapeHtml(p.email)}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="status-badge ${p.status}">${formatStatus(p.status)}</span>
+                ${canMarkComplete && p.status === 'registered' ? `
+                    <div class="participant-actions">
+                        <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); markComplete(${p.id})">
+                            ✓ Complete
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); markNoShow(${p.id})">
+                            ✗ No Show
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleSession(id) {
+    if (expandedSessions.has(id)) {
+        expandedSessions.delete(id);
+    } else {
+        expandedSessions.add(id);
+    }
+    
+    const panel = document.getElementById(`panel-${id}`);
+    if (panel) {
+        panel.classList.toggle('open');
+    }
+}
+
+async function markComplete(bookingId) {
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            await loadSessions();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to mark complete', 'error');
+    }
+}
+
+async function markNoShow(bookingId) {
+    if (!confirm('Mark this student as a no-show?')) return;
+    
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/no-show/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            await loadSessions();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to mark no-show', 'error');
+    }
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function formatStatus(status) {
+    const labels = {
+        'registered': 'Registered',
+        'confirmed': 'Confirmed',
+        'waitlisted': 'Waitlisted',
+        'completed': 'Completed',
+        'no_show': 'No Show'
+    };
+    return labels[status] || status;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}
