@@ -4,7 +4,7 @@
 {% block title %}My Training Progress - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
-<a href="{% url 'student_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<a href="{% url 'user_dashboard' %}" class="breadcrumb-item">Dashboard</a>
 <span class="breadcrumb-separator">></span>
 <span class="breadcrumb-item active">My Training Progress</span>
 {% endblock %}
@@ -372,7 +372,7 @@
             <h1>🎓 My Training Progress</h1>
             <p style="margin: 0.5rem 0 0; color: #666;">Track your training completions and upcoming sessions</p>
         </div>
-        <a href="{% url 'training_browser' %}" class="btn btn-primary">
+        <a href="{% url 'reservations:training_browser' %}" class="btn btn-primary">
             📅 Browse Sessions
         </a>
     </div>
@@ -636,7 +636,7 @@ function renderUpcoming() {
                 <div class="empty-state-icon">📅</div>
                 <h3>No Upcoming Sessions</h3>
                 <p>You don't have any training sessions scheduled.</p>
-                <a href="{% url 'training_browser' %}" class="btn btn-primary">Browse Sessions</a>
+                <a href="{% url 'reservations:training_browser' %}" class="btn btn-primary">Browse Sessions</a>
             </div>
         `;
         return;
