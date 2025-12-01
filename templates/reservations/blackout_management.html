@@ -1,0 +1,900 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Blackout Periods - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'reservations:staff_reservations_hub' %}" class="breadcrumb-item">Reservations Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Blackout Periods</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+.tab-badge {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Blackout Card */
+.blackout-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: start;
+}
+
+.blackout-card.expired {
+    opacity: 0.6;
+    background: #f8f9fa;
+}
+
+.blackout-card.active {
+    border-left: 4px solid var(--cinnabar);
+}
+
+.blackout-card.upcoming {
+    border-left: 4px solid var(--sunglow);
+}
+
+.blackout-dates {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-width: 100px;
+}
+
+.blackout-dates .label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.blackout-dates .date {
+    font-weight: 600;
+    color: var(--gunmetal);
+    font-size: 0.9rem;
+}
+
+.blackout-dates .time {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.blackout-info h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    color: var(--gunmetal);
+}
+
+.blackout-meta {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.blackout-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+/* Scope Badge */
+.scope-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.scope-badge.global {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.scope-badge.location {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.scope-badge.category {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.scope-badge.machine {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Block badges */
+.block-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.block-badge.active {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Status indicator */
+.status-indicator {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-indicator.active {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-indicator.upcoming {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-indicator.expired {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.checkbox-group {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.scope-options {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.scope-options.active {
+    display: block;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>🚫 Blackout Periods</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Block reservations and trainings during closures or events</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+            ➕ New Blackout
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="active">
+            Active & Upcoming <span class="tab-badge" id="activeCount">0</span>
+        </button>
+        <button class="tab" data-tab="all">All</button>
+        <button class="tab" data-tab="expired">Expired</button>
+    </div>
+
+    <!-- Blackout List -->
+    <div id="blackoutContainer"></div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Blackout Period</h2>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Scope</label>
+                <select id="blackoutScope" onchange="updateScopeOptions()">
+                    <option value="global">Global (All Machines)</option>
+                    <option value="location">Specific Location</option>
+                    <option value="category">Specific Category</option>
+                    <option value="machine">Specific Machine</option>
+                </select>
+                
+                <div class="scope-options" id="locationOptions">
+                    <label>Location</label>
+                    <select id="blackoutLocation"></select>
+                </div>
+                
+                <div class="scope-options" id="categoryOptions">
+                    <label>Category</label>
+                    <select id="blackoutCategory"></select>
+                </div>
+                
+                <div class="scope-options" id="machineOptions">
+                    <label>Machine</label>
+                    <select id="blackoutMachine"></select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date & Time</label>
+                    <input type="datetime-local" id="blackoutStart">
+                </div>
+                <div class="form-group">
+                    <label>End Date & Time</label>
+                    <input type="datetime-local" id="blackoutEnd">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Reason (shown to users)</label>
+                <input type="text" id="blackoutReason" placeholder="e.g., Holiday closure, Maintenance, Event">
+            </div>
+            
+            <div class="form-group">
+                <label>Internal Notes (staff only)</label>
+                <textarea id="blackoutNotes" placeholder="Optional internal notes..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Block Types</label>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="blocksReservations" checked>
+                        Block Reservations
+                    </label>
+                    <label>
+                        <input type="checkbox" id="blocksTrainings" checked>
+                        Block Trainings
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="createBlackout()">Create Blackout</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Blackout Period</h2>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete this blackout period?</p>
+            <p id="deleteDetails" style="color: #666;"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allBlackouts = [];
+let currentTab = 'active';
+let deletingId = null;
+let locations = [];
+let categories = [];
+let machines = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadFilters();
+    loadBlackouts();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.dataset.tab;
+            renderBlackouts();
+        });
+    });
+});
+
+async function loadFilters() {
+    // Load locations
+    try {
+        const locResponse = await fetch('/api/locations/');
+        const locData = await locResponse.json();
+        locations = locData.locations || [];
+        
+        const locSelect = document.getElementById('blackoutLocation');
+        locSelect.innerHTML = '<option value="">Select location...</option>';
+        locations.forEach(loc => {
+            locSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
+        });
+    } catch (err) {
+        console.error('Error loading locations:', err);
+    }
+    
+    // Load categories
+    try {
+        const catResponse = await fetch('/api/categories/');
+        const catData = await catResponse.json();
+        categories = catData.categories || [];
+        
+        const catSelect = document.getElementById('blackoutCategory');
+        catSelect.innerHTML = '<option value="">Select category...</option>';
+        categories.forEach(cat => {
+            const icon = cat.icon ? cat.icon + ' ' : '';
+            catSelect.innerHTML += `<option value="${cat.name}">${icon}${cat.name}</option>`;
+        });
+    } catch (err) {
+        console.error('Error loading categories:', err);
+    }
+    
+    // Load machines
+    try {
+        const machResponse = await fetch('/api/machines/');
+        const machData = await machResponse.json();
+        machines = machData.machines || [];
+        
+        const machSelect = document.getElementById('blackoutMachine');
+        machSelect.innerHTML = '<option value="">Select machine...</option>';
+        machines.forEach(m => {
+            machSelect.innerHTML += `<option value="${m.id}">${m.name} (${m.machine_name})</option>`;
+        });
+    } catch (err) {
+        console.error('Error loading machines:', err);
+    }
+}
+
+async function loadBlackouts() {
+    try {
+        const response = await fetch('/reservations/api/admin/blackouts/');
+        const data = await response.json();
+        
+        if (data.success) {
+            allBlackouts = data.blackouts;
+            updateCounts();
+            renderBlackouts();
+        }
+    } catch (err) {
+        console.error('Error loading blackouts:', err);
+        showToast('Failed to load blackout periods', 'error');
+    }
+}
+
+function updateCounts() {
+    const now = new Date();
+    const activeAndUpcoming = allBlackouts.filter(b => new Date(b.end_datetime) > now);
+    document.getElementById('activeCount').textContent = activeAndUpcoming.length;
+}
+
+function renderBlackouts() {
+    const container = document.getElementById('blackoutContainer');
+    const now = new Date();
+    
+    let filtered = [];
+    
+    if (currentTab === 'active') {
+        filtered = allBlackouts.filter(b => new Date(b.end_datetime) > now);
+    } else if (currentTab === 'expired') {
+        filtered = allBlackouts.filter(b => new Date(b.end_datetime) <= now);
+    } else {
+        filtered = allBlackouts;
+    }
+    
+    // Sort by start date
+    filtered.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h3>No Blackout Periods</h3>
+                <p>${currentTab === 'active' ? 'No active or upcoming blackout periods.' : 'No blackout periods found.'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map(b => {
+        const startDate = new Date(b.start_datetime);
+        const endDate = new Date(b.end_datetime);
+        
+        let statusClass = 'upcoming';
+        let statusText = 'Upcoming';
+        
+        if (endDate <= now) {
+            statusClass = 'expired';
+            statusText = 'Expired';
+        } else if (startDate <= now && endDate > now) {
+            statusClass = 'active';
+            statusText = 'Active Now';
+        }
+        
+        // Determine target text
+        let targetText = 'All Machines';
+        if (b.scope === 'location' && b.location) {
+            targetText = b.location;
+        } else if (b.scope === 'category' && b.category) {
+            targetText = b.category;
+        } else if (b.scope === 'machine' && b.machine) {
+            targetText = b.machine;
+        }
+        
+        return `
+            <div class="blackout-card ${statusClass}">
+                <div class="blackout-dates">
+                    <div class="label">Start</div>
+                    <div class="date">${formatDate(startDate)}</div>
+                    <div class="time">${formatTime(startDate)}</div>
+                    <div style="margin: 0.5rem 0; color: #ccc;">↓</div>
+                    <div class="label">End</div>
+                    <div class="date">${formatDate(endDate)}</div>
+                    <div class="time">${formatTime(endDate)}</div>
+                </div>
+                
+                <div class="blackout-info">
+                    <h3>${escapeHtml(b.reason)}</h3>
+                    <div class="blackout-meta">
+                        ${escapeHtml(targetText)}
+                        ${b.created_by ? ` • Created by ${escapeHtml(b.created_by)}` : ''}
+                    </div>
+                    <div class="blackout-badges">
+                        <span class="scope-badge ${b.scope}">${b.scope}</span>
+                        <span class="block-badge ${b.blocks_reservations ? 'active' : ''}">
+                            ${b.blocks_reservations ? '🚫' : '✓'} Reservations
+                        </span>
+                        <span class="block-badge ${b.blocks_trainings ? 'active' : ''}">
+                            ${b.blocks_trainings ? '🚫' : '✓'} Trainings
+                        </span>
+                    </div>
+                </div>
+                
+                <div style="text-align: right;">
+                    <span class="status-indicator ${statusClass}">${statusText}</span>
+                    ${statusClass !== 'expired' ? `
+                        <button class="btn btn-danger btn-sm" style="margin-top: 0.5rem;" onclick="openDeleteModal(${b.id}, '${escapeHtml(b.reason)}')">
+                            Delete
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatDate(date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+function formatTime(date) {
+    const h = date.getHours();
+    const m = date.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+}
+
+function updateScopeOptions() {
+    const scope = document.getElementById('blackoutScope').value;
+    
+    document.getElementById('locationOptions').classList.remove('active');
+    document.getElementById('categoryOptions').classList.remove('active');
+    document.getElementById('machineOptions').classList.remove('active');
+    
+    if (scope === 'location') {
+        document.getElementById('locationOptions').classList.add('active');
+    } else if (scope === 'category') {
+        document.getElementById('categoryOptions').classList.add('active');
+    } else if (scope === 'machine') {
+        document.getElementById('machineOptions').classList.add('active');
+    }
+}
+
+// Create Modal
+function openCreateModal() {
+    // Reset form
+    document.getElementById('blackoutScope').value = 'global';
+    document.getElementById('blackoutStart').value = '';
+    document.getElementById('blackoutEnd').value = '';
+    document.getElementById('blackoutReason').value = '';
+    document.getElementById('blackoutNotes').value = '';
+    document.getElementById('blocksReservations').checked = true;
+    document.getElementById('blocksTrainings').checked = true;
+    
+    updateScopeOptions();
+    document.getElementById('createModal').classList.add('active');
+}
+
+function closeCreateModal() {
+    document.getElementById('createModal').classList.remove('active');
+}
+
+async function createBlackout() {
+    const scope = document.getElementById('blackoutScope').value;
+    const startStr = document.getElementById('blackoutStart').value;
+    const endStr = document.getElementById('blackoutEnd').value;
+    const reason = document.getElementById('blackoutReason').value.trim();
+    
+    if (!startStr || !endStr || !reason) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    const data = {
+        scope: scope,
+        start_datetime: new Date(startStr).toISOString(),
+        end_datetime: new Date(endStr).toISOString(),
+        reason: reason,
+        internal_notes: document.getElementById('blackoutNotes').value,
+        blocks_reservations: document.getElementById('blocksReservations').checked,
+        blocks_trainings: document.getElementById('blocksTrainings').checked,
+    };
+    
+    // Add scope-specific fields
+    if (scope === 'location') {
+        data.location_id = document.getElementById('blackoutLocation').value;
+        if (!data.location_id) {
+            showToast('Please select a location', 'error');
+            return;
+        }
+    } else if (scope === 'category') {
+        data.category = document.getElementById('blackoutCategory').value;
+        if (!data.category) {
+            showToast('Please select a category', 'error');
+            return;
+        }
+    } else if (scope === 'machine') {
+        data.machine_id = document.getElementById('blackoutMachine').value;
+        if (!data.machine_id) {
+            showToast('Please select a machine', 'error');
+            return;
+        }
+    }
+    
+    try {
+        const response = await fetch('/reservations/api/admin/blackouts/create/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Blackout period created', 'success');
+            closeCreateModal();
+            await loadBlackouts();
+        } else {
+            showToast(result.error || 'Failed to create blackout', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to create blackout period', 'error');
+    }
+}
+
+// Delete Modal
+function openDeleteModal(id, reason) {
+    deletingId = id;
+    document.getElementById('deleteDetails').textContent = `"${reason}"`;
+    document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+    deletingId = null;
+}
+
+async function confirmDelete() {
+    if (!deletingId) return;
+    
+    try {
+        const response = await fetch(`/reservations/api/admin/blackouts/${deletingId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Blackout period deleted', 'success');
+            closeDeleteModal();
+            await loadBlackouts();
+        } else {
+            showToast(data.error || 'Failed to delete', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to delete blackout period', 'error');
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCreateModal();
+});
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
+{% endblock %}

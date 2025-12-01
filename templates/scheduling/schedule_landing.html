@@ -1,0 +1,170 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Schedule Management - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Schedule Management</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <h1 style="margin-bottom: 2rem; color: var(--maroon);">📅 Schedule Management</h1>
+    
+    <!-- Quick Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div style="padding: 1rem; background: var(--light-gold); border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--maroon);">{{ active_semester.name|default:"None" }}</div>
+            <div style="color: #666; font-size: 0.9rem;">Active Semester</div>
+        </div>
+        
+        <div style="padding: 1rem; background: var(--light-maroon); border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--maroon);">{{ total_team_members }}</div>
+            <div style="color: #666; font-size: 0.9rem;">Team Members</div>
+        </div>
+        
+        <div style="padding: 1rem; background: var(--light-gold); border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--maroon);">{{ total_shifts }}</div>
+            <div style="color: #666; font-size: 0.9rem;">Shifts This Week</div>
+        </div>
+    </div>
+    
+    <!-- Main Options -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        
+        <!-- View Current Schedule -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:view_schedule' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #4CAF50, #45a049);">
+                📊
+            </div>
+            <h2>View Current Schedule</h2>
+            <p>View and edit the active weekly schedule, see coverage gaps, and make adjustments</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Initialize/Configure Semester -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:configure_semester' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, var(--gold), #e6b800);">
+                ⚙️
+            </div>
+            <h2>Configure Semester</h2>
+            <p>Set up semester details, operating hours, holidays, and shift requirements</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Unavailability & Hours -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:manage_availability' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, var(--maroon), #a8305a);">
+                📋
+            </div>
+            <h2>Unavailability & Hours</h2>
+            <p>Set weekly hours, manage unavailability windows, and view who's available when</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Run Auto-Scheduler -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:auto_schedule' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #2196F3, #1976D2);">
+                🤖
+            </div>
+            <h2>Auto-Schedule</h2>
+            <p>Automatically generate the weekly schedule based on requirements and unavailability</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Review Requests -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:review_requests' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #FF5722, #E64A19);">
+                📬
+            </div>
+            <h2>Review Requests</h2>
+            <p>Approve or reject shift swaps, cancellations, and schedule change requests</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Manage Semesters -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:manage_semesters' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+                📚
+            </div>
+            <h2>Manage Semesters</h2>
+            <p>Create new semesters, archive old ones, and switch between semester schedules</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+        <!-- Publish Schedule -->
+        <div class="option-card" onclick="window.location.href='{% url 'scheduling:publish_schedule' %}'">
+            <div class="option-icon" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">
+                🚀
+            </div>
+            <h2>Publish Schedule</h2>
+            <p>Send calendar invites to team members and make the schedule visible</p>
+            <div class="option-arrow">→</div>
+        </div>
+        
+    </div>
+</div>
+
+<style>
+.option-card {
+    background: white;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.option-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.option-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.option-card h2 {
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.option-card p {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+.option-arrow {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 1.5rem;
+    color: var(--gold);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.option-card:hover .option-arrow {
+    opacity: 1;
+    transform: translateX(4px);
+}
+</style>
+
+{% endblock %}

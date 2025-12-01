@@ -1,0 +1,15 @@
+{% comment %}
+Training Management Navigation Card - Include this in the staff dashboard
+Usage: {% include 'staff/training_management_card.html' %}
+{% endcomment %}
+
+<!-- Training Management Card -->
+<div class="card" style="cursor: pointer;" onclick="window.location.href='{% url 'training_management' %}'">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>🎓 Training Management</h2>
+            <p style="color: #666; margin-top: 0.5rem;">Create and manage machine trainings, levels, and qualifications</p>
+        </div>
+        <div style="font-size: 2rem; color: var(--gold);">→</div>
+    </div>
+</div>

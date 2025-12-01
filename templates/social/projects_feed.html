@@ -1,0 +1,603 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Projects - The Hatchery{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+.btn-create {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-create:hover {
+    background: #e5b52c;
+}
+
+/* Filters Bar */
+.filters-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.filter-select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+}
+
+.sort-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: #f0f0f0;
+    padding: 0.25rem;
+    border-radius: 8px;
+    margin-left: auto;
+}
+
+.sort-tab {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.sort-tab.active {
+    background: white;
+    color: var(--gunmetal);
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Projects Grid */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Project Card */
+.project-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.project-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.project-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+    overflow: hidden;
+    position: relative;
+}
+
+.project-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.project-image .placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: #ccc;
+}
+
+.project-body {
+    padding: 1.25rem;
+}
+
+.project-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--gunmetal);
+}
+
+.project-description {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.project-tag {
+    padding: 0.25rem 0.6rem;
+    background: #f0f0f0;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.project-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.project-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.author-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--sunglow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.author-name {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.project-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.stat.liked {
+    color: var(--cinnabar);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem;
+    color: var(--gunmetal);
+}
+
+.empty-state p {
+    margin: 0 0 1.5rem;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #f0f0f0;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-btn.active {
+    background: var(--sunglow);
+    border-color: var(--sunglow);
+    font-weight: 600;
+}
+
+/* Loading */
+.loading-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.skeleton-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-body {
+    padding: 1.25rem;
+}
+
+.skeleton-line {
+    height: 16px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>🎨 Project Showcase</h1>
+        <p style="color: #666; margin: 0.5rem 0 0;">Share your creations and get inspired by the community</p>
+    </div>
+    <a href="{% url 'social:create_project' %}" class="btn-create">
+        <span>+</span> Share Project
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="filter-group">
+        <label>Category:</label>
+        <select class="filter-select" id="categoryFilter" onchange="applyFilters()">
+            <option value="">All Categories</option>
+            <option value="3D Printing">3D Printing</option>
+            <option value="Laser">Laser Cutting</option>
+            <option value="Woodworking">Woodworking</option>
+            <option value="Textile">Textile</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Metalworking">Metalworking</option>
+        </select>
+    </div>
+    
+    <div class="sort-tabs">
+        <button class="sort-tab active" data-sort="recent" onclick="setSort('recent')">Recent</button>
+        <button class="sort-tab" data-sort="popular" onclick="setSort('popular')">Popular</button>
+        <button class="sort-tab" data-sort="most_liked" onclick="setSort('most_liked')">Most Liked</button>
+    </div>
+</div>
+
+<!-- Projects Grid -->
+<div class="projects-grid" id="projectsGrid">
+    <!-- Loading skeleton -->
+    <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+        </div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+        </div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="pagination" id="pagination"></div>
+
+<script>
+let currentPage = 1;
+let currentSort = 'recent';
+let currentCategory = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProjects();
+});
+
+async function loadProjects() {
+    const grid = document.getElementById('projectsGrid');
+    
+    try {
+        const params = new URLSearchParams({
+            page: currentPage,
+            sort: currentSort,
+        });
+        
+        if (currentCategory) {
+            params.append('category', currentCategory);
+        }
+        
+        const response = await fetch(`/social/api/projects/?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderProjects(data.projects);
+            renderPagination(data.pagination);
+        }
+    } catch (err) {
+        console.error('Error loading projects:', err);
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">😕</div>
+                <h3>Could not load projects</h3>
+                <p>Please try again later</p>
+            </div>
+        `;
+    }
+}
+
+function renderProjects(projects) {
+    const grid = document.getElementById('projectsGrid');
+    
+    if (projects.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">🎨</div>
+                <h3>No projects yet</h3>
+                <p>Be the first to share your creation!</p>
+                <a href="{% url 'social:create_project' %}" class="btn-create">Share Project</a>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = projects.map(project => `
+        <div class="project-card" onclick="viewProject(${project.id})">
+            <div class="project-image">
+                ${project.cover_image 
+                    ? `<img src="${project.cover_image}" alt="${escapeHtml(project.title)}">`
+                    : `<div class="placeholder">🔧</div>`
+                }
+            </div>
+            <div class="project-body">
+                <h3 class="project-title">${escapeHtml(project.title)}</h3>
+                <p class="project-description">${escapeHtml(project.description)}</p>
+                
+                ${project.machine_types_used.length > 0 ? `
+                    <div class="project-tags">
+                        ${project.machine_types_used.slice(0, 3).map(t => 
+                            `<span class="project-tag">🔧 ${escapeHtml(t)}</span>`
+                        ).join('')}
+                        ${project.machine_types_used.length > 3 ? `<span class="project-tag">+${project.machine_types_used.length - 3}</span>` : ''}
+                    </div>
+                ` : ''}
+                
+                <div class="project-footer">
+                    <div class="project-author">
+                        <div class="author-avatar">${getInitials(project.author_name)}</div>
+                        <span class="author-name">${escapeHtml(project.author_name)}</span>
+                    </div>
+                    <div class="project-stats">
+                        <span class="stat ${project.is_liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleLike(${project.id})">
+                            ${project.is_liked ? '❤️' : '🤍'} ${project.likes_count}
+                        </span>
+                        <span class="stat">💬 ${project.comments_count}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderPagination(pagination) {
+    const container = document.getElementById('pagination');
+    
+    if (pagination.total_pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${!pagination.has_previous ? 'disabled' : ''}>← Prev</button>`;
+    
+    for (let i = 1; i <= pagination.total_pages; i++) {
+        if (i === 1 || i === pagination.total_pages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+            html += `<span style="padding: 0.5rem;">...</span>`;
+        }
+    }
+    
+    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${!pagination.has_next ? 'disabled' : ''}>Next →</button>`;
+    
+    container.innerHTML = html;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    loadProjects();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setSort(sort) {
+    currentSort = sort;
+    currentPage = 1;
+    
+    document.querySelectorAll('.sort-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.sort === sort);
+    });
+    
+    loadProjects();
+}
+
+function applyFilters() {
+    currentCategory = document.getElementById('categoryFilter').value;
+    currentPage = 1;
+    loadProjects();
+}
+
+function viewProject(projectId) {
+    window.location.href = `/social/projects/${projectId}/`;
+}
+
+async function toggleLike(projectId) {
+    try {
+        const response = await fetch(`/social/api/projects/${projectId}/like/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            loadProjects(); // Refresh to update like state
+        }
+    } catch (err) {
+        console.error('Error toggling like:', err);
+    }
+}
+
+function getInitials(name) {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

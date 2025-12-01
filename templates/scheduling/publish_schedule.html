@@ -1,0 +1,1465 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Publish Schedule - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Publish Schedule</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--gunmetal);
+}
+
+/* Semester selector */
+.semester-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.semester-bar label {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.semester-bar select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 200px;
+}
+
+/* Stats overview */
+.publish-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.publish-stat {
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #e9ecef;
+}
+
+.publish-stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.publish-stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.publish-stat.success .publish-stat-value {
+    color: var(--keppel);
+}
+
+.publish-stat.warning .publish-stat-value {
+    color: #f59e0b;
+}
+
+.publish-stat.danger .publish-stat-value {
+    color: var(--cinnabar);
+}
+
+/* Publication options */
+.publish-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.publish-option-card {
+    background: white;
+    border: 2px solid var(--timberwolf);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+}
+
+.publish-option-card:hover {
+    border-color: var(--sunglow);
+}
+
+.publish-option-card.selected {
+    border-color: var(--keppel);
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.05), white);
+}
+
+.publish-option-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.publish-option-checkbox {
+    margin-top: 0.25rem;
+}
+
+.publish-option-checkbox input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.publish-option-icon {
+    font-size: 2rem;
+}
+
+.publish-option-content {
+    flex: 1;
+}
+
+.publish-option-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+}
+
+.publish-option-desc {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.publish-option-details {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.publish-option-details label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.publish-option-details select,
+.publish-option-details input,
+.publish-option-details textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.publish-option-details textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Week selector */
+.week-selector {
+    margin-top: 1rem;
+}
+
+.week-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.week-chip {
+    padding: 0.4rem 0.8rem;
+    background: #f0f0f0;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.week-chip:hover {
+    background: #e8e8e8;
+}
+
+.week-chip.selected {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    font-weight: 500;
+}
+
+.week-chip.selected.no-shifts {
+    background: #f0e68c;
+    opacity: 0.8;
+}
+
+.week-chip.no-shifts {
+    font-style: italic;
+}
+
+.week-chip.published {
+    background: #d4edda;
+    color: #155724;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* Recipient list */
+.recipient-section {
+    margin-top: 1.5rem;
+}
+
+.recipient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recipient-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gunmetal);
+}
+
+.recipient-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.recipient-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+}
+
+.recipient-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.recipient-item:last-child {
+    border-bottom: none;
+}
+
+.recipient-item input {
+    cursor: pointer;
+}
+
+.recipient-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--timberwolf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--gunmetal);
+}
+
+.recipient-info {
+    flex: 1;
+}
+
+.recipient-name {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.recipient-email {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.recipient-shifts {
+    font-size: 0.8rem;
+    color: #666;
+    background: #f0f0f0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+}
+
+/* Publish button section */
+.publish-section {
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa, white);
+    border-radius: 12px;
+    border: 2px dashed var(--timberwolf);
+    margin-top: 2rem;
+}
+
+.publish-section.ready {
+    border-style: solid;
+    border-color: var(--keppel);
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.05), white);
+}
+
+.publish-button {
+    background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+    color: white;
+    border: none;
+    padding: 1rem 3rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s;
+}
+
+.publish-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.publish-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.publish-summary {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Progress */
+.progress-section {
+    display: none;
+    margin-top: 2rem;
+}
+
+.progress-section.show {
+    display: block;
+}
+
+.progress-bar-container {
+    background: #e0e0e0;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #9C27B0, var(--sunglow));
+    border-radius: 6px;
+    transition: width 0.3s;
+}
+
+.progress-status {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Results */
+.results-section {
+    display: none;
+    margin-top: 2rem;
+}
+
+.results-section.show {
+    display: block;
+}
+
+.results-card {
+    background: white;
+    border-radius: 12px;
+    border: 2px solid var(--keppel);
+    overflow: hidden;
+}
+
+.results-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 181, 156, 0.1), rgba(0, 181, 156, 0.05));
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.results-icon {
+    font-size: 2.5rem;
+}
+
+.results-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0;
+}
+
+.results-subtitle {
+    color: #666;
+    margin: 0.25rem 0 0;
+}
+
+.results-body {
+    padding: 1.5rem;
+}
+
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.result-stat {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.result-stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.result-stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.results-actions {
+    padding: 1.5rem;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* History */
+.history-section {
+    margin-top: 2rem;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.history-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.history-table tr:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.sent {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Publication warning */
+.publication-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #fff8e1;
+    border: 1px solid #ffcc02;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.publication-warning .warning-icon {
+    font-size: 1.5rem;
+}
+
+.publication-warning .warning-content {
+    flex: 1;
+}
+
+.publication-warning .warning-title {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+}
+
+.publication-warning .warning-text {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Republish button styling */
+.publish-button.republish {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.publish-button.republish:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>📤 Publish Schedule</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Send calendar invites and notify team members about their shifts</p>
+        </div>
+    </div>
+    
+    <div class="semester-bar">
+        <label>Semester:</label>
+        <select id="semesterSelect" onchange="loadPublishData()">
+            <option value="">-- Select Semester --</option>
+        </select>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="card" id="statsCard" style="display: none;">
+    <h2 style="margin: 0 0 1rem; color: var(--gunmetal);">Schedule Overview</h2>
+    
+    <!-- Publication Warning Banner -->
+    <div id="publicationWarning" class="publication-warning" style="display: none;">
+        <!-- Populated by JS -->
+    </div>
+    
+    <div class="publish-stats" id="publishStats">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<!-- Publication Options -->
+<div class="card" id="optionsCard" style="display: none;">
+    <h2 style="margin: 0 0 1.5rem; color: var(--gunmetal);">Publication Options</h2>
+    
+    <div class="publish-options">
+        <!-- Calendar Invites -->
+        <div class="publish-option-card selected" id="calendarOption">
+            <div class="publish-option-header">
+                <div class="publish-option-checkbox">
+                    <input type="checkbox" id="sendCalendarInvites" checked onchange="updateOptionCard('calendar')">
+                </div>
+                <div class="publish-option-icon">📅</div>
+                <div class="publish-option-content">
+                    <div class="publish-option-title">Send Calendar Invites</div>
+                    <div class="publish-option-desc">Add shifts to team members' Google Calendar</div>
+                </div>
+            </div>
+            <div class="publish-option-details">
+                <label>Include in invite:</label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; align-items: flex-start;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="includeLocation" checked> Location details
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="includeNotes" checked> Shift notes
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="includeReminder" checked> 1-hour reminder
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Email Notification -->
+        <div class="publish-option-card" id="emailOption">
+            <div class="publish-option-header">
+                <div class="publish-option-checkbox">
+                    <input type="checkbox" id="sendEmailNotification" checked onchange="updateOptionCard('email')">
+                </div>
+                <div class="publish-option-icon">📧</div>
+                <div class="publish-option-content">
+                    <div class="publish-option-title">Send Email Notification</div>
+                    <div class="publish-option-desc">Email team members with their schedule summary</div>
+                </div>
+            </div>
+            <div class="publish-option-details">
+                <label>From email address:</label>
+                <input type="email" id="fromEmail" value="{{ default_from_email }}" placeholder="hatchery@bc.edu">
+                <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">This address will appear as the sender (configured in settings.py)</div>
+                
+                <label style="margin-top: 0.75rem;">Email subject:</label>
+                <input type="text" id="emailSubject" value="Your Hatchery Schedule">
+                
+                <label style="margin-top: 0.75rem;">Custom message (optional):</label>
+                <textarea id="emailMessage" placeholder="Add any additional notes or reminders..."></textarea>
+                
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #e3f2fd; border-radius: 6px; font-size: 0.85rem;">
+                    <strong>📋 Email Preview:</strong><br>
+                    Each recipient will receive an email listing their assigned shifts with dates, times, locations, and shift types.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Week Selection -->
+    <div class="week-selector">
+        <h3 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--gunmetal);">Select Weeks to Publish</h3>
+        <p style="margin: 0 0 0.75rem; font-size: 0.85rem; color: #666;">Choose which weeks to include in this publication</p>
+        
+        <div class="week-quick-select" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange('all')">All Weeks</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange(1)">Next Week</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange(2)">Next 2 Weeks</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange(4)">Next 4 Weeks</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange('remaining')">Remaining Semester</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectWeekRange('none')">Clear Selection</button>
+        </div>
+        
+        <div class="week-chips" id="weekChips">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+    
+    <!-- Recipients -->
+    <div class="recipient-section">
+        <div class="recipient-header">
+            <h3>Recipients (<span id="recipientCount">0</span> selected)</h3>
+            <div class="recipient-actions">
+                <button class="btn btn-secondary" onclick="selectAllRecipients()">Select All</button>
+                <button class="btn btn-secondary" onclick="deselectAllRecipients()">Deselect All</button>
+            </div>
+        </div>
+        <div class="recipient-list" id="recipientList">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Publish Section -->
+<div class="card" id="publishCard" style="display: none;">
+    <div class="publish-section" id="publishSection">
+        <p style="color: #666; margin-bottom: 1rem;">Review the options above, then publish the schedule</p>
+        <button class="publish-button" id="publishButton" onclick="doPublishSchedule()" disabled>
+            <span>📤</span>
+            <span>Publish Schedule</span>
+        </button>
+        <div class="publish-summary" id="publishSummary">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+    
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">Preparing...</div>
+    </div>
+    
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+        <div class="results-card">
+            <div class="results-header">
+                <div class="results-icon" id="resultsIcon">✅</div>
+                <div>
+                    <h2 class="results-title">Schedule Published Successfully</h2>
+                    <p class="results-subtitle" id="resultsSubtitle">All notifications have been sent</p>
+                </div>
+            </div>
+            <div class="results-body">
+                <div class="results-stats">
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultInvites">0</div>
+                        <div class="result-stat-label">Calendar Invites</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultEmails">0</div>
+                        <div class="result-stat-label">Emails Sent</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value" id="resultRecipients">0</div>
+                        <div class="result-stat-label">Recipients</div>
+                    </div>
+                </div>
+            </div>
+            <div class="results-actions">
+                <a href="{% url 'scheduling:view_schedule' %}" class="btn btn-primary">View Schedule</a>
+                <button class="btn btn-secondary" onclick="resetPublish()">Publish More</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Publication History -->
+<div class="card" id="historyCard" style="display: none;">
+    <div class="history-header">
+        <h2 style="margin: 0; color: var(--gunmetal);">Publication History</h2>
+    </div>
+    <table class="history-table" id="historyTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Weeks</th>
+                <th>Recipients</th>
+                <th>Calendar</th>
+                <th>Email</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="historyBody">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Empty State -->
+<div class="card" id="emptyState" style="display: none;">
+    <div class="empty-state">
+        <div class="empty-state-icon">📤</div>
+        <h2>Select a Semester</h2>
+        <p>Choose a semester to view and publish its schedule.</p>
+    </div>
+</div>
+
+<script>
+let currentSemester = null;
+let scheduleData = null;
+let selectedWeeks = new Set();
+let selectedRecipients = new Set();
+let lastPublication = null; // Track last publication details
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSemesters();
+});
+
+function loadSemesters() {
+    fetch('/scheduling/api/semesters/')
+        .then(r => r.json())
+        .then(data => {
+            const select = document.getElementById('semesterSelect');
+            const semesters = data.semesters || [];
+            
+            semesters.forEach(sem => {
+                const option = document.createElement('option');
+                option.value = sem.id;
+                option.textContent = sem.name + (sem.is_active ? ' (Active)' : '');
+                if (sem.is_active) option.selected = true;
+                select.appendChild(option);
+            });
+            
+            if (select.value) {
+                loadPublishData();
+            } else {
+                showEmptyState();
+            }
+        })
+        .catch(err => {
+            console.error('Error loading semesters:', err);
+            showEmptyState();
+        });
+}
+
+function loadPublishData() {
+    const semesterId = document.getElementById('semesterSelect').value;
+    
+    if (!semesterId) {
+        showEmptyState();
+        return;
+    }
+    
+    currentSemester = semesterId;
+    
+    // Load schedule data including semester config
+    Promise.all([
+        fetch(`/scheduling/api/shifts/?semester_id=${semesterId}`).then(r => r.json()),
+        fetch(`/scheduling/api/publish/history/?semester_id=${semesterId}`).then(r => r.json()).catch(() => ({ history: [] })),
+        fetch(`/scheduling/api/semester/${semesterId}/config/`).then(r => r.json()).catch(() => ({ semester: null }))
+    ])
+    .then(([shiftsData, historyData, configData]) => {
+        scheduleData = {
+            shifts: shiftsData.shifts || [],
+            history: historyData.history || [],
+            config: configData
+        };
+        
+        if (scheduleData.shifts.length === 0) {
+            showNoShiftsState();
+            return;
+        }
+        
+        // Check if previously published
+        lastPublication = scheduleData.history.length > 0 ? scheduleData.history[0] : null;
+        
+        renderStats();
+        renderWeekChips();
+        renderRecipients();
+        renderHistory();
+        renderPublicationWarning();
+        updatePublishButton();
+        
+        document.getElementById('statsCard').style.display = 'block';
+        document.getElementById('optionsCard').style.display = 'block';
+        document.getElementById('publishCard').style.display = 'block';
+        document.getElementById('historyCard').style.display = scheduleData.history.length > 0 ? 'block' : 'none';
+        document.getElementById('emptyState').style.display = 'none';
+    })
+    .catch(err => {
+        console.error('Error loading data:', err);
+        showEmptyState();
+    });
+}
+
+function renderStats() {
+    const shifts = scheduleData.shifts;
+    
+    // Calculate stats
+    const totalShifts = shifts.length;
+    const uniqueMembers = new Set(shifts.map(s => s.user_id)).size;
+    
+    // Get weeks
+    const weeks = new Set();
+    shifts.forEach(s => {
+        const date = new Date(s.date);
+        const weekStart = getWeekStart(date);
+        weeks.add(weekStart.toISOString().split('T')[0]);
+    });
+    
+    // Calculate total hours
+    let totalHours = 0;
+    shifts.forEach(s => {
+        totalHours += s.duration_hours || 0;
+    });
+    
+    document.getElementById('publishStats').innerHTML = `
+        <div class="publish-stat">
+            <div class="publish-stat-value">${totalShifts}</div>
+            <div class="publish-stat-label">Total Shifts</div>
+        </div>
+        <div class="publish-stat">
+            <div class="publish-stat-value">${uniqueMembers}</div>
+            <div class="publish-stat-label">Team Members</div>
+        </div>
+        <div class="publish-stat">
+            <div class="publish-stat-value">${weeks.size}</div>
+            <div class="publish-stat-label">Weeks</div>
+        </div>
+        <div class="publish-stat">
+            <div class="publish-stat-value">${Math.round(totalHours)}</div>
+            <div class="publish-stat-label">Total Hours</div>
+        </div>
+    `;
+}
+
+let allWeeksData = []; // Store week data for quick selection
+
+function renderWeekChips() {
+    const shifts = scheduleData.shifts;
+    const container = document.getElementById('weekChips');
+    
+    // Get semester date range from the config or derive from shifts
+    let semesterStart, semesterEnd;
+    
+    // Try to get from semester config if available
+    if (scheduleData.config && scheduleData.config.semester) {
+        semesterStart = new Date(scheduleData.config.semester.start_date);
+        semesterEnd = new Date(scheduleData.config.semester.end_date);
+    } else if (shifts.length > 0) {
+        // Fall back to deriving from shift dates
+        const dates = shifts.map(s => new Date(s.date));
+        semesterStart = new Date(Math.min(...dates));
+        semesterEnd = new Date(Math.max(...dates));
+        // Extend to cover full semester (roughly)
+        semesterEnd.setDate(semesterEnd.getDate() + 60);
+    } else {
+        container.innerHTML = '<p style="color: #666;">No weeks available</p>';
+        return;
+    }
+    
+    // Count shifts per week
+    const shiftCountByWeek = new Map();
+    shifts.forEach(s => {
+        const date = new Date(s.date);
+        const weekStart = getWeekStart(date);
+        const key = weekStart.toISOString().split('T')[0];
+        shiftCountByWeek.set(key, (shiftCountByWeek.get(key) || 0) + 1);
+    });
+    
+    // Generate all weeks in semester
+    const weeksData = [];
+    let currentWeekStart = getWeekStart(semesterStart);
+    
+    while (currentWeekStart <= semesterEnd) {
+        const key = currentWeekStart.toISOString().split('T')[0];
+        const shiftCount = shiftCountByWeek.get(key) || 0;
+        
+        weeksData.push([key, {
+            start: new Date(currentWeekStart),
+            shiftCount: shiftCount
+        }]);
+        
+        // Move to next week
+        currentWeekStart = new Date(currentWeekStart);
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+    }
+    
+    // Store for quick selection
+    allWeeksData = weeksData;
+    
+    // Select all weeks by default
+    selectedWeeks.clear();
+    weeksData.forEach(([key]) => selectedWeeks.add(key));
+    
+    container.innerHTML = weeksData.map(([key, data]) => {
+        const weekEnd = new Date(data.start);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        const startStr = data.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        const shiftLabel = data.shiftCount > 0 ? `(${data.shiftCount} shifts)` : '(no shifts)';
+        const hasShiftsClass = data.shiftCount > 0 ? '' : 'no-shifts';
+        
+        return `
+            <div class="week-chip selected ${hasShiftsClass}" data-week="${key}" onclick="toggleWeek('${key}')">
+                ${startStr} – ${endStr} ${shiftLabel}
+            </div>
+        `;
+    }).join('');
+}
+
+function selectWeekRange(range) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    selectedWeeks.clear();
+    
+    if (range === 'all') {
+        // Select all weeks
+        allWeeksData.forEach(([key]) => selectedWeeks.add(key));
+    } else if (range === 'none') {
+        // Clear all selections
+        // selectedWeeks is already cleared
+    } else if (range === 'remaining') {
+        // Select all weeks from today onwards
+        allWeeksData.forEach(([key, data]) => {
+            const weekEnd = new Date(data.start);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            if (weekEnd >= today) {
+                selectedWeeks.add(key);
+            }
+        });
+    } else if (typeof range === 'number') {
+        // Select next N weeks from today
+        let weeksAdded = 0;
+        for (const [key, data] of allWeeksData) {
+            const weekEnd = new Date(data.start);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            if (weekEnd >= today && weeksAdded < range) {
+                selectedWeeks.add(key);
+                weeksAdded++;
+            }
+        }
+    }
+    
+    // Update UI
+    document.querySelectorAll('.week-chip').forEach(chip => {
+        chip.classList.toggle('selected', selectedWeeks.has(chip.dataset.week));
+    });
+    
+    updatePublishButton();
+}
+
+function toggleWeek(weekKey) {
+    if (selectedWeeks.has(weekKey)) {
+        selectedWeeks.delete(weekKey);
+    } else {
+        selectedWeeks.add(weekKey);
+    }
+    
+    // Update chip UI
+    document.querySelectorAll('.week-chip').forEach(chip => {
+        if (chip.dataset.week === weekKey) {
+            chip.classList.toggle('selected', selectedWeeks.has(weekKey));
+        }
+    });
+    
+    updatePublishButton();
+}
+
+function renderRecipients() {
+    const shifts = scheduleData.shifts;
+    const container = document.getElementById('recipientList');
+    
+    // Get unique users with shift counts
+    const usersMap = new Map();
+    shifts.forEach(s => {
+        if (!usersMap.has(s.user_id)) {
+            usersMap.set(s.user_id, {
+                id: s.user_id,
+                name: s.user,
+                email: s.user.includes('@') ? s.user : '',
+                shiftCount: 0
+            });
+        }
+        usersMap.get(s.user_id).shiftCount++;
+    });
+    
+    const users = Array.from(usersMap.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
+    );
+    
+    // Select all by default
+    selectedRecipients.clear();
+    users.forEach(u => selectedRecipients.add(u.id));
+    
+    container.innerHTML = users.map(user => {
+        const name = user.name.includes('@') ? user.name.split('@')[0] : user.name;
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        
+        return `
+            <div class="recipient-item">
+                <input type="checkbox" checked data-user-id="${user.id}" onchange="toggleRecipient(${user.id})">
+                <div class="recipient-avatar">${initials}</div>
+                <div class="recipient-info">
+                    <div class="recipient-name">${name}</div>
+                    <div class="recipient-email">${user.email || user.name}</div>
+                </div>
+                <div class="recipient-shifts">${user.shiftCount} shifts</div>
+            </div>
+        `;
+    }).join('');
+    
+    updateRecipientCount();
+}
+
+function toggleRecipient(userId) {
+    if (selectedRecipients.has(userId)) {
+        selectedRecipients.delete(userId);
+    } else {
+        selectedRecipients.add(userId);
+    }
+    updateRecipientCount();
+    updatePublishButton();
+}
+
+function selectAllRecipients() {
+    document.querySelectorAll('#recipientList input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        selectedRecipients.add(parseInt(cb.dataset.userId));
+    });
+    updateRecipientCount();
+    updatePublishButton();
+}
+
+function deselectAllRecipients() {
+    document.querySelectorAll('#recipientList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+    selectedRecipients.clear();
+    updateRecipientCount();
+    updatePublishButton();
+}
+
+function updateRecipientCount() {
+    document.getElementById('recipientCount').textContent = selectedRecipients.size;
+}
+
+function updateOptionCard(type) {
+    if (type === 'calendar') {
+        const checked = document.getElementById('sendCalendarInvites').checked;
+        document.getElementById('calendarOption').classList.toggle('selected', checked);
+    } else if (type === 'email') {
+        const checked = document.getElementById('sendEmailNotification').checked;
+        document.getElementById('emailOption').classList.toggle('selected', checked);
+    }
+    updatePublishButton();
+}
+
+function updatePublishButton() {
+    const hasWeeks = selectedWeeks.size > 0;
+    const hasRecipients = selectedRecipients.size > 0;
+    const sendCalendar = document.getElementById('sendCalendarInvites').checked;
+    const sendEmail = document.getElementById('sendEmailNotification').checked;
+    const hasOptions = sendCalendar || sendEmail;
+    
+    const canPublish = hasWeeks && hasRecipients && hasOptions;
+    
+    // Check if this is a republish with same options
+    let isRepublish = false;
+    let hasNewOptions = false;
+    
+    if (lastPublication) {
+        isRepublish = true;
+        // Check if user selected options that weren't in last publication
+        if (sendCalendar && !lastPublication.calendar_invites) {
+            hasNewOptions = true;
+        }
+        if (sendEmail && !lastPublication.email_sent) {
+            hasNewOptions = true;
+        }
+    }
+    
+    const publishButton = document.getElementById('publishButton');
+    const publishSection = document.getElementById('publishSection');
+    
+    publishButton.disabled = !canPublish;
+    publishSection.classList.toggle('ready', canPublish);
+    
+    // Style button based on republish status
+    if (isRepublish && !hasNewOptions && canPublish) {
+        publishButton.classList.add('republish');
+        publishButton.innerHTML = '<span>📤</span><span>Republish Schedule</span>';
+    } else {
+        publishButton.classList.remove('republish');
+        publishButton.innerHTML = '<span>📤</span><span>Publish Schedule</span>';
+    }
+    
+    // Update summary
+    const summary = [];
+    if (sendCalendar) {
+        summary.push('calendar invites');
+    }
+    if (sendEmail) {
+        summary.push('email notifications');
+    }
+    
+    let summaryText = '';
+    if (canPublish) {
+        summaryText = `Will send ${summary.join(' and ')} to <strong>${selectedRecipients.size}</strong> recipients for <strong>${selectedWeeks.size}</strong> week(s)`;
+        if (isRepublish && !hasNewOptions) {
+            summaryText += '<br><span style="color: #f59e0b;">⚠️ This will send duplicate notifications to recipients who were already notified.</span>';
+        }
+    } else {
+        summaryText = 'Select weeks, recipients, and at least one notification method';
+    }
+    
+    document.getElementById('publishSummary').innerHTML = summaryText;
+}
+
+function renderPublicationWarning() {
+    const warningContainer = document.getElementById('publicationWarning');
+    
+    if (!lastPublication) {
+        warningContainer.style.display = 'none';
+        return;
+    }
+    
+    const pubDate = new Date(lastPublication.published_at);
+    const dateStr = pubDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    });
+    
+    const methods = [];
+    if (lastPublication.calendar_invites) methods.push('calendar invites');
+    if (lastPublication.email_sent) methods.push('emails');
+    
+    warningContainer.innerHTML = `
+        <div class="warning-icon">📋</div>
+        <div class="warning-content">
+            <div class="warning-title">Previously Published</div>
+            <div class="warning-text">
+                This schedule was last published on <strong>${dateStr}</strong> 
+                (${methods.join(' and ')} sent to ${lastPublication.recipients_count} recipients).
+                <br>Publishing again may send duplicate notifications.
+            </div>
+        </div>
+    `;
+    warningContainer.style.display = 'flex';
+}
+
+function renderHistory() {
+    const history = scheduleData.history;
+    const tbody = document.getElementById('historyBody');
+    
+    if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No publication history</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = history.map(pub => {
+        const date = new Date(pub.published_at);
+        const dateStr = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+        
+        return `
+            <tr>
+                <td>${dateStr}</td>
+                <td>${pub.weeks_count || '-'} weeks</td>
+                <td>${pub.recipients_count || '-'}</td>
+                <td>${pub.calendar_invites ? '✅' : '—'}</td>
+                <td>${pub.email_sent ? '✅' : '—'}</td>
+                <td><span class="status-badge ${pub.status}">${pub.status}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function doPublishSchedule() {
+    const sendCalendar = document.getElementById('sendCalendarInvites').checked;
+    const sendEmail = document.getElementById('sendEmailNotification').checked;
+    
+    // Confirm if republishing
+    if (lastPublication) {
+        const confirmMsg = 'This schedule was previously published. Are you sure you want to send notifications again? This may result in duplicate emails/calendar invites.';
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+    }
+    
+    const payload = {
+        semester_id: currentSemester,
+        weeks: Array.from(selectedWeeks),
+        recipients: Array.from(selectedRecipients),
+        send_calendar_invites: sendCalendar,
+        send_email: sendEmail,
+        from_email: document.getElementById('fromEmail').value,
+        email_subject: document.getElementById('emailSubject').value,
+        email_message: document.getElementById('emailMessage').value,
+        include_location: document.getElementById('includeLocation').checked,
+        include_notes: document.getElementById('includeNotes').checked,
+        include_reminder: document.getElementById('includeReminder').checked
+    };
+    
+    // Show progress
+    document.getElementById('publishSection').style.display = 'none';
+    document.getElementById('progressSection').classList.add('show');
+    
+    // Simulate progress
+    const progressBar = document.getElementById('progressBar');
+    const progressStatus = document.getElementById('progressStatus');
+    
+    const steps = [
+        { pct: 20, msg: 'Preparing schedule data...' },
+        { pct: 40, msg: 'Creating calendar events...' },
+        { pct: 60, msg: 'Sending invitations...' },
+        { pct: 80, msg: 'Sending email notifications...' },
+        { pct: 95, msg: 'Finalizing...' }
+    ];
+    
+    let stepIndex = 0;
+    const progressInterval = setInterval(() => {
+        if (stepIndex < steps.length) {
+            progressBar.style.width = steps[stepIndex].pct + '%';
+            progressStatus.textContent = steps[stepIndex].msg;
+            stepIndex++;
+        }
+    }, 600);
+    
+    // Send request
+    fetch('/scheduling/api/publish/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => {
+        if (!r.ok) {
+            throw new Error(`Server error: ${r.status}`);
+        }
+        return r.json();
+    })
+    .then(result => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressStatus.textContent = 'Complete!';
+        
+        setTimeout(() => {
+            showResults(result);
+        }, 500);
+    })
+    .catch(err => {
+        clearInterval(progressInterval);
+        console.error('Error:', err);
+        
+        // Show error in results section
+        showResults({
+            success: false,
+            message: err.message || 'An error occurred while publishing'
+        });
+    });
+}
+
+function showResults(result) {
+    document.getElementById('progressSection').classList.remove('show');
+    document.getElementById('resultsSection').classList.add('show');
+    
+    const resultsCard = document.querySelector('#resultsSection .results-card');
+    const resultsHeader = resultsCard.querySelector('.results-header');
+    const resultsIcon = document.getElementById('resultsIcon');
+    const resultsTitle = document.querySelector('#resultsSection .results-title');
+    const resultsSubtitle = document.getElementById('resultsSubtitle');
+    
+    if (result.success) {
+        resultsCard.style.borderColor = 'var(--keppel)';
+        resultsHeader.style.background = 'linear-gradient(135deg, rgba(0, 181, 156, 0.1), rgba(0, 181, 156, 0.05))';
+        resultsIcon.textContent = '✅';
+        resultsTitle.textContent = 'Schedule Published Successfully';
+        resultsSubtitle.textContent = result.message || 'All notifications have been sent';
+    } else {
+        resultsCard.style.borderColor = 'var(--cinnabar)';
+        resultsHeader.style.background = 'linear-gradient(135deg, rgba(240, 82, 62, 0.1), rgba(240, 82, 62, 0.05))';
+        resultsIcon.textContent = '❌';
+        resultsTitle.textContent = 'Publishing Failed';
+        resultsSubtitle.textContent = result.message || 'An error occurred';
+    }
+    
+    document.getElementById('resultInvites').textContent = result.calendar_invites_sent || 0;
+    document.getElementById('resultEmails').textContent = result.emails_sent || 0;
+    document.getElementById('resultRecipients').textContent = result.recipients_count || selectedRecipients.size;
+}
+
+function resetPublish() {
+    document.getElementById('publishSection').style.display = 'block';
+    document.getElementById('progressSection').classList.remove('show');
+    document.getElementById('resultsSection').classList.remove('show');
+    document.getElementById('progressBar').style.width = '0%';
+    
+    loadPublishData();
+}
+
+function showEmptyState() {
+    document.getElementById('statsCard').style.display = 'none';
+    document.getElementById('optionsCard').style.display = 'none';
+    document.getElementById('publishCard').style.display = 'none';
+    document.getElementById('historyCard').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+}
+
+function showNoShiftsState() {
+    document.getElementById('statsCard').style.display = 'none';
+    document.getElementById('optionsCard').style.display = 'none';
+    document.getElementById('publishCard').style.display = 'none';
+    document.getElementById('historyCard').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h2>No Shifts to Publish</h2>
+            <p>This semester doesn't have any shifts yet. Run the auto-scheduler first.</p>
+            <a href="{% url 'scheduling:auto_schedule' %}" class="btn btn-primary" style="margin-top: 1rem;">Go to Auto-Schedule</a>
+        </div>
+    `;
+}
+
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize option card states
+document.addEventListener('DOMContentLoaded', function() {
+    updateOptionCard('calendar');
+    updateOptionCard('email');
+});
+</script>
+
+{% endblock %}

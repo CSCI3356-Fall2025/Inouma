@@ -1,0 +1,668 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Share Project - The Hatchery{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+/* Form Layout */
+.form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 900px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-section h3 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.form-group label span {
+    color: #999;
+    font-weight: 400;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--sunglow);
+}
+
+textarea.form-control {
+    min-height: 150px;
+    resize: vertical;
+}
+
+/* Image Upload */
+.image-upload-zone {
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fafafa;
+}
+
+.image-upload-zone:hover {
+    border-color: var(--sunglow);
+    background: #fff;
+}
+
+.image-upload-zone.has-image {
+    border-style: solid;
+    padding: 0;
+    overflow: hidden;
+}
+
+.image-upload-zone img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+}
+
+.upload-placeholder {
+    color: #999;
+}
+
+.upload-placeholder .icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.upload-placeholder p {
+    margin: 0;
+}
+
+.upload-placeholder .hint {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+/* Machine Selection */
+.machine-selector {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.machine-category {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.machine-category:last-child {
+    border-bottom: none;
+}
+
+.category-header {
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-header:hover {
+    background: #f0f0f0;
+}
+
+.category-machines {
+    display: none;
+    padding: 0.5rem;
+}
+
+.category-machines.open {
+    display: block;
+}
+
+.machine-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.machine-option:hover {
+    background: #f8f9fa;
+}
+
+.machine-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--sunglow);
+}
+
+.machine-option label {
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+/* Tags Input */
+.tags-input-container {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 46px;
+}
+
+.tags-input-container:focus-within {
+    border-color: var(--sunglow);
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--sunglow);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.tag-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--gunmetal);
+    opacity: 0.7;
+}
+
+.tag-chip button:hover {
+    opacity: 1;
+}
+
+.tags-input {
+    border: none;
+    outline: none;
+    flex: 1;
+    min-width: 100px;
+    padding: 0.35rem;
+    font-size: 0.9rem;
+}
+
+/* Quick Tags */
+.quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.quick-tag {
+    padding: 0.35rem 0.75rem;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.quick-tag:hover {
+    background: #e0e0e0;
+}
+
+.quick-tag.selected {
+    background: var(--sunglow);
+}
+
+/* Preview Card */
+.preview-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.preview-image {
+    width: 100%;
+    height: 180px;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}
+
+.preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-body {
+    padding: 1rem;
+}
+
+.preview-title {
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--gunmetal);
+}
+
+.preview-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0 0 0.75rem;
+}
+
+.preview-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.preview-tag {
+    padding: 0.2rem 0.5rem;
+    background: #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+/* Buttons */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🎨 Share Your Project</h1>
+    <p>Show off your creation and inspire the community</p>
+</div>
+
+<form id="projectForm" class="form-grid">
+    {% csrf_token %}
+    
+    <!-- Main Form Column -->
+    <div>
+        <!-- Basic Info -->
+        <div class="form-section">
+            <h3>📝 Project Details</h3>
+            
+            <div class="form-group">
+                <label>Project Title <span>(required)</span></label>
+                <input type="text" id="title" class="form-control" placeholder="Give your project a catchy name" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Description <span>(required)</span></label>
+                <textarea id="description" class="form-control" placeholder="Tell us about your project. What did you make? What was your process? What did you learn?" required></textarea>
+            </div>
+        </div>
+        
+        <!-- Cover Image -->
+        <div class="form-section">
+            <h3>📷 Cover Image</h3>
+            
+            <div class="image-upload-zone" id="imageUploadZone" onclick="document.getElementById('coverImage').click()">
+                <div class="upload-placeholder">
+                    <div class="icon">📷</div>
+                    <p>Click to upload a cover image</p>
+                    <p class="hint">JPG, PNG, or GIF • Max 5MB</p>
+                </div>
+            </div>
+            <input type="file" id="coverImage" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+        </div>
+        
+        <!-- Machines Used -->
+        <div class="form-section">
+            <h3>🔧 Machines Used</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Select the machine types you used in this project</p>
+            
+            <div class="quick-tags" id="machineTypeTags">
+                <button type="button" class="quick-tag" data-type="Laser Cutter">🔴 Laser Cutter</button>
+                <button type="button" class="quick-tag" data-type="3D Printer">🟣 3D Printer</button>
+                <button type="button" class="quick-tag" data-type="CNC Router">🟤 CNC Router</button>
+                <button type="button" class="quick-tag" data-type="Vinyl Cutter">🔵 Vinyl Cutter</button>
+                <button type="button" class="quick-tag" data-type="Sewing Machine">🟢 Sewing Machine</button>
+                <button type="button" class="quick-tag" data-type="Embroidery Machine">🟡 Embroidery</button>
+                <button type="button" class="quick-tag" data-type="Soldering Station">⚡ Soldering</button>
+                <button type="button" class="quick-tag" data-type="Band Saw">🪚 Band Saw</button>
+                <button type="button" class="quick-tag" data-type="Drill Press">🔩 Drill Press</button>
+            </div>
+        </div>
+        
+        <!-- Categories -->
+        <div class="form-section">
+            <h3>🏷️ Categories</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Add categories to help others find your project</p>
+            
+            <div class="quick-tags" id="categoryTags">
+                <button type="button" class="quick-tag" data-category="3D Printing">3D Printing</button>
+                <button type="button" class="quick-tag" data-category="Laser">Laser Cutting</button>
+                <button type="button" class="quick-tag" data-category="Woodworking">Woodworking</button>
+                <button type="button" class="quick-tag" data-category="Textile">Textile</button>
+                <button type="button" class="quick-tag" data-category="Electronics">Electronics</button>
+                <button type="button" class="quick-tag" data-category="Metalworking">Metalworking</button>
+                <button type="button" class="quick-tag" data-category="Art">Art</button>
+                <button type="button" class="quick-tag" data-category="Functional">Functional</button>
+                <button type="button" class="quick-tag" data-category="Gift">Gift</button>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">🚀 Publish Project</button>
+        </div>
+    </div>
+    
+    <!-- Preview Column -->
+    <div>
+        <div class="form-section" style="position: sticky; top: 1rem;">
+            <h3>👁️ Preview</h3>
+            
+            <div class="preview-card">
+                <div class="preview-image" id="previewImage">
+                    No image yet
+                </div>
+                <div class="preview-body">
+                    <h4 class="preview-title" id="previewTitle">Your Project Title</h4>
+                    <p class="preview-description" id="previewDescription">Your project description will appear here...</p>
+                    <div class="preview-tags" id="previewTags"></div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f8ff; border-radius: 8px; font-size: 0.85rem;">
+                <strong>💡 Tips for a great project post:</strong>
+                <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem; color: #666;">
+                    <li>Add a clear cover image</li>
+                    <li>Describe your process</li>
+                    <li>Tag all machines you used</li>
+                    <li>Share what you learned</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+let selectedMachineTypes = [];
+let selectedCategories = [];
+let coverImageFile = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Machine type tags
+    document.querySelectorAll('#machineTypeTags .quick-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            const type = this.dataset.type;
+            this.classList.toggle('selected');
+            
+            if (this.classList.contains('selected')) {
+                selectedMachineTypes.push(type);
+            } else {
+                selectedMachineTypes = selectedMachineTypes.filter(t => t !== type);
+            }
+            updatePreview();
+        });
+    });
+    
+    // Category tags
+    document.querySelectorAll('#categoryTags .quick-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            const category = this.dataset.category;
+            this.classList.toggle('selected');
+            
+            if (this.classList.contains('selected')) {
+                selectedCategories.push(category);
+            } else {
+                selectedCategories = selectedCategories.filter(c => c !== category);
+            }
+            updatePreview();
+        });
+    });
+    
+    // Live preview for title and description
+    document.getElementById('title').addEventListener('input', updatePreview);
+    document.getElementById('description').addEventListener('input', updatePreview);
+});
+
+function handleImageUpload(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image must be less than 5MB', 'error');
+            return;
+        }
+        
+        coverImageFile = file;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const zone = document.getElementById('imageUploadZone');
+            zone.classList.add('has-image');
+            zone.innerHTML = `<img src="${e.target.result}" alt="Cover image">`;
+            
+            document.getElementById('previewImage').innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function updatePreview() {
+    const title = document.getElementById('title').value || 'Your Project Title';
+    const description = document.getElementById('description').value || 'Your project description will appear here...';
+    
+    document.getElementById('previewTitle').textContent = title;
+    document.getElementById('previewDescription').textContent = description.substring(0, 100) + (description.length > 100 ? '...' : '');
+    
+    const tagsHtml = [
+        ...selectedMachineTypes.map(t => `<span class="preview-tag">🔧 ${t}</span>`),
+        ...selectedCategories.map(c => `<span class="preview-tag">${c}</span>`)
+    ].join('');
+    
+    document.getElementById('previewTags').innerHTML = tagsHtml;
+}
+
+document.getElementById('projectForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    
+    if (!title || !description) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Publishing...';
+    
+    try {
+        // First, create the project
+        const response = await fetch('/social/api/projects/create/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                description: description,
+                machine_types_used: selectedMachineTypes,
+                categories: selectedCategories,
+                status: 'published',
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Project published successfully!', 'success');
+            
+            // TODO: Upload cover image if selected
+            // For now, redirect to project page
+            setTimeout(() => {
+                window.location.href = `/social/projects/${data.project_id}/`;
+            }, 1000);
+        } else {
+            showToast(data.error || 'Failed to publish project', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 Publish Project';
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showToast('Failed to publish project', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 Publish Project';
+    }
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1014 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Review Requests - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'staff_dashboard' %}" class="breadcrumb-item">Staff Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<a href="{% url 'scheduling:schedule_landing' %}" class="breadcrumb-item">Schedule Management</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Review Requests</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--gunmetal);
+}
+
+/* Stats */
+.request-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.request-stat {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 10px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.request-stat:hover {
+    border-color: var(--sunglow);
+}
+
+.request-stat.active {
+    border-color: var(--gunmetal);
+    background: #f8f9fa;
+}
+
+.request-stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--gunmetal);
+}
+
+.request-stat-value.pending {
+    color: #f59e0b;
+}
+
+.request-stat-value.approved {
+    color: var(--keppel);
+}
+
+.request-stat-value.rejected {
+    color: var(--cinnabar);
+}
+
+.request-stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Filters */
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.filter-bar select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    padding: 0.4rem 0.8rem;
+    background: #f0f0f0;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.filter-chip:hover {
+    background: #e8e8e8;
+}
+
+.filter-chip.active {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    font-weight: 500;
+}
+
+/* Request Cards */
+.requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.request-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.request-card:hover {
+    border-color: var(--timberwolf);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.request-card.swap {
+    border-left: 4px solid #3b82f6;
+}
+
+.request-card.amendment {
+    border-left: 4px solid #8b5cf6;
+}
+
+.request-card.cancellation {
+    border-left: 4px solid var(--cinnabar);
+}
+
+.request-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.request-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.request-type-badge.swap {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.request-type-badge.amendment {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.request-type-badge.cancellation {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.request-status {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.request-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.request-status.approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.request-status.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.request-status.auto_approved {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.request-body {
+    padding: 1.25rem;
+}
+
+.request-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.request-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.request-info-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.request-info-value {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.request-shift-details {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.request-shift-details h4 {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.shift-detail-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.shift-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.shift-detail-icon {
+    opacity: 0.7;
+}
+
+/* Swap specific styling */
+.swap-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    color: #666;
+    font-size: 1.25rem;
+}
+
+.swap-details {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+    background: #f0f9ff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.swap-side {
+    text-align: center;
+}
+
+.swap-side-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.swap-side-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.swap-side-shift {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.swap-acceptance {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+.swap-acceptance.accepted {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.swap-acceptance.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Amendment specific styling */
+.amendment-comparison {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    background: #faf5ff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.amendment-side {
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+
+.amendment-side.original {
+    background: rgba(0,0,0,0.05);
+}
+
+.amendment-side.proposed {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.amendment-side-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.amendment-arrow {
+    display: flex;
+    align-items: center;
+    color: #8b5cf6;
+    font-size: 1.5rem;
+}
+
+/* Cancellation reason */
+.cancellation-reason {
+    background: #fff5f5;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border-left: 3px solid var(--cinnabar);
+}
+
+.cancellation-reason-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.cancellation-reason-text {
+    color: var(--gunmetal);
+    font-style: italic;
+}
+
+/* Request actions */
+.request-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.request-actions .btn {
+    flex: 1;
+    max-width: 150px;
+}
+
+.btn-approve {
+    background: var(--keppel);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-approve:hover {
+    background: #009d86;
+}
+
+.btn-reject {
+    background: white;
+    color: var(--cinnabar);
+    border: 2px solid var(--cinnabar);
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-reject:hover {
+    background: #fee2e2;
+}
+
+/* Admin notes */
+.admin-notes-section {
+    margin-top: 1rem;
+}
+
+.admin-notes-section textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--timberwolf);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-height: 60px;
+    resize: vertical;
+}
+
+.admin-notes-section label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+/* Reviewed info */
+.reviewed-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--gunmetal);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+/* Timestamp */
+.request-timestamp {
+    font-size: 0.8rem;
+    color: #999;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>📋 Review Requests</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Review and manage shift change requests from team members</p>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="request-stats">
+        <div class="request-stat active" data-filter="all" onclick="filterByStatus('all')">
+            <div class="request-stat-value" id="statAll">0</div>
+            <div class="request-stat-label">All Requests</div>
+        </div>
+        <div class="request-stat" data-filter="pending" onclick="filterByStatus('pending')">
+            <div class="request-stat-value pending" id="statPending">0</div>
+            <div class="request-stat-label">Pending</div>
+        </div>
+        <div class="request-stat" data-filter="approved" onclick="filterByStatus('approved')">
+            <div class="request-stat-value approved" id="statApproved">0</div>
+            <div class="request-stat-label">Approved</div>
+        </div>
+        <div class="request-stat" data-filter="rejected" onclick="filterByStatus('rejected')">
+            <div class="request-stat-value rejected" id="statRejected">0</div>
+            <div class="request-stat-label">Rejected</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card">
+    <div class="filter-bar">
+        <select id="semesterFilter" onchange="loadRequests()">
+            <option value="">All Semesters</option>
+        </select>
+        
+        <div class="filter-chips">
+            <div class="filter-chip active" data-type="all" onclick="filterByType('all')">All Types</div>
+            <div class="filter-chip" data-type="swap" onclick="filterByType('swap')">🔄 Swaps</div>
+            <div class="filter-chip" data-type="amendment" onclick="filterByType('amendment')">✏️ Amendments</div>
+            <div class="filter-chip" data-type="cancellation" onclick="filterByType('cancellation')">❌ Cancellations</div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests List -->
+<div class="card">
+    <div class="requests-list" id="requestsList">
+        <!-- Populated by JS -->
+    </div>
+    
+    <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-state-icon">📭</div>
+        <p>There are no shift change requests matching your filters.</p>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Reject Request</h2>
+            <button class="modal-close" onclick="closeRejectModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to reject this request?</p>
+            <div class="admin-notes-section">
+                <label>Reason for rejection (optional):</label>
+                <textarea id="rejectReason" placeholder="Provide a reason for the rejection..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeRejectModal()">Cancel</button>
+            <button class="btn-reject" onclick="confirmReject()">Reject Request</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allRequests = [];
+let filteredRequests = [];
+let currentStatusFilter = 'all';
+let currentTypeFilter = 'all';
+let pendingRejectId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSemesters();
+    loadRequests();
+});
+
+function loadSemesters() {
+    fetch('/scheduling/api/semesters/')
+        .then(r => r.json())
+        .then(data => {
+            const select = document.getElementById('semesterFilter');
+            const semesters = data.semesters || [];
+            
+            semesters.forEach(sem => {
+                const option = document.createElement('option');
+                option.value = sem.id;
+                option.textContent = sem.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Error loading semesters:', err));
+}
+
+function loadRequests() {
+    const semesterId = document.getElementById('semesterFilter').value;
+    let url = '/scheduling/api/requests/';
+    if (semesterId) {
+        url += `?semester_id=${semesterId}`;
+    }
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            allRequests = data.requests || [];
+            updateStats();
+            applyFilters();
+        })
+        .catch(err => {
+            console.error('Error loading requests:', err);
+            allRequests = [];
+            updateStats();
+            renderRequests([]);
+        });
+}
+
+function updateStats() {
+    const pending = allRequests.filter(r => r.status === 'pending').length;
+    const approved = allRequests.filter(r => r.status === 'approved' || r.status === 'auto_approved').length;
+    const rejected = allRequests.filter(r => r.status === 'rejected').length;
+    
+    document.getElementById('statAll').textContent = allRequests.length;
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statApproved').textContent = approved;
+    document.getElementById('statRejected').textContent = rejected;
+}
+
+function filterByStatus(status) {
+    currentStatusFilter = status;
+    
+    // Update UI
+    document.querySelectorAll('.request-stat').forEach(stat => {
+        stat.classList.toggle('active', stat.dataset.filter === status);
+    });
+    
+    applyFilters();
+}
+
+function filterByType(type) {
+    currentTypeFilter = type;
+    
+    // Update UI
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.type === type);
+    });
+    
+    applyFilters();
+}
+
+function applyFilters() {
+    filteredRequests = allRequests.filter(r => {
+        // Status filter
+        if (currentStatusFilter !== 'all') {
+            if (currentStatusFilter === 'approved') {
+                if (r.status !== 'approved' && r.status !== 'auto_approved') return false;
+            } else if (r.status !== currentStatusFilter) {
+                return false;
+            }
+        }
+        
+        // Type filter
+        if (currentTypeFilter !== 'all' && r.request_type !== currentTypeFilter) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    renderRequests(filteredRequests);
+}
+
+function renderRequests(requests) {
+    const container = document.getElementById('requestsList');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    container.innerHTML = requests.map(request => {
+        const typeIcon = {
+            'swap': '🔄',
+            'amendment': '✏️',
+            'cancellation': '❌'
+        }[request.request_type] || '📋';
+        
+        const typeLabel = {
+            'swap': 'Shift Swap',
+            'amendment': 'Amendment',
+            'cancellation': 'Cancellation'
+        }[request.request_type] || request.request_type;
+        
+        const statusLabel = {
+            'pending': 'Pending',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'auto_approved': 'Auto-Approved'
+        }[request.status] || request.status;
+        
+        const createdDate = new Date(request.created_at);
+        const timeAgo = getTimeAgo(createdDate);
+        
+        let detailsHtml = '';
+        
+        if (request.request_type === 'swap') {
+            detailsHtml = renderSwapDetails(request);
+        } else if (request.request_type === 'amendment') {
+            detailsHtml = renderAmendmentDetails(request);
+        } else if (request.request_type === 'cancellation') {
+            detailsHtml = renderCancellationDetails(request);
+        }
+        
+        const actionsHtml = request.status === 'pending' ? `
+            <div class="request-actions">
+                <button class="btn-approve" onclick="approveRequest(${request.id})">✓ Approve</button>
+                <button class="btn-reject" onclick="openRejectModal(${request.id})">✗ Reject</button>
+            </div>
+        ` : `
+            <div class="reviewed-info">
+                <span>${request.status === 'approved' || request.status === 'auto_approved' ? '✅' : '❌'}</span>
+                <span>${statusLabel} ${request.reviewed_by ? `by ${request.reviewed_by}` : ''} ${request.reviewed_at ? `on ${new Date(request.reviewed_at).toLocaleDateString()}` : ''}</span>
+            </div>
+            ${request.admin_notes ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;"><strong>Notes:</strong> ${request.admin_notes}</div>` : ''}
+        `;
+        
+        return `
+            <div class="request-card ${request.request_type}">
+                <div class="request-header">
+                    <div>
+                        <span class="request-type-badge ${request.request_type}">${typeIcon} ${typeLabel}</span>
+                        <span class="request-timestamp" style="margin-left: 0.75rem;">${timeAgo}</span>
+                    </div>
+                    <span class="request-status ${request.status}">${statusLabel}</span>
+                </div>
+                <div class="request-body">
+                    <div class="request-info">
+                        <div class="request-info-item">
+                            <span class="request-info-label">Requested By</span>
+                            <span class="request-info-value">${request.requested_by_name}</span>
+                        </div>
+                        <div class="request-info-item">
+                            <span class="request-info-label">Original Shift</span>
+                            <span class="request-info-value">${formatShiftDate(request.shift)}</span>
+                        </div>
+                        <div class="request-info-item">
+                            <span class="request-info-label">Shift Time</span>
+                            <span class="request-info-value">${request.shift.start_time} - ${request.shift.end_time}</span>
+                        </div>
+                        <div class="request-info-item">
+                            <span class="request-info-label">Shift Type</span>
+                            <span class="request-info-value">${formatShiftType(request.shift.shift_type)}</span>
+                        </div>
+                    </div>
+                    
+                    ${detailsHtml}
+                    ${actionsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSwapDetails(request) {
+    const otherAccepted = request.swap_accepted_by_other_user;
+    
+    return `
+        <div class="swap-details">
+            <div class="swap-side">
+                <div class="swap-side-label">From</div>
+                <div class="swap-side-name">${request.requested_by_name}</div>
+                <div class="swap-side-shift">${formatShiftDate(request.shift)}<br>${request.shift.start_time} - ${request.shift.end_time}</div>
+            </div>
+            <div class="swap-arrow">⇄</div>
+            <div class="swap-side">
+                <div class="swap-side-label">To</div>
+                <div class="swap-side-name">${request.swap_with_user_name || 'Not specified'}</div>
+                ${request.swap_with_shift ? `
+                    <div class="swap-side-shift">${formatShiftDate(request.swap_with_shift)}<br>${request.swap_with_shift.start_time} - ${request.swap_with_shift.end_time}</div>
+                ` : '<div class="swap-side-shift">Any available shift</div>'}
+                <div class="swap-acceptance ${otherAccepted ? 'accepted' : 'pending'}">
+                    ${otherAccepted ? '✓ Other party accepted' : '⏳ Awaiting acceptance'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderAmendmentDetails(request) {
+    return `
+        <div class="amendment-comparison">
+            <div class="amendment-side original">
+                <div class="amendment-side-label">Original</div>
+                <div><strong>${formatShiftDate(request.shift)}</strong></div>
+                <div>${request.shift.start_time} - ${request.shift.end_time}</div>
+            </div>
+            <div class="amendment-arrow">→</div>
+            <div class="amendment-side proposed">
+                <div class="amendment-side-label">Proposed</div>
+                <div><strong>${request.proposed_date || formatShiftDate(request.shift)}</strong></div>
+                <div>${request.proposed_start_time || request.shift.start_time} - ${request.proposed_end_time || request.shift.end_time}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderCancellationDetails(request) {
+    return `
+        <div class="cancellation-reason">
+            <div class="cancellation-reason-label">Reason for Cancellation</div>
+            <div class="cancellation-reason-text">"${request.cancellation_reason || 'No reason provided'}"</div>
+        </div>
+    `;
+}
+
+function formatShiftDate(shift) {
+    if (!shift || !shift.date) return 'Unknown';
+    const date = new Date(shift.date);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return `${days[date.getDay()]}, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+}
+
+function formatShiftType(type) {
+    return (type || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+}
+
+function approveRequest(requestId) {
+    if (!confirm('Are you sure you want to approve this request?')) {
+        return;
+    }
+    
+    fetch('/scheduling/api/requests/approve/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            request_id: requestId
+        })
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            loadRequests();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to approve request'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('An error occurred while approving the request');
+    });
+}
+
+function openRejectModal(requestId) {
+    pendingRejectId = requestId;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+
+function closeRejectModal() {
+    pendingRejectId = null;
+    document.getElementById('rejectModal').style.display = 'none';
+}
+
+function confirmReject() {
+    if (!pendingRejectId) return;
+    
+    const reason = document.getElementById('rejectReason').value;
+    
+    fetch('/scheduling/api/requests/reject/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            request_id: pendingRejectId,
+            reason: reason
+        })
+    })
+    .then(r => r.json())
+    .then(result => {
+        closeRejectModal();
+        if (result.success) {
+            loadRequests();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to reject request'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        closeRejectModal();
+        alert('An error occurred while rejecting the request');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Close modal on overlay click
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRejectModal();
+    }
+});
+</script>
+
+{% endblock %}

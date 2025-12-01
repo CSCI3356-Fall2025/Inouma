@@ -1,0 +1,151 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Machine Management - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > 
+    <span class="breadcrumb-item active">Machine Management</span>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Header -->
+    <div style="margin-bottom: 3rem;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #1a1a1a;">
+            🔧 Machine Management
+        </h1>
+        <p style="color: #666; font-size: 1.1rem;">
+            Manage makerspace equipment and machinery
+        </p>
+    </div>
+
+    <!-- Three Option Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+        
+        <!-- Search Directory Card -->
+        <div class="card" style="cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" 
+            onclick="window.location.href='{% url 'staff_machine_directory' %}'"
+            onmouseover="this.style.borderColor='var(--gold)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
+            onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+            
+            <div style="text-align: center; padding: 2rem;">
+                <!-- Icon -->
+                <div style="font-size: 4rem; margin-bottom: 1.5rem;">
+                    🔍
+                </div>
+                
+                <!-- Title -->
+                <h2 style="font-size: 1.6rem; margin-bottom: 1rem; color: #1a1a1a;">
+                    Search Directory
+                </h2>
+                
+                <!-- Description -->
+                <p style="color: #666; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                    Browse and search through existing machines, view details, edit specifications, and manage machine status
+                </p>
+                
+                <!-- Button -->
+                <div style="display: inline-block; padding: 0.75rem 2rem; background-color: var(--gold); color: white; border-radius: 8px; font-weight: 600; font-size: 0.95rem;">
+                    Browse Machines →
+                </div>
+            </div>
+        </div>
+
+        <!-- Add New Machine Card -->
+        <div class="card" style="cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" 
+             onclick="window.location.href='{% url 'add_machine' %}'"
+             onmouseover="this.style.borderColor='var(--gold)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+            
+            <div style="text-align: center; padding: 2rem;">
+                <!-- Icon -->
+                <div style="font-size: 4rem; margin-bottom: 1.5rem;">
+                    ➕
+                </div>
+                
+                <!-- Title -->
+                <h2 style="font-size: 1.6rem; margin-bottom: 1rem; color: #1a1a1a;">
+                    Add New Machine
+                </h2>
+                
+                <!-- Description -->
+                <p style="color: #666; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                    Register a new machine to the makerspace, set specifications, assign location, and configure training requirements
+                </p>
+                
+                <!-- Button -->
+                <div style="display: inline-block; padding: 0.75rem 2rem; background-color: var(--gold); color: white; border-radius: 8px; font-weight: 600; font-size: 0.95rem;">
+                    Add Machine →
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Categories Card -->
+        <div class="card" style="cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" 
+             onclick="window.location.href='{% url 'manage_categories' %}'"
+             onmouseover="this.style.borderColor='var(--gold)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+            
+            <div style="text-align: center; padding: 2rem;">
+                <!-- Icon -->
+                <div style="font-size: 4rem; margin-bottom: 1.5rem;">
+                    📁
+                </div>
+                
+                <!-- Title -->
+                <h2 style="font-size: 1.6rem; margin-bottom: 1rem; color: #1a1a1a;">
+                    Manage Categories
+                </h2>
+                
+                <!-- Description -->
+                <p style="color: #666; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                    Add, edit, or remove machine categories to organize your equipment by type
+                </p>
+                
+                <!-- Button -->
+                <div style="display: inline-block; padding: 0.75rem 2rem; background-color: var(--gold); color: white; border-radius: 8px; font-weight: 600; font-size: 0.95rem;">
+                    Manage Categories →
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quick Stats Section -->
+    <div style="margin-top: 3rem; padding: 2rem; background-color: #f8f9fa; border-radius: 12px;">
+        <h3 style="font-size: 1.3rem; margin-bottom: 1rem; color: #1a1a1a;">
+            Quick Overview
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <div>
+                <div style="font-size: 2rem; font-weight: 600; color: var(--gold);">{{ total_machines }}</div>
+                <div style="color: #666; font-size: 0.9rem;">Total Machines</div>
+            </div>
+            <div>
+                <div style="font-size: 2rem; font-weight: 600; color: var(--gold);">{{ active_machines }}</div>
+                <div style="color: #666; font-size: 0.9rem;">Active Machines</div>
+            </div>
+            <div>
+                <div style="font-size: 2rem; font-weight: 600; color: var(--gold);">{{ categories_count }}</div>
+                <div style="color: #666; font-size: 0.9rem;">Categories</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    :root {
+        --gold: #D4AF37;
+    }
+</style>
+{% endblock %}

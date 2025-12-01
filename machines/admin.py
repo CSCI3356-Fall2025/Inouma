@@ -1,73 +1,100 @@
 from django.contrib import admin
-from django.utils.html import format_html
-from .models import Machine
+from .models import Machine, TrainingType, Training, UserTrainingRecord, MachineCategory
+
+
+@admin.register(MachineCategory)
+class MachineCategoryAdmin(admin.ModelAdmin):
+    """Machine category admin"""
+    list_display = ('name', 'icon', 'machine_count', 'display_order', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'description')
+    ordering = ('display_order', 'name')
+    list_editable = ('display_order', 'is_active')
+
+
+@admin.register(TrainingType)
+class TrainingTypeAdmin(admin.ModelAdmin):
+    """Legacy training type admin"""
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+
+
+@admin.register(Training)
+class TrainingAdmin(admin.ModelAdmin):
+    """Training admin - training courses"""
+    list_display = ('name', 'level', 'category', 'duration_minutes', 'max_participants', 'status', 'created_at')
+    list_filter = ('level', 'category', 'status')
+    search_fields = ('name', 'description', 'category')
+    filter_horizontal = ('prerequisites',)
+    ordering = ('category', 'level', 'name')
+    raw_id_fields = ('created_by',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'description', 'level', 'category', 'status')
+        }),
+        ('Machine Types', {
+            'fields': ('machine_type_names',),
+            'description': 'JSON list of machine_name values this training qualifies users for'
+        }),
+        ('Prerequisites', {
+            'fields': ('prerequisites',),
+            'description': 'Other trainings required before this one',
+            'classes': ('collapse',)
+        }),
+        ('Training Details', {
+            'fields': ('duration_minutes', 'max_participants', 'materials_url', 'video_url')
+        }),
+        ('Metadata', {
+            'fields': ('created_by',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(UserTrainingRecord)
+class UserTrainingRecordAdmin(admin.ModelAdmin):
+    """User training record admin - tracks completed trainings"""
+    list_display = ('user', 'training', 'status', 'completed_at', 'trainer', 'is_valid_display')
+    list_filter = ('status', 'training__category', 'training__level')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name', 'training__name')
+    raw_id_fields = ('user', 'trainer')
+    ordering = ('-completed_at',)
+    date_hierarchy = 'completed_at'
+    
+    def is_valid_display(self, obj):
+        return obj.is_valid
+    is_valid_display.boolean = True
+    is_valid_display.short_description = 'Valid'
+
 
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
-    list_display = ['image_thumbnail', 'name', 'machine_name', 'category', 'location', 'year_bought', 'training_levels']
-    list_filter = ['category', 'location', 'requires_level_1', 'requires_level_2', 'requires_level_3', 'year_bought']
-    search_fields = ['name', 'machine_name', 'description', 'mac_address']
-    ordering = ['category', 'name']
+    """Machine admin"""
+    list_display = ('name', 'machine_name', 'category', 'location', 'manufacturer', 'created_at')
+    list_filter = ('category', 'location', 'manufacturer', 'requires_level_1', 'requires_level_2', 'requires_level_3')
+    search_fields = ('name', 'machine_name', 'category', 'manufacturer', 'model_number')
+    filter_horizontal = ('required_trainings',)
     
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'machine_name', 'category', 'location')
+        ('Basic Info', {
+            'fields': ('name', 'machine_name', 'category', 'location', 'description', 'image')
         }),
-        ('Image', {
-            'fields': ('image', 'image_preview'),
-            'description': 'Upload an image for this machine'
+        ('Machine Details', {
+            'fields': ('manufacturer', 'model_number', 'documentation_url'),
+            'classes': ('collapse',)
         }),
-        ('Optional Technical Details', {
-            'fields': ('mac_address', 'year_bought', 'description'),
-            'classes': ('collapse',),  # This makes it collapsible
+        ('Legacy Training Requirements', {
+            'fields': ('required_trainings', 'requires_level_1', 'requires_level_2', 'requires_level_3'),
+            'classes': ('collapse',)
         }),
-        ('Training Requirements', {
-            'fields': ('requires_level_1', 'requires_level_2', 'requires_level_3')
+        ('Technical Details', {
+            'fields': ('mac_address', 'year_bought'),
+            'classes': ('collapse',)
+        }),
+        ('Floorplan Position', {
+            'fields': ('map_position_x', 'map_position_y'),
+            'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ['image_preview']
-    
-    def image_thumbnail(self, obj):
-        """Display small thumbnail in list view"""
-        if obj.image:
-            return format_html(
-                '<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 4px;" />',
-                obj.image.url
-            )
-        return format_html(
-            '<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 4px; opacity: 0.5;" />',
-            obj.get_image_url()
-        )
-    image_thumbnail.short_description = 'Image'
-    
-    def image_preview(self, obj):
-        """Display larger preview in detail view"""
-        if obj.image:
-            return format_html(
-                '<img src="{}" style="max-width: 300px; max-height: 300px; border-radius: 8px;" />',
-                obj.image.url
-            )
-        return format_html(
-            '<img src="{}" style="max-width: 300px; max-height: 300px; border-radius: 8px; opacity: 0.7;" /><br><em>Using default image</em>',
-            obj.get_image_url()
-        )
-    image_preview.short_description = 'Current Image Preview'
-    
-    def training_levels(self, obj):
-        """Display training levels in a concise format"""
-        levels = []
-        if obj.requires_level_1:
-            levels.append('L1')
-        if obj.requires_level_2:
-            levels.append('L2')
-        if obj.requires_level_3:
-            levels.append('L3')
-        
-        if levels:
-            return format_html(
-                '<span style="background: #ffd700; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">{}</span>',
-                ', '.join(levels)
-            )
-        return format_html('<span style="color: #999;">None</span>')
-    training_levels.short_description = 'Training'

@@ -187,9 +187,10 @@ class StudentProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         instance = kwargs.get('instance')
         
-        # Access control: Restrict major and graduation_year to students only
-        if self.user and self.user.role != 'student':
-            # Hide/disable major and graduation year fields for non-students
+        # Access control: Restrict major and graduation_year to Users and Team Members (students)
+        # Hide for Collaborator and Staff
+        if self.user and self.user.role not in ['User', 'Team Member']:
+            # Hide/disable major and graduation year fields for non-student roles
             self.fields['major1'].widget = forms.HiddenInput()
             self.fields['major2'].widget = forms.HiddenInput()
             self.fields['minor1'].widget = forms.HiddenInput()
@@ -250,8 +251,8 @@ class StudentProfileForm(forms.ModelForm):
         """Cross-field validation"""
         cleaned_data = super().clean()
         
-        # Ensure students have at least major1 if they're a student
-        if self.user and self.user.role == 'student':
+        # Ensure Users and Team Members have at least major1
+        if self.user and self.user.role in ['User', 'Team Member']:
             major1 = cleaned_data.get('major1')
             if not major1:
                 raise ValidationError({
