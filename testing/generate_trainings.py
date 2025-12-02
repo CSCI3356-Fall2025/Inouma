@@ -47,7 +47,7 @@ TRAINING_DATA = {
 
 def generate_trainings():
     """Generate all trainings in the database."""
-    from trainings.models import Training, TrainingCategory
+    from machines.models import Training
     
     print(f"\n{'='*60}")
     print("🎓 Generating Trainings for The Hatchery")
@@ -58,17 +58,6 @@ def generate_trainings():
     
     for category_name, trainings in TRAINING_DATA.items():
         print(f"\n📁 {category_name}:")
-        
-        # Get or create the category
-        category, cat_created = TrainingCategory.objects.get_or_create(
-            name=category_name,
-            defaults={
-                'description': f'{category_name} trainings and certifications',
-                'is_active': True,
-            }
-        )
-        if cat_created:
-            print(f"   ✓ Created category: {category_name}")
         
         for level, training_name in trainings:
             # Check if training already exists
@@ -82,12 +71,12 @@ def generate_trainings():
             # Create the training
             training = Training.objects.create(
                 name=training_name,
-                category=category,
+                category=category_name,
                 level=level,
                 description=f"Level {level} training for {category_name.lower()}",
                 duration_minutes=60 if level == 1 else (90 if level == 2 else 120),
                 max_participants=8 if level == 1 else (6 if level == 2 else 4),
-                is_active=True,
+                status='active',
             )
             
             print(f"   ✓ Lvl {level}: {training_name}")
@@ -102,12 +91,8 @@ def generate_trainings():
     # Summary by category
     print("📊 Trainings by Category:")
     for category_name in TRAINING_DATA.keys():
-        try:
-            cat = TrainingCategory.objects.get(name=category_name)
-            count = Training.objects.filter(category=cat).count()
-            print(f"   {category_name}: {count} trainings")
-        except TrainingCategory.DoesNotExist:
-            print(f"   {category_name}: category not found")
+        count = Training.objects.filter(category=category_name).count()
+        print(f"   {category_name}: {count} trainings")
     
     # Summary by level
     print("\n📊 Trainings by Level:")
@@ -119,7 +104,7 @@ def generate_trainings():
 
 def clear_trainings():
     """Clear all trainings (use with caution!)"""
-    from trainings.models import Training
+    from machines.models import Training
     
     count = Training.objects.count()
     confirm = input(f"⚠️  Delete all {count} trainings? (yes/no): ")
