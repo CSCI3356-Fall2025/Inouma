@@ -1,0 +1,11 @@
+Run the following commands in your console from the main Inouma folder to generate test users, 
+requirements, unavailabilities, machines, and trainings:
+
+First cd to the main Inouma folder that holds the manage.py file.
+
+1. python manage.py shell < testing/generate_test_machines.py
+2. python manage.py shell < testing/generate_test_users.py
+3. python manage.py shell < testing/generate_test_requirements.py
+4. python manage.py shell < testing/generate_test_unavailabilites.py
+5. python manage.py shell < testing/generate_trainings.py
+
