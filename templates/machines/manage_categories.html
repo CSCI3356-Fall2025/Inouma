@@ -1,0 +1,425 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Manage Categories - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'staff_dashboard' %}" style="color: #666; text-decoration: none;">Staff Dashboard</a> > 
+    <a href="{% url 'machine_management' %}" style="color: #666; text-decoration: none;">Machine Management</a> > 
+    <span class="breadcrumb-item active">Manage Categories</span>
+{% endblock %}
+
+{% block content %}
+<style>
+:root { --gold: #FFC933; --gunmetal: #293242; --timberwolf: #D5D0CD; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.page-header h1 { margin: 0; font-size: 1.75rem; color: var(--gunmetal); }
+
+.categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+
+.category-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.15s;
+    position: relative;
+}
+.category-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.category-card.inactive { opacity: 0.6; background: #f8f9fa; }
+
+.category-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.category-icon { font-size: 2.5rem; }
+.category-info { flex: 1; }
+.category-name { font-size: 1.25rem; font-weight: 600; color: var(--gunmetal); margin: 0; }
+.category-count { font-size: 0.85rem; color: #888; }
+
+.category-description { font-size: 0.9rem; color: #666; margin-bottom: 1rem; line-height: 1.5; }
+
+.category-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.meta-badge { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.3rem; 
+    padding: 0.25rem 0.5rem; 
+    border-radius: 4px; 
+    font-size: 0.75rem; 
+    font-weight: 500;
+}
+.meta-badge.order { background: #e0e7ff; color: #3730a3; }
+.meta-badge.inactive { background: #fee2e2; color: #dc2626; }
+.meta-badge.color { border: 2px solid; }
+
+.category-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+.btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.btn-primary { background: var(--gold); color: var(--gunmetal); }
+.btn-primary:hover { background: #e5b52c; }
+.btn-secondary { background: #e9ecef; color: var(--gunmetal); }
+.btn-secondary:hover { background: #dee2e6; }
+.btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+.modal.active { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 100%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.modal-header { padding: 1.25rem; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { margin: 0; font-size: 1.25rem; color: var(--gunmetal); }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888; padding: 0; line-height: 1; }
+.close-btn:hover { color: var(--gunmetal); }
+.modal-body { padding: 1.25rem; overflow-y: auto; flex: 1; }
+.modal-footer { padding: 1rem 1.25rem; border-top: 1px solid #e9ecef; display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+/* Form */
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 0.35rem; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--timberwolf); border-radius: 6px; font-size: 0.95rem; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+.form-group small { display: block; margin-top: 0.25rem; color: #888; font-size: 0.8rem; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* Icon Picker */
+.icon-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--timberwolf); border-radius: 6px; max-height: 150px; overflow-y: auto; }
+.icon-option { 
+    width: 40px; 
+    height: 40px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 1.5rem; 
+    border: 2px solid transparent; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    transition: all 0.15s;
+}
+.icon-option:hover { background: #f8f9fa; }
+.icon-option.selected { border-color: var(--gold); background: rgba(255,201,51,0.1); }
+
+/* Color Picker */
+.color-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.color-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+}
+.color-option:hover { transform: scale(1.1); }
+.color-option.selected { border-color: var(--gunmetal); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--gunmetal); }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 3rem; color: #888; }
+.empty-state h3 { margin: 0 0 0.5rem; color: var(--gunmetal); }
+
+/* Drag handle */
+.drag-handle { cursor: grab; color: #ccc; font-size: 1.2rem; }
+.drag-handle:hover { color: #888; }
+</style>
+
+<div class="card">
+    <div class="page-header">
+        <h1>📁 Manage Categories</h1>
+        <button class="btn btn-primary" onclick="openCategoryModal()">+ Add Category</button>
+    </div>
+    
+    <p style="color: #666; margin-bottom: 2rem;">
+        Manage machine categories. Categories help organize machines and are used throughout the system for filtering and grouping.
+    </p>
+    
+    <div class="categories-grid" id="categoriesGrid">
+        <!-- Categories will be loaded here -->
+    </div>
+    
+    <div class="empty-state" id="emptyState" style="display: none;">
+        <h3>No categories yet</h3>
+        <p>Create your first category to get started</p>
+        <button class="btn btn-primary" onclick="openCategoryModal()" style="margin-top: 1rem;">+ Add Category</button>
+    </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal" id="categoryModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="categoryModalTitle">Add Category</h2>
+            <button class="close-btn" onclick="closeCategoryModal()">&times;</button>
+        </div>
+        <form id="categoryForm" onsubmit="saveCategory(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Category Name *</label>
+                    <input type="text" id="categoryName" required placeholder="e.g., 3D Printing">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="categoryDescription" placeholder="Brief description of this category..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Icon</label>
+                    <div class="icon-picker" id="iconPicker">
+                        <!-- Icons will be populated by JS -->
+                    </div>
+                    <input type="hidden" id="categoryIcon" value="🔧">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Color</label>
+                        <div class="color-options" id="colorOptions">
+                            <!-- Colors will be populated by JS -->
+                        </div>
+                        <input type="hidden" id="categoryColor" value="#293242">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Display Order</label>
+                        <input type="number" id="categoryOrder" value="0" min="0">
+                        <small>Lower numbers appear first</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="categoryActive" checked style="width: auto;">
+                        Active
+                    </label>
+                    <small>Inactive categories won't appear in dropdowns</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCategoryModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="categorySubmitBtn">Add Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2>Delete Category</h2>
+            <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete <strong id="deleteCategoryName"></strong>?</p>
+            <p style="color: #dc2626; font-size: 0.9rem;" id="deleteWarning"></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const ICONS = ['🔧', '⚡', '🖨️', '✂️', '🪚', '🔩', '💡', '🎨', '📐', '🔬', '🧵', '🪡', '⚙️', '🛠️', '📦', '🎯', '🔌', '💻', '🖥️', '📱'];
+const COLORS = ['#293242', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#2563eb', '#7c3aed', '#c026d3', '#64748b'];
+
+let categories = [];
+let editingCategoryId = null;
+let deletingCategoryId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initIconPicker();
+    initColorPicker();
+    loadCategories();
+});
+
+function initIconPicker() {
+    const picker = document.getElementById('iconPicker');
+    picker.innerHTML = ICONS.map(icon => 
+        `<div class="icon-option ${icon === '🔧' ? 'selected' : ''}" onclick="selectIcon('${icon}')">${icon}</div>`
+    ).join('');
+}
+
+function initColorPicker() {
+    const picker = document.getElementById('colorOptions');
+    picker.innerHTML = COLORS.map(color => 
+        `<div class="color-option ${color === '#293242' ? 'selected' : ''}" style="background: ${color}" onclick="selectColor('${color}')" data-color="${color}"></div>`
+    ).join('');
+}
+
+function selectIcon(icon) {
+    document.getElementById('categoryIcon').value = icon;
+    document.querySelectorAll('.icon-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.textContent === icon);
+    });
+}
+
+function selectColor(color) {
+    document.getElementById('categoryColor').value = color;
+    document.querySelectorAll('.color-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.color === color);
+    });
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch('/api/categories/');
+        const data = await res.json();
+        categories = data.categories || [];
+        renderCategories();
+    } catch (e) {
+        console.error('Error loading categories:', e);
+    }
+}
+
+function renderCategories() {
+    const grid = document.getElementById('categoriesGrid');
+    const empty = document.getElementById('emptyState');
+    
+    if (categories.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    grid.innerHTML = categories.map(cat => `
+        <div class="category-card ${!cat.is_active ? 'inactive' : ''}" data-id="${cat.id}">
+            <div class="category-header">
+                <div class="category-icon">${cat.icon || '🔧'}</div>
+                <div class="category-info">
+                    <h3 class="category-name">${cat.name}</h3>
+                    <div class="category-count">${cat.machine_count} machine${cat.machine_count !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
+            ${cat.description ? `<div class="category-description">${cat.description}</div>` : ''}
+            <div class="category-meta">
+                <span class="meta-badge order">Order: ${cat.display_order}</span>
+                ${!cat.is_active ? '<span class="meta-badge inactive">Inactive</span>' : ''}
+                <span class="meta-badge color" style="border-color: ${cat.color || '#293242'}; color: ${cat.color || '#293242'}">●</span>
+            </div>
+            <div class="category-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editCategory(${cat.id})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCategory(${cat.id}, '${cat.name}', ${cat.machine_count})">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openCategoryModal() {
+    editingCategoryId = null;
+    document.getElementById('categoryModalTitle').textContent = 'Add Category';
+    document.getElementById('categorySubmitBtn').textContent = 'Add Category';
+    document.getElementById('categoryForm').reset();
+    selectIcon('🔧');
+    selectColor('#293242');
+    document.getElementById('categoryActive').checked = true;
+    document.getElementById('categoryModal').classList.add('active');
+}
+
+function editCategory(id) {
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    
+    editingCategoryId = id;
+    document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+    document.getElementById('categorySubmitBtn').textContent = 'Save Changes';
+    
+    document.getElementById('categoryName').value = cat.name;
+    document.getElementById('categoryDescription').value = cat.description || '';
+    document.getElementById('categoryOrder').value = cat.display_order;
+    document.getElementById('categoryActive').checked = cat.is_active;
+    
+    selectIcon(cat.icon || '🔧');
+    selectColor(cat.color || '#293242');
+    
+    document.getElementById('categoryModal').classList.add('active');
+}
+
+function closeCategoryModal() {
+    document.getElementById('categoryModal').classList.remove('active');
+    editingCategoryId = null;
+}
+
+async function saveCategory(e) {
+    e.preventDefault();
+    
+    const data = {
+        name: document.getElementById('categoryName').value.trim(),
+        description: document.getElementById('categoryDescription').value.trim(),
+        icon: document.getElementById('categoryIcon').value,
+        color: document.getElementById('categoryColor').value,
+        display_order: parseInt(document.getElementById('categoryOrder').value) || 0,
+        is_active: document.getElementById('categoryActive').checked
+    };
+    
+    const url = editingCategoryId 
+        ? `/api/categories/${editingCategoryId}/update/`
+        : '/api/categories/create/';
+    
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+            closeCategoryModal();
+            loadCategories();
+        } else {
+            alert(result.error || 'Error saving category');
+        }
+    } catch (e) {
+        alert('Error saving category');
+    }
+}
+
+function deleteCategory(id, name, machineCount) {
+    deletingCategoryId = id;
+    document.getElementById('deleteCategoryName').textContent = name;
+    
+    if (machineCount > 0) {
+        document.getElementById('deleteWarning').textContent = 
+            `⚠️ This category has ${machineCount} machine(s). You must reassign or delete them first.`;
+        document.querySelector('#deleteModal .btn-danger').disabled = true;
+    } else {
+        document.getElementById('deleteWarning').textContent = 'This action cannot be undone.';
+        document.querySelector('#deleteModal .btn-danger').disabled = false;
+    }
+    
+    document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+    deletingCategoryId = null;
+}
+
+async function confirmDelete() {
+    if (!deletingCategoryId) return;
+    
+    try {
+        const res = await fetch(`/api/categories/${deletingCategoryId}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeDeleteModal();
+            loadCategories();
+        } else {
+            alert(data.error || 'Error deleting category');
+        }
+    } catch (e) {
+        alert('Error deleting category');
+    }
+}
+
+function getCookie(n) {
+    const v = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+</script>
+{% endblock %}

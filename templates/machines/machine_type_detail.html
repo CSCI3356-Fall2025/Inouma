@@ -6,37 +6,1185 @@
 {% block breadcrumb %}
     <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
     <a href="{% url 'category_detail' category %}" style="color: #666; text-decoration: none;">{{ category }}</a> > 
-    {{ machine_type }}
+    <span class="breadcrumb-item active">{{ machine_type }}</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+    --light-gold: rgba(252, 201, 49, 0.15);
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+    margin: 0 0 0.5rem;
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    font-weight: 500;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+/* Section visibility */
+.tab-section {
+    display: none;
+}
+
+.tab-section.active {
+    display: block;
+}
+
+/* Training Requirements Section */
+.training-requirements-box {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.training-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.training-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gunmetal);
+}
+
+.training-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.training-badge-large {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.training-level {
+    background: #e9ecef;
+    padding: 0.35rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.training-level.l1 { background: #d1fae5; color: #065f46; }
+.training-level.l2 { background: #fef3c7; color: #92400e; }
+.training-level.l3 { background: #fee2e2; color: #dc2626; }
+
+.expand-toggle {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.expand-toggle:hover {
+    color: var(--gunmetal);
+}
+
+.prerequisites-section {
+    display: none;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.prerequisites-section.active {
+    display: block;
+}
+
+.prerequisites-section h4 {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.prereq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.prereq-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.prereq-item .check {
+    color: var(--keppel);
+}
+
+.prereq-item .pending {
+    color: #999;
+}
+
+.no-training {
+    color: var(--keppel);
+    font-weight: 500;
+}
+
+/* Machine Grid */
+.machines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.machine-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.machine-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    border-color: var(--sunglow);
+}
+
+.machine-image {
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: #f5f5f5;
+    position: relative;
+}
+
+.machine-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.machine-placeholder {
+    width: 100%;
+    height: 160px;
+    background: linear-gradient(135deg, var(--light-gold), #f8f9fa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+}
+
+/* Availability Badge */
+.availability-badge {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.availability-badge.available {
+    background: rgba(0, 181, 156, 0.9);
+    color: white;
+}
+
+.availability-badge.limited {
+    background: rgba(252, 201, 49, 0.95);
+    color: var(--gunmetal);
+}
+
+.availability-badge.unavailable {
+    background: rgba(240, 82, 62, 0.9);
+    color: white;
+}
+
+.availability-badge.loading {
+    background: #e9ecef;
+    color: #666;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.machine-info {
+    padding: 1rem;
+}
+
+.machine-info h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+}
+
+.machine-location {
+    color: #666;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* Training Sessions Section */
+.week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.week-nav-btn {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.week-nav-btn:hover {
+    background: var(--sunglow);
+    border-color: var(--sunglow);
+}
+
+.week-range {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+/* Training Calendar */
+.training-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+    .training-calendar {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .training-calendar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.day-column {
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-height: 250px;
+}
+
+.day-header {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.day-header.today {
+    background: var(--sunglow);
+    border-radius: 8px 8px 0 0;
+}
+
+.day-header .date {
+    font-size: 1.25rem;
+    display: block;
+}
+
+.day-header .weekday {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.day-sessions {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.session-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.6rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.8rem;
+}
+
+.session-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.session-card.available {
+    border-left: 3px solid var(--keppel);
+}
+
+.session-card.full {
+    border-left: 3px solid var(--cinnabar);
+    opacity: 0.7;
+}
+
+.session-card.booked {
+    border-left: 3px solid #3b82f6;
+    background: #eff6ff;
+}
+
+.session-time {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin-bottom: 0.25rem;
+}
+
+.session-training {
+    color: #666;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.session-trainer {
+    color: #999;
+    font-size: 0.7rem;
+}
+
+.session-spots {
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+}
+
+.session-spots.available { color: var(--keppel); }
+.session-spots.full { color: var(--cinnabar); }
+
+.empty-day {
+    padding: 1rem;
+    text-align: center;
+    color: #999;
+    font-size: 0.8rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.session-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.session-detail-row:last-child {
+    border-bottom: none;
+}
+
+.session-detail-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.session-detail-value {
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+/* Buttons */
+.btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>{{ machine_type }} Units</h2>
-    <p style="color: #666; margin-bottom: 2rem;">Select a specific machine to view details and make a reservation</p>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem;">
-        {% for machine in machines %}
-        <a href="{% url 'machine_detail' machine.id %}" style="text-decoration: none; color: inherit;">
-            <div class="location-card-minimal" style="cursor: pointer;">
-                {% if machine.image %}
-                <div style="width: 100%; height: 100px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f5f5f5;">
-                    <img src="{{ machine.image }}" alt="{{ machine.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+    <div class="page-header">
+        <h2>{{ machine_type }}</h2>
+        <p>{{ machines|length }} machine{{ machines|length|pluralize }} available</p>
+    </div>
+
+    <!-- Training Requirements Section -->
+    <div class="training-requirements-box" id="trainingBox">
+        <div class="training-header" onclick="togglePrerequisites()">
+            <div>
+                <h3>🎓 Required Training</h3>
+                <div class="training-main" id="mainTraining">
+                    <!-- Populated by JS -->
+                    <span class="no-training">Loading...</span>
                 </div>
-                {% endif %}
-                
-                <h3 style="color: var(--dark); margin-bottom: 0.5rem; font-size: 1rem;">{{ machine.name }}</h3>
-                <p style="color: #999; font-size: 0.85rem;">📍 {{ machine.location }}</p>
-                
-                {% if machine.required_trainings.all %}
-                <div style="margin-top: 0.5rem;">
-                    <span style="background: var(--light-gold); color: var(--dark); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
-                        🎓 Training Required
-                    </span>
-                </div>
-                {% endif %}
             </div>
-        </a>
-        {% endfor %}
+            <button class="expand-toggle" id="expandToggle" style="display: none;">
+                <span id="expandText">Show prerequisites</span>
+                <span id="expandIcon">▼</span>
+            </button>
+        </div>
+        
+        <div class="prerequisites-section" id="prerequisitesSection">
+            <h4>Prerequisites (complete these first)</h4>
+            <div class="prereq-list" id="prereqList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="machines">🔧 Machines</button>
+        <button class="tab" data-tab="training">🎓 Book Training</button>
+    </div>
+
+    <!-- Machines Section -->
+    <div class="tab-section active" id="machinesSection">
+        <div class="machines-grid">
+            {% for machine in machines %}
+            <a href="{% url 'machine_detail' machine.id %}" class="machine-card" data-machine-id="{{ machine.id }}">
+                <div class="machine-image">
+                    {% if machine.image %}
+                    <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
+                    {% else %}
+                    <div class="machine-placeholder">🔧</div>
+                    {% endif %}
+                    
+                    <div class="availability-badge loading" id="avail-{{ machine.id }}">
+                        Loading...
+                    </div>
+                </div>
+                
+                <div class="machine-info">
+                    <h3>{{ machine.name }}</h3>
+                    <div class="machine-location">
+                        📍 {% if machine.location %}{{ machine.location.name }}{% else %}Location not set{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <p style="color: #666; grid-column: 1 / -1;">No machines of this type found.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Training Sessions Section -->
+    <div class="tab-section" id="trainingSection">
+        <div class="week-nav">
+            <button class="week-nav-btn" onclick="previousWeek()">← Previous</button>
+            <span class="week-range" id="weekRange">Loading...</span>
+            <button class="week-nav-btn" onclick="nextWeek()">Next →</button>
+        </div>
+
+        <div class="training-calendar" id="trainingCalendar">
+            <!-- Populated by JS -->
+        </div>
     </div>
 </div>
+
+<!-- Session Detail Modal -->
+<div class="modal-overlay" id="sessionModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>🎓 Training Session</h2>
+            <button class="close-btn" onclick="closeSessionModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="sessionModalBody">
+            <!-- Populated by JS -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeSessionModal()">Cancel</button>
+            <button class="btn btn-primary" id="bookSessionBtn" onclick="bookSession()">Book Session</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const MACHINE_TYPE = "{{ machine_type }}";
+const CATEGORY = "{{ category }}";
+
+let currentWeekStart = getWeekStart(new Date());
+let allSessions = [];
+let selectedSession = null;
+let trainingData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load training requirements
+    loadTrainingRequirements();
+    
+    // Load availability for machines
+    loadAllAvailability();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            const tabName = this.dataset.tab;
+            document.getElementById('machinesSection').classList.toggle('active', tabName === 'machines');
+            document.getElementById('trainingSection').classList.toggle('active', tabName === 'training');
+            
+            if (tabName === 'training') {
+                loadTrainingSessions();
+            }
+        });
+    });
+});
+
+// ==================== Training Requirements ====================
+
+async function loadTrainingRequirements() {
+    try {
+        const response = await fetch(`/api/trainings/?status=active`);
+        const data = await response.json();
+        
+        if (data.trainings) {
+            // Find trainings that apply to this machine type
+            const relevantTrainings = data.trainings.filter(t => 
+                t.machine_type_names && t.machine_type_names.includes(MACHINE_TYPE)
+            );
+            
+            // Sort by level to find the main required training
+            relevantTrainings.sort((a, b) => b.level - a.level);
+            
+            if (relevantTrainings.length > 0) {
+                trainingData = relevantTrainings[0]; // Highest level = main requirement
+                renderTrainingRequirements(relevantTrainings);
+            } else {
+                // Check for category-based trainings
+                const categoryTrainings = data.trainings.filter(t => 
+                    t.category && t.category.toLowerCase() === CATEGORY.toLowerCase()
+                );
+                
+                categoryTrainings.sort((a, b) => b.level - a.level);
+                
+                if (categoryTrainings.length > 0) {
+                    trainingData = categoryTrainings[0];
+                    renderTrainingRequirements(categoryTrainings);
+                } else {
+                    document.getElementById('mainTraining').innerHTML = '<span class="no-training">✓ No training required for this machine type</span>';
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error loading training requirements:', err);
+        document.getElementById('mainTraining').innerHTML = '<span style="color: #999;">Could not load training info</span>';
+    }
+}
+
+function renderTrainingRequirements(trainings) {
+    const mainTraining = trainings[0]; // Highest level
+    const mainContainer = document.getElementById('mainTraining');
+    
+    // Render main training badge
+    mainContainer.innerHTML = `
+        <span class="training-badge-large">${escapeHtml(mainTraining.name)}</span>
+        <span class="training-level l${mainTraining.level}">Level ${mainTraining.level}</span>
+    `;
+    
+    // Get prerequisites (lower level trainings in same category)
+    const prerequisites = trainings.filter(t => t.level < mainTraining.level).sort((a, b) => a.level - b.level);
+    
+    // Also check the training's own prerequisites
+    if (mainTraining.prerequisites && mainTraining.prerequisites.length > 0) {
+        const prereqIds = mainTraining.prerequisites.map(p => p.id);
+        // Add any prerequisites not already in our list
+        mainTraining.prerequisites.forEach(prereq => {
+            if (!prerequisites.find(p => p.id === prereq.id)) {
+                prerequisites.unshift(prereq);
+            }
+        });
+    }
+    
+    if (prerequisites.length > 0) {
+        document.getElementById('expandToggle').style.display = 'flex';
+        
+        const prereqList = document.getElementById('prereqList');
+        prereqList.innerHTML = prerequisites.map(prereq => `
+            <div class="prereq-item">
+                <span class="pending">○</span>
+                <span>${escapeHtml(prereq.name)}</span>
+                <span class="training-level l${prereq.level}">Level ${prereq.level}</span>
+            </div>
+        `).join('');
+    }
+}
+
+function togglePrerequisites() {
+    const section = document.getElementById('prerequisitesSection');
+    const icon = document.getElementById('expandIcon');
+    const text = document.getElementById('expandText');
+    
+    section.classList.toggle('active');
+    
+    if (section.classList.contains('active')) {
+        icon.textContent = '▲';
+        text.textContent = 'Hide prerequisites';
+    } else {
+        icon.textContent = '▼';
+        text.textContent = 'Show prerequisites';
+    }
+}
+
+// ==================== Machine Availability ====================
+
+async function loadAllAvailability() {
+    const machineCards = document.querySelectorAll('.machine-card[data-machine-id]');
+    const today = new Date().toISOString().split('T')[0];
+    
+    for (const card of machineCards) {
+        const machineId = card.dataset.machineId;
+        loadMachineAvailability(machineId, today);
+    }
+}
+
+async function loadMachineAvailability(machineId, date) {
+    const badge = document.getElementById(`avail-${machineId}`);
+    
+    try {
+        const response = await fetch(`/reservations/api/machines/${machineId}/availability/?date=${date}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            updateAvailabilityBadge(badge, data);
+        } else {
+            badge.className = 'availability-badge unavailable';
+            badge.textContent = 'Unknown';
+        }
+    } catch (err) {
+        badge.className = 'availability-badge unavailable';
+        badge.textContent = 'Error';
+    }
+}
+
+function updateAvailabilityBadge(badge, data) {
+    const slots = data.available_slots || [];
+    
+    if (!data.is_trained) {
+        badge.className = 'availability-badge limited';
+        badge.textContent = 'Training required';
+        return;
+    }
+    
+    if (slots.length === 0) {
+        badge.className = 'availability-badge unavailable';
+        badge.textContent = 'Fully booked';
+        return;
+    }
+    
+    const totalMinutes = slots.reduce((sum, slot) => sum + slot.duration_minutes, 0);
+    const totalHours = Math.floor(totalMinutes / 60);
+    
+    if (totalMinutes >= 480) {
+        badge.className = 'availability-badge available';
+        badge.textContent = 'Available all day';
+    } else if (totalHours >= 2) {
+        badge.className = 'availability-badge available';
+        badge.textContent = `${totalHours}+ hours available`;
+    } else if (totalMinutes >= 30) {
+        badge.className = 'availability-badge limited';
+        badge.textContent = `${totalMinutes}min available`;
+    } else {
+        badge.className = 'availability-badge unavailable';
+        badge.textContent = 'Limited availability';
+    }
+}
+
+// ==================== Training Sessions ====================
+
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function updateWeekRange() {
+    const endDate = new Date(currentWeekStart);
+    endDate.setDate(endDate.getDate() + 6);
+    
+    const options = { month: 'short', day: 'numeric' };
+    const startStr = currentWeekStart.toLocaleDateString('en-US', options);
+    const endStr = endDate.toLocaleDateString('en-US', options);
+    
+    document.getElementById('weekRange').textContent = `${startStr} - ${endStr}`;
+}
+
+function previousWeek() {
+    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+    loadTrainingSessions();
+}
+
+function nextWeek() {
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+    loadTrainingSessions();
+}
+
+async function loadTrainingSessions() {
+    updateWeekRange();
+    
+    const startDate = formatDate(currentWeekStart);
+    const endDate = formatDate(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
+    
+    const calendar = document.getElementById('trainingCalendar');
+    calendar.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1 / -1; padding: 2rem;">Loading sessions...</p>';
+    
+    try {
+        const response = await fetch(`/reservations/api/trainings/available/?category=${encodeURIComponent(CATEGORY)}&start_date=${startDate}&end_date=${endDate}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Filter to only sessions for this machine type's trainings
+            allSessions = data.sessions.filter(s => {
+                // If we have training data, filter by training ID or name
+                if (trainingData) {
+                    return s.training_name === trainingData.name || 
+                           s.category.toLowerCase() === CATEGORY.toLowerCase();
+                }
+                return true;
+            });
+            renderCalendar();
+        } else {
+            calendar.innerHTML = '<p style="text-align: center; color: #999; grid-column: 1 / -1; padding: 2rem;">Failed to load sessions</p>';
+        }
+    } catch (err) {
+        console.error('Error loading sessions:', err);
+        calendar.innerHTML = '<p style="text-align: center; color: #999; grid-column: 1 / -1; padding: 2rem;">Error loading sessions</p>';
+    }
+}
+
+function renderCalendar() {
+    const calendar = document.getElementById('trainingCalendar');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let html = '';
+    
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart);
+        date.setDate(date.getDate() + i);
+        const dateStr = formatDate(date);
+        const isToday = date.getTime() === today.getTime();
+        
+        const daySessions = allSessions.filter(s => s.date === dateStr);
+        
+        html += `
+            <div class="day-column">
+                <div class="day-header ${isToday ? 'today' : ''}">
+                    <span class="weekday">${date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                    <span class="date">${date.getDate()}</span>
+                </div>
+                <div class="day-sessions">
+        `;
+        
+        if (daySessions.length === 0) {
+            html += `<div class="empty-day">No sessions</div>`;
+        } else {
+            daySessions.sort((a, b) => a.start_time.localeCompare(b.start_time));
+            
+            for (const session of daySessions) {
+                const statusClass = session.user_booking ? 'booked' : (session.is_full ? 'full' : 'available');
+                const spotsText = session.is_full ? 'Full' : `${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}`;
+                const spotsClass = session.is_full ? 'full' : 'available';
+                
+                html += `
+                    <div class="session-card ${statusClass}" onclick="openSessionModal(${session.id})">
+                        <div class="session-time">${formatTime(session.start_time)}</div>
+                        <div class="session-training">${escapeHtml(session.training_name)}</div>
+                        <div class="session-trainer">${escapeHtml(session.trainer_name)}</div>
+                        <div class="session-spots ${spotsClass}">
+                            ${session.user_booking ? '✓ Booked' : spotsText}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    calendar.innerHTML = html;
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+// ==================== Session Modal ====================
+
+function openSessionModal(sessionId) {
+    selectedSession = allSessions.find(s => s.id === sessionId);
+    if (!selectedSession) return;
+    
+    const date = new Date(selectedSession.date);
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    
+    const body = document.getElementById('sessionModalBody');
+    const bookBtn = document.getElementById('bookSessionBtn');
+    
+    let statusHtml = '';
+    if (selectedSession.user_booking) {
+        if (selectedSession.user_booking.status === 'waitlisted') {
+            statusHtml = `<div style="background: #fef3c7; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">
+                ⏳ You are on the waitlist (position ${selectedSession.user_booking.waitlist_position})
+            </div>`;
+            bookBtn.textContent = 'Cancel Waitlist';
+            bookBtn.onclick = () => cancelBooking(selectedSession.user_booking.id);
+        } else {
+            statusHtml = `<div style="background: #d1fae5; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">
+                ✓ You are registered for this session
+            </div>`;
+            bookBtn.textContent = 'Cancel Booking';
+            bookBtn.onclick = () => cancelBooking(selectedSession.user_booking.id);
+        }
+    } else if (selectedSession.is_full) {
+        statusHtml = `<div style="background: #fee2e2; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">
+            This session is full. You can join the waitlist.
+        </div>`;
+        bookBtn.textContent = 'Join Waitlist';
+        bookBtn.onclick = bookSession;
+        bookBtn.disabled = false;
+    } else {
+        bookBtn.textContent = 'Book Session';
+        bookBtn.onclick = bookSession;
+        bookBtn.disabled = false;
+    }
+    
+    body.innerHTML = `
+        ${statusHtml}
+        <div class="session-detail-row">
+            <span class="session-detail-label">Training</span>
+            <span class="session-detail-value">${escapeHtml(selectedSession.training_name)}</span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Level</span>
+            <span class="session-detail-value">
+                <span class="training-level l${selectedSession.training_level}">Level ${selectedSession.training_level}</span>
+            </span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Date</span>
+            <span class="session-detail-value">${dateStr}</span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Time</span>
+            <span class="session-detail-value">${formatTime(selectedSession.start_time)} - ${formatTime(selectedSession.end_time)}</span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Trainer</span>
+            <span class="session-detail-value">${escapeHtml(selectedSession.trainer_name)}</span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Location</span>
+            <span class="session-detail-value">${escapeHtml(selectedSession.location || 'TBD')}</span>
+        </div>
+        <div class="session-detail-row">
+            <span class="session-detail-label">Capacity</span>
+            <span class="session-detail-value">${selectedSession.current_participants} / ${selectedSession.max_participants}</span>
+        </div>
+    `;
+    
+    document.getElementById('sessionModal').classList.add('active');
+}
+
+function closeSessionModal() {
+    document.getElementById('sessionModal').classList.remove('active');
+    selectedSession = null;
+}
+
+async function bookSession() {
+    if (!selectedSession) return;
+    
+    const btn = document.getElementById('bookSessionBtn');
+    btn.disabled = true;
+    btn.textContent = 'Booking...';
+    
+    try {
+        const response = await fetch(`/reservations/api/trainings/${selectedSession.id}/book/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeSessionModal();
+            await loadTrainingSessions();
+        } else {
+            showToast(data.error || 'Failed to book', 'error');
+            btn.disabled = false;
+            btn.textContent = selectedSession.is_full ? 'Join Waitlist' : 'Book Session';
+        }
+    } catch (err) {
+        showToast('Failed to book session', 'error');
+        btn.disabled = false;
+        btn.textContent = selectedSession.is_full ? 'Join Waitlist' : 'Book Session';
+    }
+}
+
+async function cancelBooking(bookingId) {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    
+    const btn = document.getElementById('bookSessionBtn');
+    btn.disabled = true;
+    btn.textContent = 'Cancelling...';
+    
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Booking cancelled', 'success');
+            closeSessionModal();
+            await loadTrainingSessions();
+        } else {
+            showToast(data.error || 'Failed to cancel', 'error');
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showToast('Failed to cancel', 'error');
+        btn.disabled = false;
+    }
+}
+
+// ==================== Utilities ====================
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('sessionModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSessionModal();
+});
+</script>
 {% endblock %}

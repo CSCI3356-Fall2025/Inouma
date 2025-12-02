@@ -1,0 +1,646 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Reservations - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'user_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Reservations</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--gunmetal);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+.tab-badge {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Reservation Cards */
+.reservations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.reservation-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.25rem;
+    align-items: center;
+    transition: all 0.15s;
+}
+
+.reservation-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.reservation-card.past {
+    opacity: 0.7;
+}
+
+.reservation-card.cancelled {
+    opacity: 0.5;
+    background: #f8f9fa;
+}
+
+.date-block {
+    text-align: center;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-width: 70px;
+}
+
+.date-block .month {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 600;
+}
+
+.date-block .day {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+    line-height: 1;
+}
+
+.date-block .weekday {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 0.25rem;
+}
+
+.reservation-info h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    color: var(--gunmetal);
+}
+
+.reservation-info .machine-type {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.reservation-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.reservation-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.reservation-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-badge.completed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.no_show {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #888;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .reservation-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    
+    .date-block {
+        justify-self: center;
+    }
+    
+    .reservation-actions {
+        align-items: center;
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h1>📅 My Reservations</h1>
+            <p style="margin: 0.5rem 0 0; color: #666;">Manage your machine reservations</p>
+        </div>
+        <a href="{% url 'machine_directory' %}" class="btn btn-primary">
+            ➕ New Reservation
+        </a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="upcoming">
+            Upcoming <span class="tab-badge" id="upcomingCount">0</span>
+        </button>
+        <button class="tab" data-tab="past">
+            Past
+        </button>
+        <button class="tab" data-tab="cancelled">
+            Cancelled
+        </button>
+    </div>
+
+    <!-- Reservations List -->
+    <div id="reservationsContainer">
+        <div class="reservations-list" id="reservationsList"></div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-state-icon">📅</div>
+            <h2>No Reservations</h2>
+            <p>You don't have any reservations yet.</p>
+            <a href="{% url 'machine_directory' %}" class="btn btn-primary">Browse Machines</a>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal-overlay" id="cancelModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Cancel Reservation</h2>
+            <button class="modal-close" onclick="closeCancelModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to cancel this reservation?</p>
+            <p id="cancelDetails" style="color: #666; margin-top: 1rem;"></p>
+            
+            <div style="margin-top: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Reason (optional)</label>
+                <textarea id="cancelReason" rows="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeCancelModal()">Keep Reservation</button>
+            <button class="btn btn-danger" onclick="confirmCancel()">Cancel Reservation</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+let allReservations = [];
+let currentTab = 'upcoming';
+let cancellingReservationId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadReservations();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.dataset.tab;
+            renderReservations();
+        });
+    });
+});
+
+async function loadReservations() {
+    try {
+        const response = await fetch('/reservations/api/my-reservations/?status=all');
+        const data = await response.json();
+        
+        if (data.success) {
+            allReservations = data.reservations;
+            updateCounts();
+            renderReservations();
+        } else {
+            showToast('Failed to load reservations', 'error');
+        }
+    } catch (err) {
+        console.error('Error loading reservations:', err);
+        showToast('Failed to load reservations', 'error');
+    }
+}
+
+function updateCounts() {
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = allReservations.filter(r => 
+        r.status === 'confirmed' && r.date >= today
+    );
+    document.getElementById('upcomingCount').textContent = upcoming.length;
+}
+
+function renderReservations() {
+    const container = document.getElementById('reservationsList');
+    const emptyState = document.getElementById('emptyState');
+    const today = new Date().toISOString().split('T')[0];
+    
+    let filtered = [];
+    
+    if (currentTab === 'upcoming') {
+        filtered = allReservations.filter(r => 
+            r.status === 'confirmed' && r.date >= today
+        );
+    } else if (currentTab === 'past') {
+        filtered = allReservations.filter(r => 
+            (r.status === 'confirmed' && r.date < today) ||
+            r.status === 'completed' ||
+            r.status === 'no_show'
+        );
+    } else if (currentTab === 'cancelled') {
+        filtered = allReservations.filter(r => r.status === 'cancelled');
+    }
+    
+    // Sort: upcoming by date asc, past/cancelled by date desc
+    if (currentTab === 'upcoming') {
+        filtered.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+    } else {
+        filtered.sort((a, b) => b.date.localeCompare(a.date) || b.start_time.localeCompare(a.start_time));
+    }
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    container.innerHTML = filtered.map(r => {
+        const date = new Date(r.date + 'T00:00:00');
+        const isPast = r.date < today;
+        const isCancelled = r.status === 'cancelled';
+        
+        return `
+            <div class="reservation-card ${isPast ? 'past' : ''} ${isCancelled ? 'cancelled' : ''}">
+                <div class="date-block">
+                    <div class="month">${MONTHS[date.getMonth()]}</div>
+                    <div class="day">${date.getDate()}</div>
+                    <div class="weekday">${WEEKDAYS[date.getDay()]}</div>
+                </div>
+                
+                <div class="reservation-info">
+                    <h3>${escapeHtml(r.machine_name)}</h3>
+                    <div class="machine-type">${escapeHtml(r.machine_type)} • ${escapeHtml(r.category)}</div>
+                    <div class="reservation-meta">
+                        <span>🕐 ${formatTime(r.start_time)} - ${formatTime(r.end_time)}</span>
+                        <span>⏱️ ${r.duration_minutes} min</span>
+                        ${r.location ? `<span>📍 ${escapeHtml(r.location)}</span>` : ''}
+                    </div>
+                    ${r.purpose ? `<p style="margin-top: 0.5rem; color: #888; font-size: 0.85rem;">${escapeHtml(r.purpose)}</p>` : ''}
+                </div>
+                
+                <div class="reservation-actions">
+                    <span class="status-badge ${r.status}">${formatStatus(r.status)}</span>
+                    ${r.status === 'confirmed' && !isPast ? `
+                        <button class="btn btn-danger btn-sm" onclick="openCancelModal(${r.id}, '${escapeHtml(r.machine_name)}', '${r.date}', '${r.start_time}')">
+                            Cancel
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function formatStatus(status) {
+    const labels = {
+        'confirmed': 'Confirmed',
+        'cancelled': 'Cancelled',
+        'completed': 'Completed',
+        'no_show': 'No Show'
+    };
+    return labels[status] || status;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Cancel Modal
+function openCancelModal(id, machineName, date, time) {
+    cancellingReservationId = id;
+    const dateObj = new Date(date + 'T00:00:00');
+    document.getElementById('cancelDetails').textContent = 
+        `${machineName} on ${MONTHS[dateObj.getMonth()]} ${dateObj.getDate()} at ${formatTime(time)}`;
+    document.getElementById('cancelReason').value = '';
+    document.getElementById('cancelModal').classList.add('active');
+}
+
+function closeCancelModal() {
+    document.getElementById('cancelModal').classList.remove('active');
+    cancellingReservationId = null;
+}
+
+async function confirmCancel() {
+    if (!cancellingReservationId) return;
+    
+    const reason = document.getElementById('cancelReason').value;
+    
+    try {
+        const formData = new FormData();
+        formData.append('reason', reason);
+        
+        const response = await fetch(`/reservations/api/reservations/${cancellingReservationId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Reservation cancelled', 'success');
+            closeCancelModal();
+            await loadReservations();
+        } else {
+            showToast(data.error || 'Failed to cancel', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to cancel reservation', 'error');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('cancelModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCancelModal();
+});
+</script>
+{% endblock %}

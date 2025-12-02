@@ -1,0 +1,15 @@
+{% comment %}
+Team Management Navigation Card - Include this in the staff dashboard
+Usage: {% include 'team/team_management_card.html' %}
+{% endcomment %}
+
+<!-- Team Directory Card -->
+<div class="card" style="cursor: pointer;" onclick="window.location.href='{% url 'team:team_directory' %}'">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>👥 Team Directory</h2>
+            <p style="color: #666; margin-top: 0.5rem;">Manage team members, groups, birthdays, and permissions</p>
+        </div>
+        <div style="font-size: 2rem; color: var(--gold);">→</div>
+    </div>
+</div>

@@ -1,0 +1,969 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Friends - The Hatchery{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    font-weight: 500;
+}
+
+.tab:hover {
+    color: var(--gunmetal);
+}
+
+.tab.active {
+    color: var(--gunmetal);
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--sunglow);
+}
+
+.tab .badge {
+    background: var(--cinnabar);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Tab Sections */
+.tab-section {
+    display: none;
+}
+
+.tab-section.active {
+    display: block;
+}
+
+/* Search Box */
+.search-box {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--sunglow);
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    margin-top: 0.5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+}
+
+.search-results.active {
+    display: block;
+}
+
+.search-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+}
+
+.search-result-item:hover {
+    background: #f8f9fa;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+/* Friend Card */
+.friends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.friend-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    transition: all 0.2s;
+}
+
+.friend-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.friend-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--sunglow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    flex-shrink: 0;
+}
+
+.friend-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.friend-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+}
+
+.friend-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.level-badge {
+    background: var(--keppel);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.friend-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.friend-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.friend-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Request Card */
+.request-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.request-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.request-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--sunglow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.request-name {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.request-time {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.request-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-success {
+    background: var(--keppel);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #009d87;
+}
+
+.btn-danger {
+    background: var(--cinnabar);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d94433;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #ddd;
+    color: #666;
+}
+
+.btn-outline:hover {
+    background: #f0f0f0;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Compare Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* Compare View */
+.compare-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.compare-user {
+    text-align: center;
+}
+
+.compare-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--sunglow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 auto 0.75rem;
+}
+
+.compare-avatar.self {
+    background: var(--keppel);
+    color: white;
+}
+
+.compare-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.compare-level {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.compare-vs {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ddd;
+}
+
+.compare-stats {
+    margin-top: 1.5rem;
+}
+
+.compare-stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: center;
+}
+
+.compare-stat-row:last-child {
+    border-bottom: none;
+}
+
+.compare-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.compare-value.winner {
+    color: var(--keppel);
+}
+
+.compare-value.left {
+    text-align: right;
+}
+
+.compare-value.right {
+    text-align: left;
+}
+
+.compare-label {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem;
+    color: var(--gunmetal);
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>👥 Friends</h1>
+</div>
+
+<!-- Search -->
+<div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="userSearch" placeholder="Search for users by name or email..." autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab active" data-tab="friends">
+        👥 Friends <span class="badge" id="friendsCount" style="display: none;">0</span>
+    </button>
+    <button class="tab" data-tab="requests">
+        📩 Requests <span class="badge" id="requestsCount" style="display: none;">0</span>
+    </button>
+    <button class="tab" data-tab="sent">
+        📤 Sent
+    </button>
+</div>
+
+<!-- Friends List -->
+<div class="tab-section active" id="friendsSection">
+    <div class="friends-grid" id="friendsGrid">
+        <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">⏳</div>
+            <p>Loading friends...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Requests -->
+<div class="tab-section" id="requestsSection">
+    <div id="requestsList">
+        <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <p>Loading requests...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Sent Requests -->
+<div class="tab-section" id="sentSection">
+    <div id="sentList">
+        <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <p>Loading sent requests...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Modal -->
+<div class="modal-overlay" id="compareModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📊 Compare Progress</h2>
+            <button class="close-btn" onclick="closeCompareModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="compareBody">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+let friendsData = [];
+let myStats = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadFriends();
+    loadMyStats();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            const tabName = this.dataset.tab;
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabName + 'Section').classList.add('active');
+        });
+    });
+    
+    // User search
+    let searchTimeout;
+    const searchInput = document.getElementById('userSearch');
+    const searchResults = document.getElementById('searchResults');
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            searchResults.classList.remove('active');
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => searchUsers(query), 300);
+    });
+    
+    searchInput.addEventListener('blur', function() {
+        setTimeout(() => searchResults.classList.remove('active'), 200);
+    });
+});
+
+async function loadMyStats() {
+    try {
+        const response = await fetch('/social/api/my-stats/');
+        const data = await response.json();
+        if (data.success) {
+            myStats = data.stats;
+        }
+    } catch (err) {
+        console.error('Error loading stats:', err);
+    }
+}
+
+async function loadFriends() {
+    try {
+        const response = await fetch('/social/api/friends/');
+        const data = await response.json();
+        
+        if (data.success) {
+            friendsData = data.friends;
+            renderFriends(data.friends);
+            renderRequests(data.pending_requests);
+            renderSentRequests(data.sent_requests);
+            
+            // Update badges
+            if (data.friends.length > 0) {
+                document.getElementById('friendsCount').textContent = data.friends.length;
+                document.getElementById('friendsCount').style.display = 'inline';
+            }
+            
+            if (data.pending_requests.length > 0) {
+                document.getElementById('requestsCount').textContent = data.pending_requests.length;
+                document.getElementById('requestsCount').style.display = 'inline';
+            }
+        }
+    } catch (err) {
+        console.error('Error loading friends:', err);
+    }
+}
+
+function renderFriends(friends) {
+    const grid = document.getElementById('friendsGrid');
+    
+    if (friends.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">👥</div>
+                <h3>No friends yet</h3>
+                <p>Search for users above to send friend requests</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = friends.map(friend => `
+        <div class="friend-card">
+            <div class="friend-avatar">${getInitials(friend.name)}</div>
+            <div class="friend-info">
+                <h4 class="friend-name">${escapeHtml(friend.name)}</h4>
+                <div class="friend-level">
+                    <span class="level-badge">Lvl ${friend.level}</span>
+                    <span>${friend.xp} XP</span>
+                </div>
+                <div class="friend-stats">
+                    <span class="friend-stat">🎨 ${friend.projects_count} projects</span>
+                    <span class="friend-stat">🎓 ${friend.trainings_completed} trainings</span>
+                </div>
+            </div>
+            <div class="friend-actions">
+                <button class="btn btn-sm btn-primary" onclick="compareFriend(${friend.id}, '${escapeHtml(friend.name)}', ${friend.level}, ${friend.xp}, ${friend.projects_count}, ${friend.trainings_completed})">
+                    📊 Compare
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="viewProfile(${friend.id})">
+                    👤 Profile
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRequests(requests) {
+    const container = document.getElementById('requestsList');
+    
+    if (requests.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📩</div>
+                <h3>No pending requests</h3>
+                <p>Friend requests you receive will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = requests.map(req => `
+        <div class="request-card" id="request-${req.id}">
+            <div class="request-info">
+                <div class="request-avatar">${getInitials(req.from_user_name)}</div>
+                <div>
+                    <div class="request-name">${escapeHtml(req.from_user_name)}</div>
+                    <div class="request-time">Sent ${formatTimeAgo(req.sent_at)}</div>
+                </div>
+            </div>
+            <div class="request-actions">
+                <button class="btn btn-sm btn-success" onclick="respondRequest(${req.id}, 'accept')">✓ Accept</button>
+                <button class="btn btn-sm btn-secondary" onclick="respondRequest(${req.id}, 'decline')">✗ Decline</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSentRequests(requests) {
+    const container = document.getElementById('sentList');
+    
+    if (requests.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📤</div>
+                <h3>No sent requests</h3>
+                <p>Friend requests you send will appear here until accepted</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = requests.map(req => `
+        <div class="request-card">
+            <div class="request-info">
+                <div class="request-avatar">${getInitials(req.to_user_name)}</div>
+                <div>
+                    <div class="request-name">${escapeHtml(req.to_user_name)}</div>
+                    <div class="request-time">Sent ${formatTimeAgo(req.sent_at)}</div>
+                </div>
+            </div>
+            <div class="request-actions">
+                <span style="color: #999; font-size: 0.85rem;">⏳ Pending</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function searchUsers(query) {
+    const results = document.getElementById('searchResults');
+    
+    try {
+        const response = await fetch(`/social/api/users/search/?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (data.success && data.users.length > 0) {
+            results.innerHTML = data.users.map(user => {
+                let actionBtn = '';
+                if (user.friendship_status === 'accepted') {
+                    actionBtn = '<span style="color: var(--keppel);">✓ Friends</span>';
+                } else if (user.friendship_status === 'pending') {
+                    actionBtn = '<span style="color: #999;">⏳ Pending</span>';
+                } else {
+                    actionBtn = `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); sendRequest(${user.id})">+ Add</button>`;
+                }
+                
+                return `
+                    <div class="search-result-item" onclick="viewProfile(${user.id})">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div class="request-avatar" style="width: 35px; height: 35px; font-size: 0.85rem;">${getInitials(user.name)}</div>
+                            <div>
+                                <div style="font-weight: 500;">${escapeHtml(user.name)}</div>
+                                <div style="font-size: 0.8rem; color: #999;">${escapeHtml(user.email)}</div>
+                            </div>
+                        </div>
+                        ${actionBtn}
+                    </div>
+                `;
+            }).join('');
+            results.classList.add('active');
+        } else {
+            results.innerHTML = `<div class="search-result-item"><span style="color: #999;">No users found</span></div>`;
+            results.classList.add('active');
+        }
+    } catch (err) {
+        console.error('Search error:', err);
+    }
+}
+
+async function sendRequest(userId) {
+    try {
+        const response = await fetch('/social/api/friends/request/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Friend request sent!', 'success');
+            document.getElementById('searchResults').classList.remove('active');
+            document.getElementById('userSearch').value = '';
+            loadFriends();
+        } else {
+            showToast(data.error || 'Failed to send request', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to send request', 'error');
+    }
+}
+
+async function respondRequest(requestId, action) {
+    try {
+        const response = await fetch(`/social/api/friends/${requestId}/respond/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action: action })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(action === 'accept' ? 'Friend added!' : 'Request declined', 'success');
+            loadFriends();
+        } else {
+            showToast(data.error || 'Failed to respond', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to respond', 'error');
+    }
+}
+
+function compareFriend(friendId, friendName, friendLevel, friendXp, friendProjects, friendTrainings) {
+    if (!myStats) {
+        showToast('Loading your stats...', 'error');
+        return;
+    }
+    
+    const body = document.getElementById('compareBody');
+    
+    const compareRow = (myVal, theirVal, label) => {
+        const myWinner = myVal > theirVal ? 'winner' : '';
+        const theirWinner = theirVal > myVal ? 'winner' : '';
+        return `
+            <div class="compare-stat-row">
+                <div class="compare-value left ${myWinner}">${myVal}</div>
+                <div class="compare-label">${label}</div>
+                <div class="compare-value right ${theirWinner}">${theirVal}</div>
+            </div>
+        `;
+    };
+    
+    body.innerHTML = `
+        <div class="compare-grid">
+            <div class="compare-user">
+                <div class="compare-avatar self">👤</div>
+                <div class="compare-name">You</div>
+                <div class="compare-level">Level ${myStats.level}</div>
+            </div>
+            <div class="compare-vs">VS</div>
+            <div class="compare-user">
+                <div class="compare-avatar">${getInitials(friendName)}</div>
+                <div class="compare-name">${escapeHtml(friendName)}</div>
+                <div class="compare-level">Level ${friendLevel}</div>
+            </div>
+        </div>
+        
+        <div class="compare-stats">
+            ${compareRow(myStats.xp_points, friendXp, '⭐ XP Points')}
+            ${compareRow(myStats.projects_count, friendProjects, '🎨 Projects')}
+            ${compareRow(myStats.trainings_completed, friendTrainings, '🎓 Trainings')}
+            ${compareRow(myStats.certifications_count, 0, '🏆 Certifications')}
+        </div>
+    `;
+    
+    document.getElementById('compareModal').classList.add('active');
+}
+
+function closeCompareModal() {
+    document.getElementById('compareModal').classList.remove('active');
+}
+
+function viewProfile(userId) {
+    window.location.href = `/social/profile/${userId}/`;
+}
+
+function formatTimeAgo(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
+}
+
+function getInitials(name) {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('compareModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCompareModal();
+});
+</script>
+{% endblock %}

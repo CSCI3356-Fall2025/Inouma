@@ -10,101 +10,537 @@
     {{ machine.name }}
 {% endblock %}
 
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+    --light-gold: rgba(252, 201, 49, 0.15);
+    --light-maroon: rgba(149, 45, 87, 0.1);
+    --maroon: #952d57;
+}
+
+.machine-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 900px) {
+    .machine-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Machine Image */
+.machine-image-container {
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    background: #f5f5f5;
+}
+
+.machine-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Machine Info */
+.machine-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    color: var(--gunmetal);
+}
+
+.machine-subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+/* Tags */
+.machine-tags {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.machine-tag {
+    background: var(--light-gold);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+/* Description */
+.machine-description {
+    margin-bottom: 1.5rem;
+}
+
+.machine-description h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.machine-description p {
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Training Requirements Box */
+.training-requirements {
+    background: var(--light-maroon);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.training-requirements h3 {
+    color: var(--maroon);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+
+.training-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    color: var(--maroon);
+}
+
+.training-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.btn-primary {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-primary:hover {
+    background: #e5b52c;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: var(--gunmetal);
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Floorplan Section */
+.floorplan-section h3 {
+    margin-bottom: 1rem;
+}
+
+.floorplan-container {
+    position: relative;
+    border: 2px solid var(--sunglow);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.floorplan-container img {
+    width: 100%;
+    display: block;
+}
+
+.machine-pin {
+    position: absolute;
+    transform: translate(-50%, -100%);
+}
+
+.machine-pin .pin-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.machine-pin .pin-label {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.machine-pin.other {
+    opacity: 0.4;
+}
+
+.machine-pin.other .pin-icon {
+    font-size: 24px;
+}
+
+.location-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.location-info strong {
+    color: var(--gunmetal);
+}
+
+.no-floorplan {
+    text-align: center;
+    padding: 3rem;
+    background: #fafafa;
+    border-radius: 12px;
+    color: #999;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gunmetal);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--sunglow);
+}
+
+.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Available Slots */
+.slots-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.slots-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.slots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 60px;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.slot-chip {
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+}
+
+.slot-chip:hover {
+    border-color: var(--sunglow);
+}
+
+.slot-chip.selected {
+    background: var(--sunglow);
+    border-color: var(--sunglow);
+    font-weight: 600;
+}
+
+.slot-chip .slot-time {
+    font-weight: 600;
+}
+
+.slot-chip .slot-duration {
+    color: #666;
+    font-size: 0.75rem;
+}
+
+.no-slots {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+}
+
+/* Custom Time Section */
+.custom-time-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.custom-time-toggle {
+    color: var(--sunglow);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.custom-time-toggle:hover {
+    text-decoration: underline;
+}
+
+.custom-time-fields {
+    display: none;
+    margin-top: 1rem;
+}
+
+.custom-time-fields.active {
+    display: block;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Training Status Alert */
+.training-alert {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.training-alert h4 {
+    margin: 0 0 0.5rem;
+    color: #92400e;
+}
+
+.training-alert p {
+    margin: 0;
+    color: #78350f;
+    font-size: 0.9rem;
+}
+
+.training-alert a {
+    color: #b45309;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <div class="machine-detail-grid">
         <!-- Left Column: Machine Info -->
         <div>
             {% if machine.image %}
-            <div style="width: 100%; height: 300px; overflow: hidden; border-radius: 12px; margin-bottom: 1.5rem; background: #f5f5f5;">
-                <img src="{{ machine.image.url }}" alt="{{ machine.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            <div class="machine-image-container">
+                <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
             </div>
             {% endif %}
             
-            <h2 style="margin-bottom: 0.5rem;">{{ machine.name }}</h2>
-            <p style="color: #666; font-size: 1.1rem; margin-bottom: 1rem;">{{ machine.machine_name }}</p>
+            <h2 class="machine-title">{{ machine.name }}</h2>
+            <p class="machine-subtitle">{{ machine.machine_name }}</p>
             
-            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <span style="background: var(--light-gold); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem;">
-                    📁 {{ machine.category }}
-                </span>
-                <span style="background: var(--light-gold); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem;">
-                    📍 {{ location.name }} - {{ location.floor }}
-                </span>
+            <div class="machine-tags">
+                <span class="machine-tag">📁 {{ machine.category }}</span>
+                <span class="machine-tag">📍 {% if location %}{{ location.name }}{% if location.floor %} - {{ location.floor }}{% endif %}{% else %}Location not set{% endif %}</span>
             </div>
             
             {% if machine.description %}
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Description</h3>
-                <p style="color: #666;">{{ machine.description }}</p>
+            <div class="machine-description">
+                <h3>Description</h3>
+                <p>{{ machine.description }}</p>
             </div>
             {% endif %}
             
             <!-- Training Requirements -->
-            <div style="background: var(--light-maroon); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--maroon); font-size: 1.1rem; margin-bottom: 0.75rem;">Training Requirements</h3>
+            <div class="training-requirements">
+                <h3>Training Requirements</h3>
                 {% with trainings=machine.required_trainings.all %}
                     {% if trainings %}
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
                             {% for training in trainings %}
                                 <span class="training-badge">{{ training.name }}</span>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p style="color: #666; font-size: 0.9rem;">No training required</p>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0;">No training required</p>
                     {% endif %}
                 {% endwith %}
             </div>
             
             <!-- Action Buttons -->
-            <div style="display: flex; gap: 1rem;">
-                <button class="btn btn-primary" onclick="openReservationModal()" style="flex: 1;">
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openReservationModal()" style="width: 100%;">
                     📅 Reserve Machine
-                </button>
-                <button class="btn btn-secondary" onclick="openTrainingModal()" style="flex: 1;">
-                    🎓 Schedule Training
                 </button>
             </div>
         </div>
         
         <!-- Right Column: Floorplan -->
-        <div>
-            <h3 style="margin-bottom: 1rem;">Location Map</h3>
+        <div class="floorplan-section">
+            <h3>Location Map</h3>
             {% if has_floorplan and machine.map_position_x and machine.map_position_y %}
-            <div style="position: relative; border: 2px solid var(--gold); border-radius: 12px; overflow: hidden;">
-                <img src="{{ floorplan_url }}" alt="Floorplan" style="width: 100%; display: block;">
+            <div class="floorplan-container">
+                <img src="{{ floorplan_url }}" alt="Floorplan">
                 
                 <!-- Current machine pin -->
-                <div style="position: absolute; left: {{ machine.map_position_x }}%; top: {{ machine.map_position_y }}%; transform: translate(-50%, -100%);">
-                    <span style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">📍</span>
-                    <div style="position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--dark); padding: 0.25rem 0.5rem; border-radius: 4px; white-space: nowrap; font-size: 0.75rem; font-weight: 600;">
-                        {{ machine.name }}
-                    </div>
+                <div class="machine-pin" style="left: {{ machine.map_position_x }}%; top: {{ machine.map_position_y }}%;">
+                    <span class="pin-icon">📍</span>
+                    <div class="pin-label">{{ machine.name }}</div>
                 </div>
                 
                 <!-- Other machines (semi-transparent) -->
                 {% for other in other_machines %}
                     {% if other.map_position_x and other.map_position_y %}
-                    <div style="position: absolute; left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%; transform: translate(-50%, -100%); opacity: 0.4;" title="{{ other.name }}">
-                        <span style="font-size: 24px;">📍</span>
+                    <div class="machine-pin other" style="left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%;" title="{{ other.name }}">
+                        <span class="pin-icon">📍</span>
                     </div>
                     {% endif %}
                 {% endfor %}
             </div>
             
-            <div style="margin-top: 1rem; padding: 1rem; background: #fafafa; border-radius: 8px;">
-                <p style="font-size: 0.9rem; color: #666;">
-                    <strong>Building:</strong> {{ location.building }}<br>
-                    <strong>Floor:</strong> {{ location.floor }}<br>
-                    <strong>Capacity:</strong> {{ location.capacity }} people
+            <div class="location-info">
+                <p>
+                    <strong>Building:</strong> {{ location.building|default:"Not specified" }}<br>
+                    <strong>Floor:</strong> {{ location.floor|default:"Not specified" }}<br>
+                    <strong>Capacity:</strong> {{ location.capacity|default:"N/A" }} people
                 </p>
             </div>
             {% elif has_floorplan %}
-            <div style="text-align: center; padding: 3rem; background: #fafafa; border-radius: 12px; color: #999;">
+            <div class="no-floorplan">
                 <p>Floorplan available but machine location not pinned yet</p>
             </div>
             {% else %}
-            <div style="text-align: center; padding: 3rem; background: #fafafa; border-radius: 12px; color: #999;">
+            <div class="no-floorplan">
                 <p>No floorplan available for this location</p>
             </div>
             {% endif %}
@@ -112,176 +548,281 @@
     </div>
 </div>
 
-<!-- Training Booking Modal -->
-<div id="trainingModal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-            <h2>🎓 Schedule Training</h2>
-            <button class="close-btn" onclick="closeTrainingModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p style="color: #666; margin-bottom: 1.5rem;">
-                Book a training session for <strong>{{ machine.machine_name }}</strong>
-            </p>
-            
-            <div class="form-group">
-                <label>Select Trainer</label>
-                <select id="trainerSelect" class="form-control">
-                    <option value="">Choose a trainer...</option>
-                    {% for trainer in trainers %}
-                        <option value="{{ trainer.id }}">{{ trainer.get_full_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Select Date</label>
-                <input type="date" id="dateInput" class="form-control" min="{{ today }}">
-            </div>
-            
-            <button id="loadSlotsBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem;">
-                Load Available Time Slots
-            </button>
-            
-            <div id="slotsContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 50px;">
-                <p style="color: #999; font-style: italic;">Select a trainer and date to see available slots</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Machine Reservation Modal -->
-<div id="reservationModal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
+<!-- Reservation Modal -->
+<div class="modal-overlay" id="reservationModal">
+    <div class="modal-content">
         <div class="modal-header">
             <h2>📅 Reserve Machine</h2>
             <button class="close-btn" onclick="closeReservationModal()">&times;</button>
         </div>
         <div class="modal-body">
             <p style="color: #666; margin-bottom: 1.5rem;">
-                Reserve <strong>{{ machine.name }} ({{ machine.machine_name }})</strong> for use
+                Reserve <strong>{{ machine.name }}</strong> ({{ machine.machine_name }})
             </p>
+            
+            <!-- Training Alert (shown if not trained) -->
+            <div class="training-alert" id="trainingAlert" style="display: none;">
+                <h4>⚠️ Training Required</h4>
+                <p>You need to complete training before reserving this machine. <a href="{% url 'category_detail' machine.category %}?tab=training">Book a training session →</a></p>
+            </div>
             
             <form id="reservationForm">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label>Reservation Date</label>
-                    <input type="date" id="reservationDate" name="reservation_date" class="form-control" min="{{ today }}" required>
+                    <label>Select Date</label>
+                    <input type="date" id="reservationDate" name="reservation_date" class="form-control" min="{{ today }}" required onchange="loadAvailableSlots()">
                 </div>
                 
-                <div class="two-column">
-                    <div class="form-group">
-                        <label>Start Time</label>
-                        <input type="time" id="reservationStartTime" name="start_time" class="form-control" required>
+                <!-- Available Slots -->
+                <div class="form-group">
+                    <div class="slots-header">
+                        <h4>Available Time Slots</h4>
+                        <span id="slotsDate" style="color: #666; font-size: 0.85rem;"></span>
                     </div>
-                    <div class="form-group">
-                        <label>End Time</label>
-                        <input type="time" id="reservationEndTime" name="end_time" class="form-control" required>
+                    <div class="slots-container" id="slotsContainer">
+                        <p class="no-slots">Select a date to see available slots</p>
+                    </div>
+                </div>
+                
+                <!-- Custom Time Option -->
+                <div class="custom-time-section">
+                    <button type="button" class="custom-time-toggle" onclick="toggleCustomTime()">
+                        Or enter custom time →
+                    </button>
+                    <div class="custom-time-fields" id="customTimeFields">
+                        <div class="two-column">
+                            <div class="form-group">
+                                <label>Start Time</label>
+                                <input type="time" id="customStartTime" name="start_time" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>End Time</label>
+                                <input type="time" id="customEndTime" name="end_time" class="form-control">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label>Purpose (Optional)</label>
-                    <textarea name="purpose" class="form-control" rows="3" placeholder="What are you working on?"></textarea>
+                    <textarea name="purpose" class="form-control" rows="2" placeholder="What are you working on?"></textarea>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="submitBtn">
                     Confirm Reservation
                 </button>
             </form>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script src="{% static 'js/booking.js' %}"></script>
 
 <script>
-// Set up training context for booking.js
-window.TRAINING_CONTEXT = {
-    machineInstanceId: '{{ machine.id }}',
-    machineName: '{{ machine.name }}',
-    machineType: '{{ machine.machine_name }}'
-};
+const MACHINE_ID = {{ machine.id }};
+const AVAILABILITY_URL = "{{ availability_api_url }}";
+const RESERVATION_URL = "{{ reservation_api_url }}";
 
-const RESERVATION_URL = "{% url 'reservation_create_api' machine.id %}";
+let availableSlots = [];
+let selectedSlot = null;
+let isTrained = true;
+{% comment %} const RESERVATION_URL = "{% url 'reservations:api_create_reservation' machine.id %}"; {% endcomment %}
 
-// Training Modal Functions
-function openTrainingModal() {
-    document.getElementById('trainingModal').classList.add('active');
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('reservationDate').value = today;
+});
 
-function closeTrainingModal() {
-    document.getElementById('trainingModal').classList.remove('active');
-}
-
-// Reservation Modal Functions
 function openReservationModal() {
     document.getElementById('reservationModal').classList.add('active');
+    
+    // Load slots for today
+    const dateInput = document.getElementById('reservationDate');
+    if (dateInput.value) {
+        loadAvailableSlots();
+    }
 }
 
 function closeReservationModal() {
     document.getElementById('reservationModal').classList.remove('active');
+    selectedSlot = null;
 }
 
-// Close modals when clicking outside
-document.getElementById('trainingModal').addEventListener('click', function(e) {
-    if (e.target === this) closeTrainingModal();
-});
+async function loadAvailableSlots() {
+    const date = document.getElementById('reservationDate').value;
+    if (!date) return;
+    
+    const container = document.getElementById('slotsContainer');
+    container.innerHTML = '<p class="no-slots">Loading...</p>';
+    
+    document.getElementById('slotsDate').textContent = formatDateDisplay(date);
+    
+    try {
+        const response = await fetch(`${AVAILABILITY_URL}?date=${date}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            availableSlots = data.available_slots;
+            isTrained = data.is_trained;
+            
+            // Show/hide training alert
+            document.getElementById('trainingAlert').style.display = isTrained ? 'none' : 'block';
+            document.getElementById('submitBtn').disabled = !isTrained;
+            
+            renderSlots();
+        } else {
+            container.innerHTML = `<p class="no-slots">${data.error || 'Failed to load slots'}</p>`;
+        }
+    } catch (err) {
+        console.error('Error loading slots:', err);
+        container.innerHTML = '<p class="no-slots">Error loading availability</p>';
+    }
+}
 
-document.getElementById('reservationModal').addEventListener('click', function(e) {
-    if (e.target === this) closeReservationModal();
-});
+function renderSlots() {
+    const container = document.getElementById('slotsContainer');
+    
+    if (availableSlots.length === 0) {
+        container.innerHTML = '<p class="no-slots">No available slots for this date</p>';
+        return;
+    }
+    
+    container.innerHTML = availableSlots.map((slot, index) => {
+        const duration = formatDuration(slot.duration_minutes);
+        return `
+            <div class="slot-chip ${selectedSlot === index ? 'selected' : ''}" onclick="selectSlot(${index})">
+                <div class="slot-time">${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}</div>
+                <div class="slot-duration">${duration}</div>
+            </div>
+        `;
+    }).join('');
+}
 
-// Handle machine reservation form submission
+function selectSlot(index) {
+    selectedSlot = index;
+    const slot = availableSlots[index];
+    
+    // Update custom time fields
+    document.getElementById('customStartTime').value = slot.start_time;
+    document.getElementById('customEndTime').value = slot.end_time;
+    
+    // Re-render to show selection
+    renderSlots();
+}
+
+function toggleCustomTime() {
+    const fields = document.getElementById('customTimeFields');
+    fields.classList.toggle('active');
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function formatDuration(minutes) {
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${minutes}m`;
+}
+
+function formatDateDisplay(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// Handle form submission
 document.getElementById('reservationForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const form = e.target;
-    const formData = new FormData(form);
+    if (!isTrained) {
+        showToast('You need to complete training first', 'error');
+        return;
+    }
+    
+    const date = document.getElementById('reservationDate').value;
+    const startTime = document.getElementById('customStartTime').value;
+    const endTime = document.getElementById('customEndTime').value;
+    const purpose = this.querySelector('textarea[name="purpose"]').value;
+    
+    if (!date || !startTime || !endTime) {
+        showToast('Please select a date and time slot', 'error');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
     
     try {
         const response = await fetch(RESERVATION_URL, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCsrfToken(),
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
             },
-            credentials: 'same-origin',
-            body: formData
+            body: JSON.stringify({
+                reservation_date: date,
+                start_time: startTime,
+                end_time: endTime,
+                purpose: purpose
+            })
         });
         
         const data = await response.json();
-        console.log('Reservation API response:', data);
         
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || data.message || 'Reservation failed');
+        if (data.success) {
+            showToast('Reservation created successfully!', 'success');
+            closeReservationModal();
+            
+            // Optionally redirect to my reservations
+            setTimeout(() => {
+                window.location.href = '/reservations/my-reservations/';
+            }, 1500);
+        } else {
+            showToast(data.error || 'Failed to create reservation', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirm Reservation';
         }
-        
-        alert('Reservation created successfully!');
-        closeReservationModal();
-        form.reset();
-        
-    } catch (error) {
-        console.error('Reservation error:', error);
-        alert(error.message || 'Failed to create reservation. Please try again.');
+    } catch (err) {
+        console.error('Reservation error:', err);
+        showToast('Failed to create reservation', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Reservation';
     }
 });
 
-// Helper function from booking.js
-function getCsrfToken() {
-    const name = 'csrftoken=';
-    const cookies = document.cookie.split(';');
-    for (let c of cookies) {
-        c = c.trim();
-        if (c.startsWith(name)) return c.substring(name.length);
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
     }
-    return '';
+    return cookieValue;
 }
 
-// Set minimum date to today
-const today = new Date().toISOString().split('T')[0];
-document.getElementById('dateInput').min = today;
-document.getElementById('reservationDate').min = today;
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('reservationModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReservationModal();
+});
 </script>
 {% endblock %}
