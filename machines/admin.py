@@ -71,10 +71,12 @@ class UserTrainingRecordAdmin(admin.ModelAdmin):
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
     """Machine admin"""
-    list_display = ('name', 'machine_name', 'category', 'location', 'manufacturer', 'created_at')
-    list_filter = ('category', 'location', 'manufacturer', 'requires_level_1', 'requires_level_2', 'requires_level_3')
+    list_display = ('name', 'machine_name', 'status', 'category', 'location', 'manufacturer', 'created_at')
+    list_editable = ('status',)
+    list_filter = ('status', 'category', 'location', 'manufacturer', 'requires_level_1', 'requires_level_2', 'requires_level_3')
     search_fields = ('name', 'machine_name', 'category', 'manufacturer', 'model_number')
     filter_horizontal = ('required_trainings',)
+    actions = ('mark_as_broken', 'mark_as_maintenance', 'mark_as_active')
     
     fieldsets = (
         ('Basic Info', {
@@ -97,4 +99,20 @@ class MachineAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    readonly_fields = ('created_at', 'updated_at')
+
+    def mark_as_broken(self, request, queryset):
+        updated = queryset.update(status='broken')
+        self.message_user(request, f"Marked {updated} machine(s) as broken.")
+    mark_as_broken.short_description = 'Mark selected machines as Broken'
+
+    def mark_as_maintenance(self, request, queryset):
+        updated = queryset.update(status='maintenance')
+        self.message_user(request, f"Marked {updated} machine(s) as under Maintenance.")
+    mark_as_maintenance.short_description = 'Mark selected machines as Maintenance'
+
+    def mark_as_active(self, request, queryset):
+        updated = queryset.update(status='active')
+        self.message_user(request, f"Marked {updated} machine(s) as Active.")
+    mark_as_active.short_description = 'Mark selected machines as Active'
     

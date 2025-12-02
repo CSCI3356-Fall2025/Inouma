@@ -296,6 +296,20 @@ class Machine(models.Model):
         help_text="Specific training(s) a student must complete to use this machine."
     )
 
+    # Reporting Issue (Delivery 6)
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('broken', 'Broken'),
+        ('maintenance', 'Maintenance'),
+    ]
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        help_text="Whether the machine is working, broken, or under maintenance."
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

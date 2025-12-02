@@ -624,6 +624,33 @@ def machine_detail(request, machine_id):
     return render(request, 'machines/machine_detail.html', context)
 
 
+@login_required
+@require_http_methods(["POST"])
+def report_broken(request, machine_id):
+    """Allow a user to report a machine as broken. Marks the machine status and redirects back."""
+    try:
+        machine = get_object_or_404(Machine, id=machine_id)
+
+        # Update status if not already marked
+        if getattr(machine, 'status', 'active') != 'broken':
+            machine.status = 'broken'
+            machine.save()
+            messages.success(request, f'Machine "{machine.name}" reported as broken. Staff will be notified.')
+        else:
+            messages.info(request, f'Machine "{machine.name}" is already marked as broken.')
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f'Error reporting machine: {e}')
+
+    # Redirect back to the referring page if available, otherwise to the machine directory
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('machine_directory')
+
+
 # ============================================================================
 # MACHINE SUGGESTION APIs
 # ============================================================================
