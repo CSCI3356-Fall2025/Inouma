@@ -520,7 +520,7 @@ function formatDate(date) {
 
 async function loadCategories() {
     try {
-        const response = await fetch("{% url 'reservations:apigetcategories' %}");
+        const response = await fetch("/api/categories/");
         const data = await response.json();
         categories = data.categories || [];
         const select = document.getElementById('filterCategory');
@@ -541,7 +541,7 @@ async function loadSessions() {
     const startDate = formatDate(currentWeekStart);
     const endDate = formatDate(new Date(currentWeekStart.getTime() + 13 * 24 * 60 * 60 * 1000));
 
-    let url = "{% url 'reservations:apiavailabletrainings' %}" + `?startdate=${encodeURIComponent(startDate)}&enddate=${encodeURIComponent(endDate)}`;
+    let url = "{% url 'reservations:api_available_trainings' %}" + `?startdate=${encodeURIComponent(startDate)}&enddate=${encodeURIComponent(endDate)}`;
     if (category) url += `&category=${encodeURIComponent(category)}`;
 
     try {
@@ -826,7 +826,7 @@ function closeSessionModal() {
 
 async function bookSession(sessionId) {
     try {
-        const response = await fetch(`{% url 'reservations:apibooktraining' 0 %}`.replace('0', sessionId), {
+        const response = await fetch(`{% url 'reservations:api_book_training' 0 %}`.replace('0', sessionId), {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
@@ -852,7 +852,7 @@ async function cancelBooking(bookingId) {
     if (!confirm('Are you sure you want to cancel this booking?')) return;
 
     try {
-        const url = `{% url 'reservations:apicanceltrainingbooking' 0 %}`.replace('0', bookingId);
+        const url = `{% url 'reservations:api_cancel_training_booking' 0 %}`.replace('0', bookingId);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -876,7 +876,7 @@ async function cancelBooking(bookingId) {
 
 async function confirmWaitlist(bookingId) {
     try {
-        const url = `{% url 'reservations:apiconfirmwaitlistbooking' 0 %}`.replace('0', bookingId);
+        const url = `{% url 'reservations:api_confirm_waitlist_booking' 0 %}`.replace('0', bookingId);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
