@@ -35,8 +35,21 @@ def is_staff_or_admin(user):
 
 
 def is_team_member(user):
-    from team.models import TeamMember
-    return TeamMember.objects.filter(user=user, is_active=True).exists()
+    # Consider role/flags on the User model and scheduling profile
+    if getattr(user, 'role', '') == 'Team Member':
+        return True
+    if getattr(user, 'is_trainer', False) or getattr(user, 'is_team_lead', False):
+        return True
+    if user.is_staff:
+        return True
+    # Fallback: check scheduling profile if it exists
+    try:
+        profile = getattr(user, 'team_profile', None)
+        if profile and (profile.is_trainer or profile.is_team_lead):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 # ============================================================================
