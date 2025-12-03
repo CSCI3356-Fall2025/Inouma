@@ -840,16 +840,14 @@ def my_availability(request):
                 messages.error(request, 'End time must be after start time.')
                 return redirect('scheduling:my_availability')
 
-            Unavailability.objects.update_or_create(
+            Unavailability.objects.create(
                 user=request.user,
                 semester=active_semester,
                 day_of_week=day_of_week,
-                defaults={
-                    'start_time': start,
-                    'end_time': end,
-                    'is_unavailable': True,
-                    'reason': reason,
-                }
+                start_time=start,
+                end_time=end,
+                is_unavailable=True,
+                reason=reason,
             )
             messages.success(request, 'Unavailability saved.')
             return redirect('scheduling:my_availability')
