@@ -1,13 +1,16 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.contrib import messages
 
 from datetime import date, datetime
 
 from accounts.models import Certification, TrainingReservation
 from machines.models import Machine
+from scheduling.models import Shift, Semester, Unavailability
+from django.utils import timezone
 # from scheduling.models import Reservation
 
 
@@ -56,6 +59,43 @@ def user_dashboard(request):
         "now": datetime.now(),
     }
     return render(request, "userDashboard.html", context)
+
+
+@login_required
+def trainer_dashboard(request):
+    """
+    Dashboard for trainers to quickly access schedule and availability tools.
+    """
+    # Allow trainers, team leads (auto-trainers), or staff
+    is_trainer = (
+        getattr(request.user, "is_trainer", False)
+        or getattr(request.user, "is_team_lead", False)
+    )
+    team_profile = getattr(request.user, "team_profile", None)
+    if team_profile:
+        is_trainer = is_trainer or getattr(team_profile, "is_trainer", False) or getattr(team_profile, "is_team_lead", False)
+
+    if not is_trainer and not request.user.is_staff:
+        messages.error(request, "Trainer access required.")
+        return redirect("user_dashboard")
+
+    active_semester = Semester.objects.filter(is_active=True).first()
+    upcoming_shifts = []
+    unavailability_blocks = []
+
+    if active_semester:
+        shifts_qs = Shift.objects.filter(user=request.user, semester=active_semester).order_by("date", "start_time")
+        upcoming_shifts = shifts_qs.filter(date__gte=timezone.now().date())[:5]
+        unavailability_blocks = Unavailability.objects.filter(
+            user=request.user, semester=active_semester
+        ).order_by("day_of_week", "start_time")
+
+    context = {
+        "active_semester": active_semester,
+        "upcoming_shifts": upcoming_shifts,
+        "unavailability_blocks": unavailability_blocks,
+    }
+    return render(request, "trainerDashboard.html", context)
 
 def landing_page(request):
     return render(request, 'landing.html')
