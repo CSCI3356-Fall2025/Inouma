@@ -6,6 +6,15 @@ from django.views.decorators.http import require_http_methods
 from django.db import models
 from django.conf import settings
 
+from datetime import date
+
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+
+from .models import Machine
+from locations.models import Location
+
 from .models import Machine, TrainingType, MachineCategory, Training
 from locations.models import Location
 from collections import defaultdict
@@ -1226,3 +1235,154 @@ def api_get_existing_machine_types(request):
         'category_info': category_info,
         'machine_type_training_map': training_map,
     })
+
+# ---------------------------------------------------------------------------
+# Existing helpers / staff views (keep all your current code above)
+# ---------------------------------------------------------------------------
+
+def is_superuser(user):
+    return user.is_superuser
+
+
+@login_required
+@user_passes_test(is_superuser)
+def staff_machine_directory(request):
+    """Staff-specific machine directory with all machines and advanced filtering"""
+    machines = Machine.objects.all().order_by('-created_at')
+
+    # Try to prefetch related trainings if the relationship exists
+    try:
+        machines = machines.prefetch_related('required_trainings')
+    except Exception:
+        pass
+
+    locations = Location.objects.all().order_by('building', 'name')
+
+    context = {
+        'machines': machines,
+        'locations': locations,
+    }
+    return render(request, 'machines/staff_machine_directory.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def machine_detail_api(request, machine_id):
+    """API endpoint to get comprehensive machine details for modal"""
+    try:
+        machine = Machine.objects.get(id=machine_id)
+
+        # Try to get related objects
+        try:
+            machine = Machine.objects.select_related('location').get(id=machine_id)
+        except Exception:
+            pass
+
+        # Get training details
+        trainings = []
+
+        # Check for required_training (single FK)
+        if hasattr(machine, 'required_training') and machine.required_training:
+            trainings.append({
+                'id': machine.required_training.id,
+                'name': machine.required_training.name,
+            })
+
+        # Check for required_trainings (M2M)
+        if hasattr(machine, 'required_trainings'):
+            try:
+                if machine.required_trainings.exists():
+                    trainings = [
+                        {'id': t.id, 'name': t.name}
+                        for t in machine.required_trainings.all()
+                    ]
+            except Exception:
+                pass
+
+        # Add level-based training if no custom trainings
+        if not trainings:
+            if getattr(machine, 'requires_level_1', False):
+                trainings.append({'name': 'Level 1 Training', 'type': 'level'})
+            if getattr(machine, 'requires_level_2', False):
+                trainings.append({'name': 'Level 2 Training', 'type': 'level'})
+            if getattr(machine, 'requires_level_3', False):
+                trainings.append({'name': 'Level 3 Training', 'type': 'level'})
+
+        # Get location details
+        location_str = 'Not assigned'
+        location_id = None
+        if machine.location:
+            if hasattr(machine.location, 'name'):
+                location_str = machine.location.name
+                location_id = machine.location.id
+                if hasattr(machine.location, 'building') and machine.location.building:
+                    location_str = f"{machine.location.building} - {machine.location.name}"
+            else:
+                location_str = str(machine.location)
+
+        data = {
+            'id': machine.id,
+            'name': machine.name,
+            'machine_name': machine.machine_name,
+            'category': machine.category,
+            'description': machine.description or 'No description available',
+            'location': location_str,
+            'location_id': location_id,
+            'year_bought': str(machine.year_bought) if machine.year_bought else 'N/A',
+            'mac_address': machine.mac_address or 'Not connected',
+            'image_url': machine.image.url if machine.image else None,
+            'map_position_x': float(machine.map_position_x) if machine.map_position_x else None,
+            'map_position_y': float(machine.map_position_y) if machine.map_position_y else None,
+            'is_reservable': getattr(machine, 'is_reservable', True),
+            'trainings': trainings,
+            'created_at': machine.created_at.strftime('%B %d, %Y at %I:%M %p'),
+            'updated_at': machine.updated_at.strftime('%B %d, %Y at %I:%M %p'),
+        }
+        return JsonResponse(data)
+
+    except Machine.DoesNotExist:
+        return JsonResponse({'error': 'Machine not found'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+# ---------------------------------------------------------------------------
+# NEW: Student-facing machine detail page with reservation support
+# ---------------------------------------------------------------------------
+
+@login_required
+def machine_detail(request, machine_id):
+    """
+    Student-facing machine detail page with reservation and floorplan.
+    Provides availability / reservation API URLs for the JS in machine_detail.html.
+    """
+    machine = get_object_or_404(Machine, id=machine_id)
+    location = machine.location
+
+    has_floorplan = False
+    floorplan_url = None
+    other_machines = Machine.objects.none()
+
+    if location and hasattr(location, "floorplan_image"):
+        has_floorplan = bool(location.floorplan_image)
+        if has_floorplan:
+            floorplan_url = location.floorplan_image.url
+
+        other_machines = (
+            location.machines.exclude(id=machine_id)
+            .filter(map_position_x__isnull=False, map_position_y__isnull=False)
+        )
+
+    context = {
+        "machine": machine,
+        "location": location,
+        "has_floorplan": has_floorplan,
+        "floorplan_url": floorplan_url,
+        "other_machines": other_machines,
+        "today": date.today().isoformat(),
+        # URLs consumed by machine_detail.html JS
+        "reservationapiurl": f"/reservations/api/machines/{machine.id}/reserve/",
+        "availabilityapiurl": f"/reservations/api/machines/{machine.id}/availability/",
+    }
+    return render(request, "machines/machine_detail.html", context)

@@ -2,13 +2,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}The Hatchery - BC Makerspace{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    {% block extra_head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}The Hatchery - BC Makerspace{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <!-- Left Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <img src="{% static 'images/HatcheryLogo.png' %}" alt="The Hatchery Logo" class="logo-image">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <a href="{% url 'machine_directory' %}" 
+        class="nav-link {% if request.resolver_match.url_name == 'machine_directory' %}active{% endif %}">
+        <span class="nav-icon">🔧</span>
+        <span>Machine Directory</span>
+      </a>
+      
+      {% if user.is_authenticated %}
+        <a href="{% url 'user_dashboard' %}"
+          class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+          <span class="nav-icon">👤</span>
+          <span>User Dashboard</span>
+        </a>
+        
+        {% if not user.is_staff %}
+          <!-- Regular User: Reservations Section -->
+          <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Reservations</div>
+          
+          <a href="{% url 'reservations:my_reservations' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'my_reservations' %}active{% endif %}">
+            <span class="nav-icon">📅</span>
+            <span>My Reservations</span>
+          </a>
+          
+          <a href="{% url 'reservations:training_browser' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'training_browser' %}active{% endif %}">
+            <span class="nav-icon">🎓</span>
+            <span>Training Sessions</span>
+          </a>
+          
+          <a href="{% url 'reservations:my_training_progress' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'my_training_progress' %}active{% endif %}">
+            <span class="nav-icon">📊</span>
+            <span>My Progress</span>
+          </a>
+        {% endif %}
+        
+        {% if user.team_member_profile %}
+          <!-- Team Member: My Training Sessions -->
+          <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Team</div>
+          
+          <a href="{% url 'reservations:team_my_training_sessions' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'team_my_training_sessions' %}active{% endif %}">
+            <span class="nav-icon">🎓</span>
+            <span>My Trainer Sessions</span>
+          </a>
+        {% endif %}
+      {% endif %}
+      
+      {% if user.is_staff %}
+        <!-- Staff Section -->
+        <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Staff</div>
+        
+        <a href="{% url 'staff_dashboard' %}" 
+          class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
+          <span class="nav-icon">⚙️</span>
+          <span>Staff Dashboard</span>
+        </a>
+      {% endif %}
+    </nav>
+
     <!-- Left Sidebar Navigation -->
     <aside class="sidebar">
         <div class="sidebar-header">
@@ -86,57 +155,64 @@
             {% endif %}
         </nav>
 
-        <div class="sidebar-footer">
-            {% if user.is_authenticated %}
-                <div class="user-info">
-                    <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
-                    <div class="user-role">{% if user.is_superuser %}Admin{% elif user.is_staff %}Staff{% else %}User{% endif %}</div>
-                </div>
-                <div class="user-actions">
-                    <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
-                    <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
-                </div>
-            {% else %}
-                <a href="{% url 'login' %}" class="login-btn">Login</a>
-            {% endif %}
+    <div class="sidebar-footer">
+      {% if user.is_authenticated %}
+        <div class="user-info">
+          <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
+          <div class="user-role">{% if user.is_superuser %}Admin{% elif user.is_staff %}Staff{% else %}User{% endif %}</div>
         </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <div class="main-wrapper">
-        <header class="top-header">
-            <div class="breadcrumb">
-                {% block breadcrumb %}
-                {% endblock %}
-            </div>
-        </header>
-
-        <main class="main-content">
-            {% if messages %}
-            <div class="messages">
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% block content %}
-            <!-- Page-specific content goes here -->
-            {% endblock %}
-        </main>
-
-        <footer class="footer">
-            <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
-        </footer>
+        <div class="user-actions">
+          <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
+          <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
+        </div>
+      {% else %}
+        <a href="{% url 'login' %}" class="login-btn">Login</a>
+      {% endif %}
     </div>
+  </aside>
+
+
+  <!-- Main Content Area -->
+  <div class="main-wrapper">
+    <header class="top-header">
+      <div class="breadcrumb">
+        {% block breadcrumb %}
+        {% endblock %}
+      </div>
+    </header>
+
+
+    <main class="main-content">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+
+      {% block content %}
+      <!-- Page-specific content goes here -->
+      {% endblock %}
+    </main>
+
+
+    <footer class="footer">
+      <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
+    </footer>
+  </div>
+
 
     <!-- Base JavaScript -->
-    <script src="{% static 'js/main.js' %}"></script>
-    
+    {# Removed prototype main.js so real per-page scripts can use Django APIs #}
+    {# <script src="{% static 'js/main.js' %}"></script> #}
+  
     {% block extra_scripts %}
     <!-- For page-specific JS -->
     {% endblock %}
 </body>
 </html>
+

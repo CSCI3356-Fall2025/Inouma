@@ -4,8 +4,8 @@
 {% block title %}{{ machine.name }} - The Hatchery{% endblock %}
 
 {% block breadcrumb %}
-    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> > 
-    <a href="{% url 'category_detail' machine.category %}" style="color: #666; text-decoration: none;">{{ machine.category }}</a> > 
+    <a href="{% url 'machine_directory' %}" style="color: #666; text-decoration: none;">Machine Directory</a> >
+    <a href="{% url 'category_detail' machine.category %}" style="color: #666; text-decoration: none;">{{ machine.category }}</a> >
     <a href="{% url 'machine_type_detail' machine.machine_name %}" style="color: #666; text-decoration: none;">{{ machine.machine_name }}</a> >
     {{ machine.name }}
 {% endblock %}
@@ -27,11 +27,8 @@
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
 }
-
 @media (max-width: 900px) {
-    .machine-detail-grid {
-        grid-template-columns: 1fr;
-    }
+    .machine-detail-grid { grid-template-columns: 1fr; }
 }
 
 /* Machine Image */
@@ -43,7 +40,6 @@
     margin-bottom: 1.5rem;
     background: #f5f5f5;
 }
-
 .machine-image-container img {
     width: 100%;
     height: 100%;
@@ -56,7 +52,6 @@
     font-size: 1.5rem;
     color: var(--gunmetal);
 }
-
 .machine-subtitle {
     color: #666;
     font-size: 1.1rem;
@@ -70,7 +65,6 @@
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
 }
-
 .machine-tag {
     background: var(--light-gold);
     padding: 0.5rem 1rem;
@@ -79,15 +73,11 @@
 }
 
 /* Description */
-.machine-description {
-    margin-bottom: 1.5rem;
-}
-
+.machine-description { margin-bottom: 1.5rem; }
 .machine-description h3 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
 }
-
 .machine-description p {
     color: #666;
     line-height: 1.6;
@@ -100,13 +90,11 @@
     border-radius: 8px;
     margin-bottom: 1.5rem;
 }
-
 .training-requirements h3 {
     color: var(--maroon);
     font-size: 1.1rem;
     margin-bottom: 0.75rem;
 }
-
 .training-badge {
     display: inline-block;
     padding: 0.35rem 0.75rem;
@@ -118,17 +106,11 @@
     color: var(--maroon);
 }
 
-.training-badge.completed {
-    background: #d1fae5;
-    color: #065f46;
-}
-
 /* Action Buttons */
 .action-buttons {
     display: flex;
     gap: 1rem;
 }
-
 .btn {
     flex: 1;
     padding: 0.75rem 1.5rem;
@@ -140,57 +122,36 @@
     transition: all 0.15s;
     text-align: center;
 }
-
 .btn-primary {
     background: var(--sunglow);
     color: var(--gunmetal);
 }
-
-.btn-primary:hover {
-    background: #e5b52c;
-}
-
-.btn-secondary {
-    background: #e9ecef;
-    color: var(--gunmetal);
-}
-
-.btn-secondary:hover {
-    background: #dee2e6;
-}
-
+.btn-primary:hover { background: #e5b52c; }
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-/* Floorplan Section */
-.floorplan-section h3 {
-    margin-bottom: 1rem;
-}
-
+/* Floorplan */
+.floorplan-section h3 { margin-bottom: 1rem; }
 .floorplan-container {
     position: relative;
     border: 2px solid var(--sunglow);
     border-radius: 12px;
     overflow: hidden;
 }
-
 .floorplan-container img {
     width: 100%;
     display: block;
 }
-
 .machine-pin {
     position: absolute;
     transform: translate(-50%, -100%);
 }
-
 .machine-pin .pin-icon {
     font-size: 32px;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
-
 .machine-pin .pin-label {
     position: absolute;
     top: -30px;
@@ -204,14 +165,8 @@
     font-size: 0.75rem;
     font-weight: 600;
 }
-
-.machine-pin.other {
-    opacity: 0.4;
-}
-
-.machine-pin.other .pin-icon {
-    font-size: 24px;
-}
+.machine-pin.other { opacity: 0.4; }
+.machine-pin.other .pin-icon { font-size: 24px; }
 
 .location-info {
     margin-top: 1rem;
@@ -221,10 +176,7 @@
     font-size: 0.9rem;
     color: #666;
 }
-
-.location-info strong {
-    color: var(--gunmetal);
-}
+.location-info strong { color: var(--gunmetal); }
 
 .no-floorplan {
     text-align: center;
@@ -234,7 +186,7 @@
     color: #999;
 }
 
-/* Modal Styles */
+/* Modal */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -248,11 +200,7 @@
     justify-content: center;
     padding: 1rem;
 }
-
-.modal-overlay.active {
-    display: flex;
-}
-
+.modal-overlay.active { display: flex; }
 .modal-content {
     background: white;
     border-radius: 12px;
@@ -261,7 +209,6 @@
     max-height: 90vh;
     overflow: auto;
 }
-
 .modal-header {
     padding: 1.25rem;
     border-bottom: 1px solid #e9ecef;
@@ -269,12 +216,10 @@
     justify-content: space-between;
     align-items: center;
 }
-
 .modal-header h2 {
     margin: 0;
     font-size: 1.25rem;
 }
-
 .close-btn {
     background: none;
     border: none;
@@ -283,23 +228,16 @@
     color: #999;
     line-height: 1;
 }
+.modal-body { padding: 1.25rem; }
 
-.modal-body {
-    padding: 1.25rem;
-}
-
-/* Form Styles */
-.form-group {
-    margin-bottom: 1rem;
-}
-
+/* Form */
+.form-group { margin-bottom: 1rem; }
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
     color: var(--gunmetal);
 }
-
 .form-control {
     width: 100%;
     padding: 0.6rem 0.75rem;
@@ -307,31 +245,23 @@
     border-radius: 6px;
     font-size: 0.95rem;
 }
-
 .form-control:focus {
     outline: none;
     border-color: var(--sunglow);
 }
-
 .two-column {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-/* Available Slots */
+/* Slots */
 .slots-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.75rem;
 }
-
-.slots-header h4 {
-    margin: 0;
-    font-size: 0.95rem;
-}
-
 .slots-container {
     display: flex;
     flex-wrap: wrap;
@@ -341,7 +271,6 @@
     background: #f8f9fa;
     border-radius: 8px;
 }
-
 .slot-chip {
     padding: 0.5rem 0.75rem;
     background: white;
@@ -351,26 +280,17 @@
     font-size: 0.85rem;
     transition: all 0.15s;
 }
-
-.slot-chip:hover {
-    border-color: var(--sunglow);
-}
-
+.slot-chip:hover { border-color: var(--sunglow); }
 .slot-chip.selected {
     background: var(--sunglow);
     border-color: var(--sunglow);
     font-weight: 600;
 }
-
-.slot-chip .slot-time {
-    font-weight: 600;
-}
-
-.slot-chip .slot-duration {
+.slot-time { font-weight: 600; }
+.slot-duration {
     color: #666;
     font-size: 0.75rem;
 }
-
 .no-slots {
     color: #999;
     font-style: italic;
@@ -378,13 +298,12 @@
     width: 100%;
 }
 
-/* Custom Time Section */
+/* Custom time */
 .custom-time-section {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #e9ecef;
 }
-
 .custom-time-toggle {
     color: var(--sunglow);
     background: none;
@@ -393,19 +312,12 @@
     font-size: 0.9rem;
     padding: 0;
 }
-
-.custom-time-toggle:hover {
-    text-decoration: underline;
-}
-
+.custom-time-toggle:hover { text-decoration: underline; }
 .custom-time-fields {
     display: none;
     margin-top: 1rem;
 }
-
-.custom-time-fields.active {
-    display: block;
-}
+.custom-time-fields.active { display: block; }
 
 /* Toast */
 .toast {
@@ -419,16 +331,14 @@
     z-index: 2000;
     animation: slideIn 0.3s ease;
 }
-
 .toast.success { background: #059669; }
 .toast.error { background: #dc2626; }
-
 @keyframes slideIn {
     from { transform: translateY(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* Training Status Alert */
+/* Training alert */
 .training-alert {
     background: #fef3c7;
     border: 1px solid #f59e0b;
@@ -436,18 +346,15 @@
     border-radius: 8px;
     margin-bottom: 1rem;
 }
-
 .training-alert h4 {
     margin: 0 0 0.5rem;
     color: #92400e;
 }
-
 .training-alert p {
     margin: 0;
     color: #78350f;
     font-size: 0.9rem;
 }
-
 .training-alert a {
     color: #b45309;
     font-weight: 600;
@@ -458,30 +365,37 @@
 {% block content %}
 <div class="card">
     <div class="machine-detail-grid">
-        <!-- Left Column: Machine Info -->
+        <!-- Left: machine info -->
         <div>
             {% if machine.image %}
             <div class="machine-image-container">
                 <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
             </div>
             {% endif %}
-            
+
             <h2 class="machine-title">{{ machine.name }}</h2>
             <p class="machine-subtitle">{{ machine.machine_name }}</p>
-            
+
             <div class="machine-tags">
                 <span class="machine-tag">📁 {{ machine.category }}</span>
-                <span class="machine-tag">📍 {% if location %}{{ location.name }}{% if location.floor %} - {{ location.floor }}{% endif %}{% else %}Location not set{% endif %}</span>
+                <span class="machine-tag">
+                    📍
+                    {% if location %}
+                        {{ location.name }}{% if location.floor %} - {{ location.floor }}{% endif %}
+                    {% else %}
+                        Location not set
+                    {% endif %}
+                </span>
             </div>
-            
+
             {% if machine.description %}
             <div class="machine-description">
                 <h3>Description</h3>
                 <p>{{ machine.description }}</p>
             </div>
             {% endif %}
-            
-            <!-- Training Requirements -->
+
+            <!-- Training requirements -->
             <div class="training-requirements">
                 <h3>Training Requirements</h3>
                 {% with trainings=machine.required_trainings.all %}
@@ -496,38 +410,35 @@
                     {% endif %}
                 {% endwith %}
             </div>
-            
-            <!-- Action Buttons -->
+
+            <!-- Action -->
             <div class="action-buttons">
-                <button class="btn btn-primary" onclick="openReservationModal()" style="width: 100%;">
+                <button class="btn btn-primary" onclick="openReservationModal()" style="width:100%;">
                     📅 Reserve Machine
                 </button>
             </div>
         </div>
-        
-        <!-- Right Column: Floorplan -->
+
+        <!-- Right: floorplan -->
         <div class="floorplan-section">
             <h3>Location Map</h3>
             {% if has_floorplan and machine.map_position_x and machine.map_position_y %}
             <div class="floorplan-container">
                 <img src="{{ floorplan_url }}" alt="Floorplan">
-                
-                <!-- Current machine pin -->
                 <div class="machine-pin" style="left: {{ machine.map_position_x }}%; top: {{ machine.map_position_y }}%;">
                     <span class="pin-icon">📍</span>
                     <div class="pin-label">{{ machine.name }}</div>
                 </div>
-                
-                <!-- Other machines (semi-transparent) -->
                 {% for other in other_machines %}
                     {% if other.map_position_x and other.map_position_y %}
-                    <div class="machine-pin other" style="left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%;" title="{{ other.name }}">
+                    <div class="machine-pin other"
+                         style="left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%;"
+                         title="{{ other.name }}">
                         <span class="pin-icon">📍</span>
                     </div>
                     {% endif %}
                 {% endfor %}
             </div>
-            
             <div class="location-info">
                 <p>
                     <strong>Building:</strong> {{ location.building|default:"Not specified" }}<br>
@@ -556,37 +467,50 @@
             <button class="close-btn" onclick="closeReservationModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <p style="color: #666; margin-bottom: 1.5rem;">
+            <p style="color:#666; margin-bottom:1.5rem;">
                 Reserve <strong>{{ machine.name }}</strong> ({{ machine.machine_name }})
             </p>
-            
-            <!-- Training Alert (shown if not trained) -->
-            <div class="training-alert" id="trainingAlert" style="display: none;">
+
+            <!-- Training alert -->
+            <div class="training-alert" id="trainingAlert" style="display:none;">
                 <h4>⚠️ Training Required</h4>
-                <p>You need to complete training before reserving this machine. <a href="{% url 'category_detail' machine.category %}?tab=training">Book a training session →</a></p>
+                <p>
+                    You need to complete training before reserving this machine.
+                    <a href="{% url 'category_detail' machine.category %}?tab=training">
+                        Book a training session →
+                    </a>
+                </p>
             </div>
-            
+
             <form id="reservationForm">
                 {% csrf_token %}
                 <div class="form-group">
                     <label>Select Date</label>
-                    <input type="date" id="reservationDate" name="reservation_date" class="form-control" min="{{ today }}" required onchange="loadAvailableSlots()">
+                    <input type="date"
+                           id="reservationDate"
+                           name="reservation_date"
+                           class="form-control"
+                           min="{{ today }}"
+                           required
+                           onchange="loadAvailableSlots()">
                 </div>
-                
-                <!-- Available Slots -->
+
+                <!-- Slots -->
                 <div class="form-group">
                     <div class="slots-header">
                         <h4>Available Time Slots</h4>
-                        <span id="slotsDate" style="color: #666; font-size: 0.85rem;"></span>
+                        <span id="slotsDate" style="color:#666; font-size:0.85rem;"></span>
                     </div>
                     <div class="slots-container" id="slotsContainer">
                         <p class="no-slots">Select a date to see available slots</p>
                     </div>
                 </div>
-                
-                <!-- Custom Time Option -->
+
+                <!-- Custom time -->
                 <div class="custom-time-section">
-                    <button type="button" class="custom-time-toggle" onclick="toggleCustomTime()">
+                    <button type="button"
+                            class="custom-time-toggle"
+                            onclick="toggleCustomTime()">
                         Or enter custom time →
                     </button>
                     <div class="custom-time-fields" id="customTimeFields">
@@ -602,13 +526,19 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Purpose (Optional)</label>
-                    <textarea name="purpose" class="form-control" rows="2" placeholder="What are you working on?"></textarea>
+                    <textarea name="purpose"
+                              class="form-control"
+                              rows="2"
+                              placeholder="What are you working on?"></textarea>
                 </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="submitBtn">
+
+                <button type="submit"
+                        class="btn btn-primary"
+                        style="width:100%; margin-top:1rem;"
+                        id="submitBtn">
                     Confirm Reservation
                 </button>
             </form>
@@ -617,25 +547,23 @@
 </div>
 
 <script>
-const MACHINE_ID = {{ machine.id }};
-const AVAILABILITY_URL = "{{ availability_api_url }}";
-const RESERVATION_URL = "{{ reservation_api_url }}";
+const AVAILABILITY_URL = "{{ availabilityapiurl }}";
+const RESERVATION_URL = "{{ reservationapiurl }}";
 
 let availableSlots = [];
 let selectedSlot = null;
 let isTrained = true;
-{% comment %} const RESERVATION_URL = "{% url 'reservations:api_create_reservation' machine.id %}"; {% endcomment %}
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('reservationDate').value = today;
+document.addEventListener('DOMContentLoaded', function () {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('reservationDate');
+    if (!dateInput.value) {
+        dateInput.value = todayStr;
+    }
 });
 
 function openReservationModal() {
     document.getElementById('reservationModal').classList.add('active');
-    
-    // Load slots for today
     const dateInput = document.getElementById('reservationDate');
     if (dateInput.value) {
         loadAvailableSlots();
@@ -650,27 +578,26 @@ function closeReservationModal() {
 async function loadAvailableSlots() {
     const date = document.getElementById('reservationDate').value;
     if (!date) return;
-    
+
     const container = document.getElementById('slotsContainer');
     container.innerHTML = '<p class="no-slots">Loading...</p>';
-    
     document.getElementById('slotsDate').textContent = formatDateDisplay(date);
-    
+
     try {
-        const response = await fetch(`${AVAILABILITY_URL}?date=${date}`);
+        const response = await fetch(AVAILABILITY_URL + '?date=' + encodeURIComponent(date));
         const data = await response.json();
-        
+
         if (data.success) {
-            availableSlots = data.available_slots;
-            isTrained = data.is_trained;
-            
-            // Show/hide training alert
+            availableSlots = data.available_slots || data.availableslots || [];
+            isTrained = (data.is_trained !== undefined ? data.is_trained : (data.istrained ?? true));
+
             document.getElementById('trainingAlert').style.display = isTrained ? 'none' : 'block';
             document.getElementById('submitBtn').disabled = !isTrained;
-            
+
             renderSlots();
         } else {
-            container.innerHTML = `<p class="no-slots">${data.error || 'Failed to load slots'}</p>`;
+            container.innerHTML =
+                '<p class="no-slots">' + (data.error || 'Failed to load slots') + '</p>';
         }
     } catch (err) {
         console.error('Error loading slots:', err);
@@ -680,17 +607,20 @@ async function loadAvailableSlots() {
 
 function renderSlots() {
     const container = document.getElementById('slotsContainer');
-    
-    if (availableSlots.length === 0) {
+
+    if (!availableSlots || availableSlots.length === 0) {
         container.innerHTML = '<p class="no-slots">No available slots for this date</p>';
         return;
     }
-    
+
     container.innerHTML = availableSlots.map((slot, index) => {
-        const duration = formatDuration(slot.duration_minutes);
+        const start = slot.start_time || slot.starttime;
+        const end = slot.end_time || slot.endtime;
+        const duration = formatDuration(slot.duration_minutes || slot.durationminutes || 0);
         return `
-            <div class="slot-chip ${selectedSlot === index ? 'selected' : ''}" onclick="selectSlot(${index})">
-                <div class="slot-time">${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}</div>
+            <div class="slot-chip ${selectedSlot === index ? 'selected' : ''}"
+                 onclick="selectSlot(${index})">
+                <div class="slot-time">${formatTime(start)} - ${formatTime(end)}</div>
                 <div class="slot-duration">${duration}</div>
             </div>
         `;
@@ -700,65 +630,69 @@ function renderSlots() {
 function selectSlot(index) {
     selectedSlot = index;
     const slot = availableSlots[index];
-    
-    // Update custom time fields
-    document.getElementById('customStartTime').value = slot.start_time;
-    document.getElementById('customEndTime').value = slot.end_time;
-    
-    // Re-render to show selection
+    const start = slot.start_time || slot.starttime;
+    const end = slot.end_time || slot.endtime;
+
+    document.getElementById('customStartTime').value = start;
+    document.getElementById('customEndTime').value = end;
+
     renderSlots();
 }
 
 function toggleCustomTime() {
-    const fields = document.getElementById('customTimeFields');
-    fields.classList.toggle('active');
+    document.getElementById('customTimeFields').classList.toggle('active');
 }
 
 function formatTime(timeStr) {
+    if (!timeStr) return '';
     const [hours, minutes] = timeStr.split(':');
-    const h = parseInt(hours);
+    const h = parseInt(hours, 10);
     const ampm = h >= 12 ? 'PM' : 'AM';
     const hour12 = h % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
 }
 
 function formatDuration(minutes) {
+    if (!minutes) return '0m';
     if (minutes >= 60) {
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
-        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+        return mins ? `${hours}h ${mins}m` : `${hours}h`;
     }
     return `${minutes}m`;
 }
 
 function formatDateDisplay(dateStr) {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    });
 }
 
-// Handle form submission
-document.getElementById('reservationForm').addEventListener('submit', async function(e) {
+document.getElementById('reservationForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    
+
     if (!isTrained) {
         showToast('You need to complete training first', 'error');
         return;
     }
-    
+
     const date = document.getElementById('reservationDate').value;
     const startTime = document.getElementById('customStartTime').value;
     const endTime = document.getElementById('customEndTime').value;
     const purpose = this.querySelector('textarea[name="purpose"]').value;
-    
+
     if (!date || !startTime || !endTime) {
         showToast('Please select a date and time slot', 'error');
         return;
     }
-    
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating...';
-    
+
     try {
         const response = await fetch(RESERVATION_URL, {
             method: 'POST',
@@ -770,19 +704,16 @@ document.getElementById('reservationForm').addEventListener('submit', async func
                 reservation_date: date,
                 start_time: startTime,
                 end_time: endTime,
-                purpose: purpose
-            })
+                purpose: purpose,
+            }),
         });
-        
         const data = await response.json();
-        
+
         if (data.success) {
             showToast('Reservation created successfully!', 'success');
             closeReservationModal();
-            
-            // Optionally redirect to my reservations
             setTimeout(() => {
-                window.location.href = '/reservations/my-reservations/';
+                window.location.href = "{% url 'reservations:my_reservations' %}";
             }, 1500);
         } else {
             showToast(data.error || 'Failed to create reservation', 'error');
@@ -814,14 +745,13 @@ function getCookie(name) {
 
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
+    toast.className = 'toast ' + type;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Close modal on overlay click
-document.getElementById('reservationModal').addEventListener('click', function(e) {
+document.getElementById('reservationModal').addEventListener('click', function (e) {
     if (e.target === this) closeReservationModal();
 });
 </script>
