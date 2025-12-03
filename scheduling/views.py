@@ -14,6 +14,7 @@ from .models import (
 )
 from locations.models import Location
 from .weekly_scheduler import WeeklyScheduler
+from datetime import time as dt_time
 
 
 def is_staff_user(user):
@@ -818,6 +819,49 @@ def my_availability(request):
     profile, created = TeamMemberProfile.objects.get_or_create(
         user=request.user
     )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            try:
+                day_of_week = int(request.POST.get('day_of_week'))
+            except (TypeError, ValueError):
+                messages.error(request, 'Select a valid day.')
+                return redirect('scheduling:my_availability')
+
+            start_str = request.POST.get('start_time') or None
+            end_str = request.POST.get('end_time') or None
+            reason = request.POST.get('reason', '').strip()
+
+            start = datetime.strptime(start_str, "%H:%M").time() if start_str else None
+            end = datetime.strptime(end_str, "%H:%M").time() if end_str else None
+
+            if start and end and end <= start:
+                messages.error(request, 'End time must be after start time.')
+                return redirect('scheduling:my_availability')
+
+            Unavailability.objects.update_or_create(
+                user=request.user,
+                semester=active_semester,
+                day_of_week=day_of_week,
+                defaults={
+                    'start_time': start,
+                    'end_time': end,
+                    'is_unavailable': True,
+                    'reason': reason,
+                }
+            )
+            messages.success(request, 'Unavailability saved.')
+            return redirect('scheduling:my_availability')
+
+        if action == 'delete':
+            entry_id = request.POST.get('entry_id')
+            if entry_id:
+                Unavailability.objects.filter(
+                    id=entry_id, user=request.user, semester=active_semester
+                ).delete()
+                messages.success(request, 'Entry removed.')
+            return redirect('scheduling:my_availability')
     
     # Get existing unavailabilities
     unavailabilities = Unavailability.objects.filter(
@@ -828,7 +872,8 @@ def my_availability(request):
     context = {
         'semester': active_semester,
         'profile': profile,
-        'unavailabilities': unavailabilities
+        'unavailabilities': unavailabilities,
+        'weekday_choices': DailyOperatingHours.WEEKDAY_CHOICES,
     }
     
     return render(request, 'scheduling/my_availability.html', context)

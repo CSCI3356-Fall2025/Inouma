@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Schedule - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'trainer_dashboard' %}" class="breadcrumb-item">Trainer Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Schedule</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.shift-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.shift {
+    border: 1px solid #f1f1f1;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.shift-main strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.muted { color: #6b7280; }
+
+.badge {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: #eef2ff;
+    color: #4338ca;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Schedule</h1>
+        <p class="muted">Upcoming shifts for the active semester{% if semester %} ({{ semester.name }}){% endif %}.</p>
+    </div>
+    <a href="{% url 'trainer_dashboard' %}" class="badge" style="text-decoration:none; background:var(--gunmetal); color:#fff;">← Trainer Dashboard</a>
+</div>
+
+<div class="card">
+    {% if shifts %}
+    <ul class="shift-list">
+        {% for shift in shifts %}
+        <li class="shift">
+            <div class="shift-main">
+                <strong>{{ shift.date|date:"D, M j" }} • {{ shift.start_time }} - {{ shift.end_time }}</strong>
+                <div class="muted">{{ shift.get_shift_type_display }}{% if shift.location %} @ {{ shift.location.name }}{% elif shift.location_group %} @ {{ shift.location_group.name }}{% endif %}{% if shift.team_category %} • {{ shift.team_category }}{% endif %}</div>
+            </div>
+            <span class="badge">{{ shift.status|capfirst }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No shifts scheduled yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
