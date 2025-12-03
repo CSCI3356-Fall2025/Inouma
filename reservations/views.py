@@ -218,66 +218,70 @@ def api_available_trainings(request):
     training_id = request.GET.get('training_id')
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
-    
+
     # Parse dates
     if start_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     else:
         start_date = timezone.now().date()
-    
+
     if end_date_str:
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
     else:
         end_date = start_date + timedelta(days=14)
-    
-    # Get training if specified
+
+    # Optional specific training
     training = None
     if training_id:
         from machines.models import Training
         training = Training.objects.filter(id=training_id).first()
-    
+
+    # Use TrainingSessionService so ids match api_book_training
     sessions = TrainingSessionService.get_available_sessions(
         category=category if category else None,
         training=training,
         start_date=start_date,
         end_date=end_date,
-        user=request.user
+        user=request.user,
     )
-    
+
     data = []
     for s in sessions:
-        # Check if user already has a booking
+        # Does the current user already have a booking for this session?
         user_booking = s.bookings.filter(user=request.user).exclude(
             status__in=['cancelled', 'no_show']
         ).first()
-        
+
         data.append({
-            'id': s.id,
-            'training_id': s.training_id,
-            'training_name': s.training.name,
-            'training_level': s.training.level,
-            'category': s.training.category,
-            'trainer_id': s.trainer_id,
-            'trainer_name': s.trainer.get_full_name() or s.trainer.email,
-            'date': str(s.date),
-            'start_time': s.start_time.strftime('%H:%M'),
-            'end_time': s.end_time.strftime('%H:%M'),
-            'duration_minutes': s.duration_minutes,
-            'location': s.location.name if s.location else None,
-            'max_participants': s.max_participants,
-            'current_participants': s.current_participants,
-            'available_spots': s.available_spots,
-            'waitlist_count': s.waitlist_count,
-            'status': s.status,
-            'is_full': s.is_full,
-            'user_booking': {
-                'id': user_booking.id,
-                'status': user_booking.status,
-                'waitlist_position': user_booking.waitlist_position,
+            "id": s.id,
+            "training_id": s.training_id,
+            "training_name": s.training.name,
+            "training_level": s.training.level,
+            "category": s.training.category,
+            "trainer_id": s.trainer_id,
+            "trainer_name": s.trainer.get_full_name() or s.trainer.email,
+            "date": str(s.date),
+            "start_time": s.start_time.strftime("%H:%M"),
+            "end_time": s.end_time.strftime("%H:%M"),
+            "duration_minutes": s.duration_minutes,
+            "location": s.location.name if s.location else None,
+            "max_participants": s.max_participants,
+            "current_participants": s.current_participants,
+            "available_spots": s.available_spots,
+            "waitlist_count": s.waitlist_count,
+            "status": s.status,
+            "is_full": s.is_full,
+            "user_booking": {
+                "id": user_booking.id,
+                "status": user_booking.status,
+                "waitlist_position": user_booking.waitlist_position,
             } if user_booking else None,
         })
-    
-    return JsonResponse({'success': True, 'sessions': data})
+
+    return JsonResponse({"success": True, "sessions": data})
+
+
+
 
 
 @login_required
