@@ -252,6 +252,24 @@
     gap: 0.35rem;
 }
 
+/* Broken / Status styling */
+.machine-card.broken {
+    opacity: 0.55;
+    filter: grayscale(60%);
+}
+
+.status-badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: white;
+}
+.status-badge.broken { background: rgba(240,82,62,0.95); }
+
 .availability-badge.available {
     background: rgba(0, 181, 156, 0.9);
     color: white;
@@ -623,17 +641,19 @@
     <div class="tab-section active" id="machinesSection">
         <div class="machines-grid">
             {% for machine in machines %}
-            <a href="{% url 'machine_detail' machine.id %}" class="machine-card" data-machine-id="{{ machine.id }}">
+            <div onclick="window.location.href='{% url 'machine_detail' machine.id %}'" class="machine-card {% if machine.status == 'broken' %}broken{% endif %}" data-machine-id="{{ machine.id }}">
                 <div class="machine-image">
                     {% if machine.image %}
                     <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
                     {% else %}
                     <div class="machine-placeholder">🔧</div>
                     {% endif %}
-                    
-                    <div class="availability-badge loading" id="avail-{{ machine.id }}">
-                        Loading...
-                    </div>
+                    {% if machine.status == 'broken' %}
+                        <div class="status-badge broken">Broken</div>
+                        <div class="availability-badge unavailable" id="avail-{{ machine.id }}">Broken</div>
+                    {% else %}
+                        <div class="availability-badge loading" id="avail-{{ machine.id }}">Loading...</div>
+                    {% endif %}
                 </div>
                 
                 <div class="machine-info">
@@ -641,8 +661,17 @@
                     <div class="machine-location">
                         📍 {% if machine.location %}{{ machine.location.name }}{% else %}Location not set{% endif %}
                     </div>
+
+                    {% if machine.status != 'broken' %}
+                    <div style="margin-top:0.75rem;">
+                        <form method="post" action="{% url 'report_broken' machine.id %}" onsubmit="event.stopPropagation();">
+                            {% csrf_token %}
+                            <button type="submit" class="btn" style="background:#f0523e; color:white; border-radius:6px; padding:0.55rem 0.9rem;" onclick="event.stopPropagation();">Report Broken</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
-            </a>
+            </div>
             {% empty %}
             <p style="color: #666; grid-column: 1 / -1;">No machines of this type found.</p>
             {% endfor %}

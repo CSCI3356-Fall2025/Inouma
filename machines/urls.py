@@ -44,4 +44,6 @@ urlpatterns = [
     path('api/machine-suggestions/', views.get_machine_suggestions, name='machine_suggestions'),
     path('api/check-duplicate/', views.check_duplicate_machine, name='check_duplicate_machine'),
     path('api/search-suggestions/', views.get_search_suggestions, name='search_suggestions'),
+    # Reporting a machine as broken (user-facing)
+    path('report-broken/<int:machine_id>/', views.report_broken, name='report_broken'),
 ]

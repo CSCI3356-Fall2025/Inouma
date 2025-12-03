@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 import json
 
 from .models import (
@@ -14,6 +14,18 @@ from .models import (
 )
 from locations.models import Location
 from .weekly_scheduler import WeeklyScheduler
+def _round_to_quarter(hour_minute):
+    """
+    Round a (hour, minute) tuple to nearest 15-minute mark.
+    Returns a datetime.time clamped to 23:45 max.
+    """
+    h, m = hour_minute
+    total = h * 60 + m
+    rounded = round(total / 15) * 15
+    rounded = max(0, min(23 * 60 + 45, rounded))
+    rh = rounded // 60
+    rm = rounded % 60
+    return dt_time(rh, rm)
 
 
 def is_staff_user(user):
@@ -818,6 +830,65 @@ def my_availability(request):
     profile, created = TeamMemberProfile.objects.get_or_create(
         user=request.user
     )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            # Get list of selected days (multiple selection)
+            days_of_week = request.POST.getlist('days_of_week')
+            
+            if not days_of_week:
+                messages.error(request, 'Select at least one day.')
+                return redirect('scheduling:my_availability')
+
+            start_str = request.POST.get('start_time') or None
+            end_str = request.POST.get('end_time') or None
+            reason = request.POST.get('reason', '').strip()
+
+            start = datetime.strptime(start_str, "%H:%M").time() if start_str else None
+            end = datetime.strptime(end_str, "%H:%M").time() if end_str else None
+
+            # Snap to nearest 15 minutes
+            if start:
+                start = _round_to_quarter((start.hour, start.minute))
+            if end:
+                end = _round_to_quarter((end.hour, end.minute))
+
+            if start and end and end <= start:
+                messages.error(request, 'End time must be after start time.')
+                return redirect('scheduling:my_availability')
+
+            # Create unavailability for each selected day
+            created_count = 0
+            for day_str in days_of_week:
+                try:
+                    day_of_week = int(day_str)
+                    Unavailability.objects.create(
+                        user=request.user,
+                        semester=active_semester,
+                        day_of_week=day_of_week,
+                        start_time=start,
+                        end_time=end,
+                        is_unavailable=True,
+                        reason=reason,
+                    )
+                    created_count += 1
+                except (TypeError, ValueError):
+                    continue
+            
+            if created_count > 0:
+                day_word = "day" if created_count == 1 else "days"
+                messages.success(request, f'Unavailability saved for {created_count} {day_word}.')
+            return redirect('scheduling:my_availability')
+
+        if action == 'delete':
+            entry_id = request.POST.get('entry_id')
+            if entry_id:
+                Unavailability.objects.filter(
+                    id=entry_id, user=request.user, semester=active_semester
+                ).delete()
+                messages.success(request, 'Entry removed.')
+            return redirect('scheduling:my_availability')
     
     # Get existing unavailabilities
     unavailabilities = Unavailability.objects.filter(
@@ -828,10 +899,13 @@ def my_availability(request):
     context = {
         'semester': active_semester,
         'profile': profile,
-        'unavailabilities': unavailabilities
+        'unavailabilities': unavailabilities,
+        'weekday_choices': DailyOperatingHours.WEEKDAY_CHOICES,
     }
     
     return render(request, 'scheduling/my_availability.html', context)
+
+
 
 
 @login_required
@@ -1405,3 +1479,56 @@ def api_reject_request(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+
+@login_required
+@require_POST
+def api_save_my_preferences(request):
+    """Save the current user's scheduling preferences (shift preference & target hours)"""
+    try:
+        data = json.loads(request.body)
+        
+        shift_preference = data.get('shift_preference', 'no_preference')
+        target_hours = data.get('target_hours', 10)
+        
+        # Validate target hours (1-20)
+        try:
+            target_hours = int(target_hours)
+        except (TypeError, ValueError):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Target hours must be a number'
+            }, status=400)
+        
+        if target_hours < 1:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Minimum is 1 hour per week'
+            }, status=400)
+        
+        if target_hours > 20:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Maximum is 20 hours per week'
+            }, status=400)
+        
+        # Validate shift preference
+        valid_preferences = ['few_long', 'many_short', 'no_preference']
+        if shift_preference not in valid_preferences:
+            shift_preference = 'no_preference'
+        
+        # Get or create profile
+        profile, created = TeamMemberProfile.objects.get_or_create(
+            user=request.user
+        )
+        
+        profile.shift_preference = shift_preference
+        profile.max_weekly_hours = target_hours
+        profile.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+

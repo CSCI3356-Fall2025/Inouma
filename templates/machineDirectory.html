@@ -5,6 +5,11 @@
 
 {% block content %}
 <div class="card">
+    <style>
+    .machine-card.broken { opacity: 0.55; filter: grayscale(60%); }
+    .machine-thumb { position: relative; }
+    .status-badge { position: absolute; top: 0.5rem; left: 0.5rem; background: rgba(240,82,62,0.95); color: white; padding: 0.35rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
+    </style>
     <h2>🔍 Find & Reserve a Machine</h2>
     
     <!-- Search Bar with Autocomplete -->
@@ -48,7 +53,7 @@
     <div class="machine-grid" id="machineGrid">
         {% if machines %}
             {% for machine in machines %}
-            <div class="machine-card" 
+            <div class="machine-card {% if machine.status == 'broken' %}broken{% endif %}"
                 data-category="{{ machine.category }}" 
                 data-machine-type="{{ machine.machine_name|lower }}"
                 data-machine-name="{{ machine.name|lower }}"
@@ -66,6 +71,9 @@
                         <img src="{% static 'images/machines/default-machine.png' %}" 
                              alt="Default machine image" 
                              loading="lazy">
+                    {% endif %}
+                    {% if machine.status == 'broken' %}
+                        <div class="status-badge">Broken</div>
                     {% endif %}
                 </div>
                 
@@ -114,6 +122,18 @@
                             style="width: 100%; text-align: center;">
                         Reserve Machine
                     </button>
+                    
+                    <!-- Report Broken Button -->
+                    {% if machine.status != 'broken' %}
+                    <form method="post" action="{% url 'report_broken' machine.id %}" style="margin-top:0.5rem;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm" 
+                                onclick="event.stopPropagation();"
+                                style="width:100%; text-align: center;">
+                            Report Broken
+                        </button>
+                    </form>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
