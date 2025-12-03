@@ -219,49 +219,45 @@ class ReservationService:
     ) -> List[Dict[str, Any]]:
         """
         Get available time slots for a machine on a given date.
-        
+
         Returns:
             List of dicts with 'start_time', 'end_time', 'duration_minutes'
         """
         from .models import MachineReservation, BlackoutPeriod, MachineMaintenance
-        
-        # Check if machine is in maintenance
+
+        # 1) Block if machine is in maintenance
         if MachineMaintenance.objects.filter(
             machine=machine,
             machine_offline=True,
             status__in=['reported', 'acknowledged', 'in_progress']
         ).exists():
             return []
-        
-        # Define operating hours (TODO: make configurable per location)
-        operating_start = time(8, 0)  # 8 AM
-        operating_end = time(22, 0)   # 10 PM
-        
-        # Get existing reservations for this date
+
+        # 2) Define operating hours (TODO: make configurable per location)
+        operating_start = time(8, 0)   # 8 AM
+        operating_end = time(22, 0)    # 10 PM
+
+        day_start = timezone.make_aware(datetime.combine(date, operating_start))
+        day_end = timezone.make_aware(datetime.combine(date, operating_end))
+
+        # 3) Collect blocked intervals (existing reservations)
         reservations = MachineReservation.objects.filter(
             machine=machine,
             date=date,
             status='confirmed'
         ).order_by('start_time')
-        
-        # Build list of blocked periods
-        blocked = []
-        
-        # Add reservations to blocked list
+
+        blocked: List[Tuple[time, time]] = []
         for r in reservations:
             blocked.append((r.start_time, r.end_time))
-        
-        # Add blackout periods
-        day_start = timezone.make_aware(datetime.combine(date, operating_start))
-        day_end = timezone.make_aware(datetime.combine(date, operating_end))
-        
+
+        # 4) Add blackout periods that apply to this machine
         blackouts = BlackoutPeriod.objects.filter(
             start_datetime__lt=day_end,
             end_datetime__gt=day_start,
             blocks_reservations=True
         )
-        
-        # Filter blackouts that apply to this machine
+
         for b in blackouts:
             applies = False
             if b.scope == 'global':
@@ -272,72 +268,67 @@ class ReservationService:
                 applies = True
             elif b.scope == 'location' and b.location_id == machine.location_id:
                 applies = True
-            
-            if applies:
-                # Convert blackout times to time objects for this date
-                b_start = max(b.start_datetime.time(), operating_start) if b.start_datetime.date() <= date else operating_start
-                b_end = min(b.end_datetime.time(), operating_end) if b.end_datetime.date() >= date else operating_end
-                
-                if b.start_datetime.date() < date:
-                    b_start = operating_start
-                if b.end_datetime.date() > date:
-                    b_end = operating_end
-                
-                blocked.append((b_start, b_end))
-        
-        # Sort and merge overlapping blocked periods
-        blocked.sort(key=lambda x: x[0])
-        merged = []
-        for start, end in blocked:
-            if merged and start <= merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+
+            if not applies:
+                continue
+
+            # Clip blackout to this date and operating hours
+            if b.start_datetime.date() > date:
+                b_start = operating_start
             else:
-                merged.append((start, end))
-        
-        # Find available slots
-        available = []
-        current = operating_start
-        
-        for block_start, block_end in merged:
-            if current < block_start:
-                # There's an available slot before this block
-                slot_duration = (
-                    datetime.combine(date, block_start) - 
-                    datetime.combine(date, current)
-                ).total_seconds() / 60
-                
-                if slot_duration >= min_duration_minutes:
-                    available.append({
-                        'start_time': current.strftime('%H:%M'),
-                        'end_time': block_start.strftime('%H:%M'),
-                        'duration_minutes': int(slot_duration)
-                    })
-            
-            current = max(current, block_end)
-        
-        # Check for slot after last block
-        if current < operating_end:
-            slot_duration = (
-                datetime.combine(date, operating_end) - 
-                datetime.combine(date, current)
-            ).total_seconds() / 60
-            
-            if slot_duration >= min_duration_minutes:
+                b_start = max(b.start_datetime.time(), operating_start)
+
+            if b.end_datetime.date() < date:
+                b_end = operating_end
+            else:
+                b_end = min(b.end_datetime.time(), operating_end)
+
+            blocked.append((b_start, b_end))
+
+        # 5) Generate fixed 1-hour candidate slots
+        SLOT_LENGTH = timedelta(hours=1)
+        available: List[Dict[str, Any]] = []
+
+        current_dt = datetime.combine(date, operating_start)
+        end_of_day = datetime.combine(date, operating_end)
+
+        while current_dt + SLOT_LENGTH <= end_of_day:
+            slot_start_time = current_dt.time()
+            slot_end_time = (current_dt + SLOT_LENGTH).time()
+
+            # Skip slots shorter than min_duration_minutes
+            if SLOT_LENGTH.total_seconds() / 60 < min_duration_minutes:
+                current_dt += SLOT_LENGTH
+                continue
+
+            # Check conflict with any blocked interval
+            conflict = False
+            for b_start, b_end in blocked:
+                # overlap if slot_start < b_end and slot_end > b_start
+                if (slot_start_time < b_end) and (slot_end_time > b_start):
+                    conflict = True
+                    break
+
+            if not conflict:
                 available.append({
-                    'start_time': current.strftime('%H:%M'),
-                    'end_time': operating_end.strftime('%H:%M'),
-                    'duration_minutes': int(slot_duration)
+                    'start_time': slot_start_time.strftime('%H:%M'),
+                    'end_time': slot_end_time.strftime('%H:%M'),
+                    'duration_minutes': int(SLOT_LENGTH.total_seconds() / 60),
                 })
-        
-        # If today, filter out past slots
-        if date == timezone.now().date():
-            now = timezone.now().time()
+
+            current_dt += SLOT_LENGTH
+
+        # 6) If today, filter out past slots
+        now = timezone.now()
+        if date == now.date():
             available = [
-                slot for slot in available 
-                if datetime.strptime(slot['end_time'], '%H:%M').time() > now
+                slot for slot in available
+                if datetime.strptime(slot['end_time'], '%H:%M').time() > now.time()
             ]
-        
+
         return available
+
+
     
     @classmethod
     def cancel_reservation(cls, reservation, user, reason=''):

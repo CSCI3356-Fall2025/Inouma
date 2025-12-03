@@ -1,0 +1,174 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Trainer Dashboard - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'user_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Trainer Dashboard</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+}
+
+.trainer-hero {
+    background: linear-gradient(135deg, var(--gunmetal) 0%, #3d4a5c 100%);
+    border-radius: 16px;
+    padding: 1.75rem;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.trainer-hero h1 {
+    margin: 0 0 0.35rem;
+}
+
+.trainer-hero p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.trainer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    background: #fff;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    border-color: #d1d5db;
+}
+
+.card h2 {
+    margin: 0 0 0.4rem;
+}
+
+.card p {
+    margin: 0;
+    color: #4b5563;
+}
+
+.mini-list {
+    margin: 0.6rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mini-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.mini-item:last-child { border-bottom: none; }
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: #eef2ff;
+    color: #4338ca;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.empty-state {
+    color: #6b7280;
+    margin: 0.4rem 0 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="trainer-hero">
+    <div>
+        <h1>Trainer Dashboard</h1>
+        <p>Review your shifts, mark unavailability, and jump into your trainer tools.</p>
+    </div>
+    <div style="text-align:right;">
+        {% if active_semester %}
+            <div style="font-weight:700;">{{ active_semester.name }}</div>
+            <div style="opacity:0.8; font-size:0.9rem;">Active semester</div>
+        {% else %}
+            <div style="font-weight:700;">No active semester</div>
+            <div style="opacity:0.8; font-size:0.9rem;">Contact staff for access</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="trainer-grid">
+    <div class="card" style="cursor:pointer;" onclick="window.location.href='{% url 'scheduling:my_schedule' %}'">
+        <h2>📅 View My Schedule</h2>
+        <p>See upcoming shifts and locations.</p>
+        {% if upcoming_shifts %}
+        <ul class="mini-list">
+            {% for shift in upcoming_shifts %}
+            <li class="mini-item">
+                <div>
+                    <strong>{{ shift.date|date:"M j" }}</strong> • {{ shift.start_time }}-{{ shift.end_time }}
+                    <div style="color:#6b7280; font-size:0.9rem;">{{ shift.get_shift_type_display }}</div>
+                </div>
+                <span class="badge">{{ shift.status|capfirst }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state">No upcoming shifts scheduled.</p>
+        {% endif %}
+    </div>
+
+    <div class="card" style="cursor:pointer;" onclick="window.location.href='{% url 'scheduling:my_availability' %}'">
+        <h2>⛔ Manage Unavailability</h2>
+        <p>Block times you cannot train.</p>
+        {% if unavailability_blocks %}
+        <ul class="mini-list">
+            {% for block in unavailability_blocks|slice:":4" %}
+            <li class="mini-item">
+                <div>
+                    <strong>{{ block.get_day_of_week_display }}</strong>
+                    <div style="color:#6b7280; font-size:0.9rem;">
+                        {% if block.start_time and block.end_time %}
+                            {{ block.start_time }} - {{ block.end_time }}
+                        {% else %}
+                            All day
+                        {% endif %}
+                    </div>
+                </div>
+                {% if block.reason %}<span class="badge" style="background:#fef3c7; color:#92400e;">{{ block.reason }}</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state">No unavailability added yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card" style="cursor:pointer;" onclick="window.location.href='{% url 'reservations:team_my_training_sessions' %}'">
+        <h2>🎓 Training Sessions</h2>
+        <p>View sessions you're conducting and manage attendees.</p>
+        <p class="empty-state">Go to your sessions to manage details.</p>
+    </div>
+</div>
+{% endblock %}

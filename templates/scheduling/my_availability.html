@@ -1,0 +1,401 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Availability - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'trainer_dashboard' %}" class="breadcrumb-item">Trainer Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Unavailability</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.card h3 {
+    margin: 0 0 0.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem 1rem;
+    align-items: end;
+}
+
+label {
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.6rem 0.65rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+/* Multi-select day checkboxes */
+.day-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.day-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    background: #f3f4f6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 150ms ease, outline 150ms ease;
+    user-select: none;
+}
+
+.day-checkbox:hover {
+    background: #e5e7eb;
+}
+
+.day-checkbox input {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.day-checkbox.checked {
+    background: #eef2ff;
+    outline: 2px solid #4338ca;
+}
+
+.day-checkbox span {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+}
+
+button {
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--gunmetal);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-weight: 700;
+}
+
+.btn-primary:hover {
+    background: #1f2937;
+}
+
+.entries {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.entry:last-child {
+    border-bottom: none;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: #eef2ff;
+    color: #4338ca;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.muted {
+    color: #6b7280;
+}
+
+.preferences-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.preferences-row > div {
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+}
+
+.save-indicator {
+    font-size: 0.85rem;
+    color: #059669;
+    opacity: 0;
+    transition: opacity 200ms ease;
+    padding-bottom: 0.65rem;
+}
+
+.save-indicator.visible {
+    opacity: 1;
+}
+
+.error-msg {
+    color: #dc2626;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+</style>
+<script>
+function snapToQuarter(el){
+    if(!el.value) return;
+    const [h,m]=el.value.split(':').map(Number);
+    const total = h*60 + m;
+    const rounded = Math.min(23*60+45, Math.max(0, Math.round(total/15)*15));
+    const hh = String(Math.floor(rounded/60)).padStart(2,'0');
+    const mm = String(rounded%60).padStart(2,'0');
+    el.value = `${hh}:${mm}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Snap time inputs to 15-minute intervals
+    ['start_time','end_time'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){
+            el.addEventListener('change', () => snapToQuarter(el));
+            el.addEventListener('blur', () => snapToQuarter(el));
+        }
+    });
+    
+    // Day checkbox styling
+    document.querySelectorAll('.day-checkbox input').forEach(cb => {
+        cb.addEventListener('change', function() {
+            this.closest('.day-checkbox').classList.toggle('checked', this.checked);
+        });
+    });
+    
+    // Target hours validation and enforcement
+    const targetHours = document.getElementById('target_hours');
+    if (targetHours) {
+        targetHours.addEventListener('input', enforceHoursRange);
+        targetHours.addEventListener('blur', function() {
+            enforceHoursRange();
+            savePreferences();
+        });
+        targetHours.addEventListener('change', savePreferences);
+    }
+    
+    // Shift preference auto-save
+    const shiftPref = document.getElementById('shift_preference');
+    if (shiftPref) {
+        shiftPref.addEventListener('change', savePreferences);
+    }
+});
+
+function enforceHoursRange() {
+    const input = document.getElementById('target_hours');
+    const errorEl = document.getElementById('hours-error');
+    let val = parseInt(input.value);
+    
+    // Clear error first
+    errorEl.textContent = '';
+    
+    if (isNaN(val) || val < 1) {
+        errorEl.textContent = 'Minimum is 1 hour per week';
+        input.value = 1;
+    } else if (val > 20) {
+        errorEl.textContent = 'Maximum is 20 hours per week';
+        input.value = 20;
+    }
+}
+
+function validateDays() {
+    const checked = document.querySelectorAll('input[name="days_of_week"]:checked');
+    if (checked.length === 0) {
+        alert('Please select at least one day.');
+        return false;
+    }
+    return true;
+}
+
+async function savePreferences() {
+    const shiftPref = document.getElementById('shift_preference').value;
+    const targetHoursInput = document.getElementById('target_hours');
+    const indicator = document.getElementById('save-indicator');
+    const errorEl = document.getElementById('hours-error');
+    
+    // Enforce range before saving
+    let targetHours = parseInt(targetHoursInput.value);
+    if (isNaN(targetHours) || targetHours < 1) {
+        targetHours = 1;
+        targetHoursInput.value = 1;
+        errorEl.textContent = 'Minimum is 1 hour per week';
+    } else if (targetHours > 20) {
+        targetHours = 20;
+        targetHoursInput.value = 20;
+        errorEl.textContent = 'Maximum is 20 hours per week';
+    } else {
+        errorEl.textContent = '';
+    }
+    
+    try {
+        const response = await fetch('{% url "scheduling:api_save_my_preferences" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({
+                shift_preference: shiftPref,
+                target_hours: targetHours
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            indicator.textContent = '✓ Saved';
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 2000);
+        }
+    } catch (err) {
+        console.error('Error saving preferences:', err);
+    }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Unavailability</h1>
+        <p class="muted">Blocks are tied to the active semester{% if semester %} ({{ semester.name }}){% endif %}. Adding a new entry replaces any existing block for that weekday.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Scheduling Preferences</h3>
+    <div class="preferences-row">
+        <div>
+            <label for="shift_preference">Shift Preference</label>
+            <select id="shift_preference" name="shift_preference">
+                <option value="no_preference" {% if profile.shift_preference == 'no_preference' %}selected{% endif %}>No Preference</option>
+                <option value="few_long" {% if profile.shift_preference == 'few_long' %}selected{% endif %}>Prefer Few Long Shifts</option>
+                <option value="many_short" {% if profile.shift_preference == 'many_short' %}selected{% endif %}>Prefer Many Short Shifts</option>
+            </select>
+        </div>
+        <div>
+            <label for="target_hours">Target Hours Per Week (1-20)</label>
+            <input type="number" id="target_hours" name="target_hours" min="1" max="20" value="{{ profile.max_weekly_hours|default:10 }}" style="max-width: 120px;">
+            <div id="hours-error" class="error-msg"></div>
+        </div>
+        <div>
+            <span id="save-indicator" class="save-indicator">✓ Saved</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Add or Update a Day</h3>
+    <form method="post" onsubmit="return validateDays()">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        
+        <div>
+            <label>Day of Week</label>
+            <div class="day-checkboxes">
+                {% for value, label in weekday_choices %}
+                <label class="day-checkbox">
+                    <input type="checkbox" name="days_of_week" value="{{ value }}">
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-grid">
+            <div>
+                <label for="start_time">Start</label>
+                <input type="time" id="start_time" name="start_time" step="900" required>
+            </div>
+            <div>
+                <label for="end_time">End</label>
+                <input type="time" id="end_time" name="end_time" step="900" required>
+            </div>
+            <div>
+                <label for="reason">Reason (optional)</label>
+                <input type="text" id="reason" name="reason" placeholder="Class, work, etc.">
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit" class="btn-primary">Save Unavailability</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>My Current Blocks</h3>
+    {% if unavailabilities %}
+    <ul class="entries">
+        {% for entry in unavailabilities %}
+        <li class="entry">
+            <div>
+                <strong>{{ entry.get_day_of_week_display }}</strong>
+                <div class="muted">
+                    {% if entry.start_time and entry.end_time %}
+                        {{ entry.start_time }} - {{ entry.end_time }}
+                    {% else %}
+                        All day
+                    {% endif %}
+                </div>
+                {% if entry.reason %}<span class="badge">{{ entry.reason }}</span>{% endif %}
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                <button type="submit" class="btn-primary" style="background:#c53030;">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">You haven't added any unavailability yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
