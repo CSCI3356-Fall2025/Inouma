@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 import json
 
 from .models import (
@@ -14,7 +14,18 @@ from .models import (
 )
 from locations.models import Location
 from .weekly_scheduler import WeeklyScheduler
-from datetime import time as dt_time
+def _round_to_quarter(hour_minute):
+    """
+    Round a (hour, minute) tuple to nearest 15-minute mark.
+    Returns a datetime.time clamped to 23:45 max.
+    """
+    h, m = hour_minute
+    total = h * 60 + m
+    rounded = round(total / 15) * 15
+    rounded = max(0, min(23 * 60 + 45, rounded))
+    rh = rounded // 60
+    rm = rounded % 60
+    return dt_time(rh, rm)
 
 
 def is_staff_user(user):
@@ -835,6 +846,12 @@ def my_availability(request):
 
             start = datetime.strptime(start_str, "%H:%M").time() if start_str else None
             end = datetime.strptime(end_str, "%H:%M").time() if end_str else None
+
+            # Snap to nearest 15 minutes
+            if start:
+                start = _round_to_quarter((start.hour, start.minute))
+            if end:
+                end = _round_to_quarter((end.hour, end.minute))
 
             if start and end and end <= start:
                 messages.error(request, 'End time must be after start time.')

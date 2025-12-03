@@ -360,7 +360,6 @@ class Unavailability(models.Model):
     class Meta:
         ordering = ['user', 'day_of_week', 'start_time']
         verbose_name_plural = 'Unavailabilities'
-        unique_together = ['user', 'semester', 'day_of_week']
     
     def __str__(self):
         status = "Unavailable" if self.is_unavailable else "Available"
