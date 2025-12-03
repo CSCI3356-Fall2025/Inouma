@@ -117,6 +117,13 @@ urlpatterns = [
         views.api_my_training_bookings,
         name="api_my_training_bookings",
     ),
+    
+    # My training records (certifications)
+    path(
+        "api/my-training-records/",
+        views.api_my_training_records,
+        name="api_my_training_records",
+    ),
 
     # =========================================================================
     # TEAM MEMBER APIs

@@ -464,10 +464,41 @@ async function loadCategories() {
 
 async function loadCompletedTrainings() {
     try {
-        // This would need a custom API endpoint to get user's training records
-        const response = await fetch('/reservations/api/my-training-bookings/?status=completed');
-        const data = await response.json();
-        completedTrainings = data.bookings || [];
+        // Get both completed bookings AND training records (certifications)
+        const [bookingsResponse, recordsResponse] = await Promise.all([
+            fetch('/reservations/api/my-training-bookings/?status=completed'),
+            fetch('/reservations/api/my-training-records/')
+        ]);
+        
+        const bookingsData = await bookingsResponse.json();
+        const recordsData = await recordsResponse.json();
+        
+        // Combine both sources
+        const bookings = bookingsData.bookings || [];
+        const records = recordsData.records || [];
+        
+        // Convert records to same format as bookings for compatibility
+        const recordBookings = records.map(r => ({
+            training_name: r.training_name,
+            category: r.category,
+            training_level: r.training_level,
+            status: 'completed',
+            completed_at: r.completed_at
+        }));
+        
+        // Merge and deduplicate by training name
+        const allCompleted = [...bookings, ...recordBookings];
+        const unique = {};
+        allCompleted.forEach(item => {
+            if (!unique[item.training_name]) {
+                unique[item.training_name] = item;
+            }
+        });
+        
+        completedTrainings = Object.values(unique);
+        
+        // Update stats after loading
+        updateStats();
     } catch (err) {
         console.error('Error loading completed trainings:', err);
     }
