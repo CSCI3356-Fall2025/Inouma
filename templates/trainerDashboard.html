@@ -38,23 +38,6 @@
     opacity: 0.9;
 }
 
-.hero-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.hero-actions a {
-    background: #fff;
-    color: var(--gunmetal);
-    padding: 0.65rem 0.9rem;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: 600;
-    border: 1px solid rgba(255,255,255,0.15);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-}
-
 .trainer-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -123,11 +106,6 @@
     <div>
         <h1>Trainer Dashboard</h1>
         <p>Review your shifts, mark unavailability, and jump into your trainer tools.</p>
-    </div>
-    <div class="hero-actions">
-        <a href="{% url 'scheduling:my_schedule' %}">📅 My Schedule</a>
-        <a href="{% url 'scheduling:my_availability' %}">⛔ Unavailability</a>
-        <a href="{% url 'reservations:team_my_training_sessions' %}">🎓 Trainer Sessions</a>
     </div>
     <div style="text-align:right;">
         {% if active_semester %}

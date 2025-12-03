@@ -59,6 +59,47 @@ input, select, textarea {
     font-size: 0.95rem;
 }
 
+/* Multi-select day checkboxes */
+.day-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.day-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    background: #f3f4f6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 150ms ease, outline 150ms ease;
+    user-select: none;
+}
+
+.day-checkbox:hover {
+    background: #e5e7eb;
+}
+
+.day-checkbox input {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.day-checkbox.checked {
+    background: #eef2ff;
+    outline: 2px solid #4338ca;
+}
+
+.day-checkbox span {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+}
+
 button {
     cursor: pointer;
 }
@@ -70,6 +111,10 @@ button {
     border-radius: 10px;
     padding: 0.65rem 1rem;
     font-weight: 700;
+}
+
+.btn-primary:hover {
+    background: #1f2937;
 }
 
 .entries {
@@ -86,6 +131,10 @@ button {
     border-bottom: 1px solid #f1f1f1;
 }
 
+.entry:last-child {
+    border-bottom: none;
+}
+
 .badge {
     display: inline-block;
     padding: 0.25rem 0.6rem;
@@ -99,6 +148,37 @@ button {
 .muted {
     color: #6b7280;
 }
+
+.preferences-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.preferences-row > div {
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+}
+
+.save-indicator {
+    font-size: 0.85rem;
+    color: #059669;
+    opacity: 0;
+    transition: opacity 200ms ease;
+    padding-bottom: 0.65rem;
+}
+
+.save-indicator.visible {
+    opacity: 1;
+}
+
+.error-msg {
+    color: #dc2626;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
 </style>
 <script>
 function snapToQuarter(el){
@@ -110,7 +190,9 @@ function snapToQuarter(el){
     const mm = String(rounded%60).padStart(2,'0');
     el.value = `${hh}:${mm}`;
 }
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Snap time inputs to 15-minute intervals
     ['start_time','end_time'].forEach(id => {
         const el = document.getElementById(id);
         if(el){
@@ -118,7 +200,102 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('blur', () => snapToQuarter(el));
         }
     });
+    
+    // Day checkbox styling
+    document.querySelectorAll('.day-checkbox input').forEach(cb => {
+        cb.addEventListener('change', function() {
+            this.closest('.day-checkbox').classList.toggle('checked', this.checked);
+        });
+    });
+    
+    // Target hours validation and enforcement
+    const targetHours = document.getElementById('target_hours');
+    if (targetHours) {
+        targetHours.addEventListener('input', enforceHoursRange);
+        targetHours.addEventListener('blur', function() {
+            enforceHoursRange();
+            savePreferences();
+        });
+        targetHours.addEventListener('change', savePreferences);
+    }
+    
+    // Shift preference auto-save
+    const shiftPref = document.getElementById('shift_preference');
+    if (shiftPref) {
+        shiftPref.addEventListener('change', savePreferences);
+    }
 });
+
+function enforceHoursRange() {
+    const input = document.getElementById('target_hours');
+    const errorEl = document.getElementById('hours-error');
+    let val = parseInt(input.value);
+    
+    // Clear error first
+    errorEl.textContent = '';
+    
+    if (isNaN(val) || val < 1) {
+        errorEl.textContent = 'Minimum is 1 hour per week';
+        input.value = 1;
+    } else if (val > 20) {
+        errorEl.textContent = 'Maximum is 20 hours per week';
+        input.value = 20;
+    }
+}
+
+function validateDays() {
+    const checked = document.querySelectorAll('input[name="days_of_week"]:checked');
+    if (checked.length === 0) {
+        alert('Please select at least one day.');
+        return false;
+    }
+    return true;
+}
+
+async function savePreferences() {
+    const shiftPref = document.getElementById('shift_preference').value;
+    const targetHoursInput = document.getElementById('target_hours');
+    const indicator = document.getElementById('save-indicator');
+    const errorEl = document.getElementById('hours-error');
+    
+    // Enforce range before saving
+    let targetHours = parseInt(targetHoursInput.value);
+    if (isNaN(targetHours) || targetHours < 1) {
+        targetHours = 1;
+        targetHoursInput.value = 1;
+        errorEl.textContent = 'Minimum is 1 hour per week';
+    } else if (targetHours > 20) {
+        targetHours = 20;
+        targetHoursInput.value = 20;
+        errorEl.textContent = 'Maximum is 20 hours per week';
+    } else {
+        errorEl.textContent = '';
+    }
+    
+    try {
+        const response = await fetch('{% url "scheduling:api_save_my_preferences" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({
+                shift_preference: shiftPref,
+                target_hours: targetHours
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            indicator.textContent = '✓ Saved';
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 2000);
+        }
+    } catch (err) {
+        console.error('Error saving preferences:', err);
+    }
+}
 </script>
 {% endblock %}
 
@@ -128,38 +305,65 @@ document.addEventListener('DOMContentLoaded', () => {
         <h1>My Unavailability</h1>
         <p class="muted">Blocks are tied to the active semester{% if semester %} ({{ semester.name }}){% endif %}. Adding a new entry replaces any existing block for that weekday.</p>
     </div>
-    <a href="{% url 'trainer_dashboard' %}" class="btn-primary" style="text-decoration:none;">← Trainer Dashboard</a>
-    </div>
+</div>
 
 <div class="card">
-    <h3>Add or Update a Day</h3>
-    <form method="post" class="form-grid">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add">
+    <h3>Scheduling Preferences</h3>
+    <div class="preferences-row">
         <div>
-            <label for="day_of_week">Day of Week</label>
-            <select id="day_of_week" name="day_of_week" required>
-                <option value="">Select day</option>
-                {% for value,label in weekday_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
+            <label for="shift_preference">Shift Preference</label>
+            <select id="shift_preference" name="shift_preference">
+                <option value="no_preference" {% if profile.shift_preference == 'no_preference' %}selected{% endif %}>No Preference</option>
+                <option value="few_long" {% if profile.shift_preference == 'few_long' %}selected{% endif %}>Prefer Few Long Shifts</option>
+                <option value="many_short" {% if profile.shift_preference == 'many_short' %}selected{% endif %}>Prefer Many Short Shifts</option>
             </select>
         </div>
         <div>
-            <label for="start_time">Start</label>
-            <input type="time" id="start_time" name="start_time" step="900" required>
+            <label for="target_hours">Target Hours Per Week (1-20)</label>
+            <input type="number" id="target_hours" name="target_hours" min="1" max="20" value="{{ profile.max_weekly_hours|default:10 }}" style="max-width: 120px;">
+            <div id="hours-error" class="error-msg"></div>
         </div>
         <div>
-            <label for="end_time">End</label>
-            <input type="time" id="end_time" name="end_time" step="900" required>
+            <span id="save-indicator" class="save-indicator">✓ Saved</span>
         </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Add or Update a Day</h3>
+    <form method="post" onsubmit="return validateDays()">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        
         <div>
-            <label for="reason">Reason (optional)</label>
-            <input type="text" id="reason" name="reason" placeholder="Class, work, etc.">
+            <label>Day of Week</label>
+            <div class="day-checkboxes">
+                {% for value, label in weekday_choices %}
+                <label class="day-checkbox">
+                    <input type="checkbox" name="days_of_week" value="{{ value }}">
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
-        <div>
-            <label>&nbsp;</label>
-            <button type="submit" class="btn-primary">Save Unavailability</button>
+        
+        <div class="form-grid">
+            <div>
+                <label for="start_time">Start</label>
+                <input type="time" id="start_time" name="start_time" step="900" required>
+            </div>
+            <div>
+                <label for="end_time">End</label>
+                <input type="time" id="end_time" name="end_time" step="900" required>
+            </div>
+            <div>
+                <label for="reason">Reason (optional)</label>
+                <input type="text" id="reason" name="reason" placeholder="Class, work, etc.">
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit" class="btn-primary">Save Unavailability</button>
+            </div>
         </div>
     </form>
 </div>

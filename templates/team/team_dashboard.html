@@ -1,0 +1,466 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Team Dashboard - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'user_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">Team Dashboard</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --keppel: #00b59c;
+    --cinnabar: #f0523e;
+    --timberwolf: #cfcfce;
+}
+
+.welcome-section {
+    background: linear-gradient(135deg, var(--keppel) 0%, #00907d 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.welcome-text h1 { margin: 0 0 0.5rem; font-size: 1.75rem; }
+.welcome-text p { margin: 0; opacity: 0.9; }
+.welcome-text .role-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.welcome-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.welcome-stat { text-align: center; }
+.welcome-stat-value { font-size: 2rem; font-weight: 700; color: white; }
+.welcome-stat-label { font-size: 0.8rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--gunmetal);
+    transition: all 0.2s;
+}
+
+.quick-action-btn:hover {
+    border-color: var(--keppel);
+    box-shadow: 0 4px 12px rgba(0, 181, 156, 0.15);
+    transform: translateY(-2px);
+}
+
+.quick-action-icon {
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f0fdf9;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+.quick-action-btn:hover .quick-action-icon { background: var(--keppel); }
+.quick-action-btn:hover .quick-action-icon span { filter: brightness(0) invert(1); }
+.quick-action-content h4 { margin: 0 0 0.25rem; font-size: 1rem; }
+.quick-action-content p { margin: 0; font-size: 0.8rem; color: #666; }
+
+.dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
+.grid-col-8 { grid-column: span 8; }
+.grid-col-4 { grid-column: span 4; }
+.grid-col-6 { grid-column: span 6; }
+.grid-col-12 { grid-column: span 12; }
+
+@media (max-width: 1100px) {
+    .grid-col-8, .grid-col-4, .grid-col-6 { grid-column: span 12; }
+}
+
+.dash-card { background: white; border-radius: 12px; border: 1px solid #e9ecef; overflow: hidden; }
+.dash-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.dash-card-header h3 { margin: 0; font-size: 1rem; color: var(--gunmetal); display: flex; align-items: center; gap: 0.5rem; }
+.dash-card-header .view-all { color: var(--keppel); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+.dash-card-header .view-all:hover { text-decoration: underline; }
+.dash-card-body { padding: 1.25rem; }
+.dash-card-body.no-padding { padding: 0; }
+
+.schedule-list { list-style: none; margin: 0; padding: 0; }
+.schedule-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.schedule-item:last-child { border-bottom: none; }
+.schedule-item:hover { background: #fafafa; }
+
+.date-block { min-width: 50px; text-align: center; padding: 0.5rem; background: var(--gunmetal); border-radius: 8px; color: white; }
+.date-block .month { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+.date-block .day { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.date-block .weekday { font-size: 0.6rem; text-transform: uppercase; opacity: 0.7; }
+.date-block.open_hours, .date-block.open-hours { background: var(--keppel); }
+.date-block.training { background: #3b82f6; }
+.date-block.floater { background: #f97316; }
+
+.item-details { flex: 1; }
+.item-title { font-weight: 600; color: var(--gunmetal); margin-bottom: 0.25rem; }
+.item-meta { font-size: 0.8rem; color: #666; }
+.item-time { font-size: 0.85rem; color: var(--gunmetal); font-weight: 500; white-space: nowrap; }
+
+.shift-type-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+.shift-type-badge.open-hours, .shift-type-badge.open_hours { background: #d1fae5; color: #065f46; }
+.shift-type-badge.training { background: #dbeafe; color: #1e40af; }
+.shift-type-badge.floater { background: #ffedd5; color: #9a3412; }
+
+.activity-item { display: flex; gap: 0.75rem; padding: 0.75rem 1.25rem; border-bottom: 1px solid #f0f0f0; align-items: center; }
+.activity-item:last-child { border-bottom: none; }
+.activity-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px; font-size: 1rem; }
+.activity-icon.reservation { background: #fef3c7; }
+.activity-content { flex: 1; min-width: 0; }
+.activity-title { font-weight: 500; color: var(--gunmetal); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity-subtitle { font-size: 0.75rem; color: #666; }
+.activity-time { font-size: 0.8rem; color: #666; white-space: nowrap; }
+
+.training-session-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; align-items: center; }
+.training-session-item:last-child { border-bottom: none; }
+.session-time-block { min-width: 60px; text-align: center; }
+.session-time { font-weight: 600; color: var(--gunmetal); font-size: 0.9rem; }
+.session-duration { font-size: 0.7rem; color: #666; }
+.session-details { flex: 1; }
+.session-title { font-weight: 600; color: var(--gunmetal); margin-bottom: 0.25rem; }
+.session-meta { font-size: 0.8rem; color: #666; }
+.session-trainer { display: inline-flex; align-items: center; gap: 0.25rem; }
+.session-spots { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.75rem; }
+.session-spots.full { color: var(--cinnabar); }
+.session-spots.available { color: var(--keppel); }
+
+.status-badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.status-badge.confirmed, .status-badge.registered { background: #d1fae5; color: #065f46; }
+.status-badge.pending, .status-badge.waitlisted { background: #fef3c7; color: #92400e; }
+.status-badge.completed { background: #dbeafe; color: #1e40af; }
+.status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+
+.empty-state { text-align: center; padding: 2rem; color: #666; }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
+.empty-state p { margin: 0; font-size: 0.9rem; }
+
+.team-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; padding: 1rem 1.25rem; }
+.team-member-card { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; text-decoration: none; color: inherit; transition: all 0.15s; }
+.team-member-card:hover { background: #f0fdf9; }
+.team-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--gunmetal); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
+.team-member-info h5 { margin: 0; font-size: 0.85rem; color: var(--gunmetal); }
+.team-member-info p { margin: 0; font-size: 0.75rem; color: #666; }
+
+.hours-summary { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border-radius: 8px; margin: 1rem 1.25rem; }
+.hours-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+.hours-bar-fill { height: 100%; background: var(--keppel); border-radius: 4px; transition: width 0.3s; }
+.hours-bar-fill.warning { background: var(--sunglow); }
+.hours-bar-fill.danger { background: var(--cinnabar); }
+.hours-text { font-size: 0.85rem; color: var(--gunmetal); min-width: 100px; text-align: right; }
+.hours-text strong { font-size: 1.1rem; }
+
+.my-session-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; align-items: center; }
+.my-session-item:last-child { border-bottom: none; }
+.my-session-item:hover { background: #fafafa; }
+.session-category-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.25rem; }
+.session-category-icon.laser { background: #fee2e2; }
+.session-category-icon.printing, .session-category-icon.3d-printing { background: #dbeafe; }
+.session-category-icon.woodworking { background: #fef3c7; }
+.session-category-icon.textile { background: #fce7f3; }
+.session-category-icon.metalworking { background: #e5e7eb; }
+.session-category-icon.vinyl { background: #d1fae5; }
+.session-category-icon.electronics { background: #ede9fe; }
+.my-session-details { flex: 1; }
+.my-session-title { font-weight: 600; color: var(--gunmetal); margin-bottom: 0.25rem; }
+.my-session-meta { font-size: 0.8rem; color: #666; }
+.my-session-participants { text-align: right; }
+.participant-count { font-size: 1.1rem; font-weight: 600; color: var(--gunmetal); }
+.participant-label { font-size: 0.75rem; color: #666; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="welcome-section">
+        <div class="welcome-text">
+            <h1>👋 Welcome back, {{ user.first_name|default:user.email }}!</h1>
+            <p>Here's your team dashboard for this week</p>
+            {% if team_profile %}
+            <span class="role-badge">
+                {% if team_profile.is_team_lead %}Team Lead{% elif team_profile.is_trainer %}Trainer{% else %}Team Member{% endif %}
+                {% if team_profile.team %} • {{ team_profile.team }}{% endif %}
+            </span>
+            {% endif %}
+        </div>
+        <div class="welcome-stats">
+            <div class="welcome-stat">
+                <div class="welcome-stat-value">{{ hours_this_week|floatformat:1|default:"0" }}</div>
+                <div class="welcome-stat-label">Hours This Week</div>
+            </div>
+            <div class="welcome-stat">
+                <div class="welcome-stat-value">{{ shifts_this_week|default:0 }}</div>
+                <div class="welcome-stat-label">Shifts This Week</div>
+            </div>
+            <div class="welcome-stat">
+                <div class="welcome-stat-value">{{ total_semester_hours|floatformat:0|default:"0" }}</div>
+                <div class="welcome-stat-label">Semester Hours</div>
+            </div>
+            {% if team_profile.is_trainer %}
+            <div class="welcome-stat">
+                <div class="welcome-stat-value">{{ my_training_sessions_today|length|default:0 }}</div>
+                <div class="welcome-stat-label">Sessions Today</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <a href="{% url 'scheduling:view_schedule' %}?user={{ user.id }}" class="quick-action-btn">
+            <div class="quick-action-icon"><span>📅</span></div>
+            <div class="quick-action-content">
+                <h4>My Semester Schedule</h4>
+                <p>View all your scheduled shifts</p>
+            </div>
+        </a>
+        <a href="{% url 'scheduling:manage_availability' %}" class="quick-action-btn">
+            <div class="quick-action-icon"><span>🕐</span></div>
+            <div class="quick-action-content">
+                <h4>Set Availability</h4>
+                <p>Define your weekly availability</p>
+            </div>
+        </a>
+        <a href="{% url 'scheduling:view_schedule' %}" class="quick-action-btn">
+            <div class="quick-action-icon"><span>👥</span></div>
+            <div class="quick-action-content">
+                <h4>Team Schedule</h4>
+                <p>See all team members' shifts</p>
+            </div>
+        </a>
+        {% if team_profile.is_trainer %}
+        <a href="{% url 'team:my_training_sessions' %}" class="quick-action-btn">
+            <div class="quick-action-icon"><span>🎓</span></div>
+            <div class="quick-action-content">
+                <h4>My Training Sessions</h4>
+                <p>View your scheduled trainings</p>
+            </div>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="grid-col-8">
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>📆 Your Upcoming Shifts</h3>
+                    <a href="{% url 'scheduling:view_schedule' %}?user={{ user.id }}" class="view-all">View Full Schedule →</a>
+                </div>
+                {% if team_profile %}
+                <div class="hours-summary">
+                    <div style="font-size: 0.85rem; color: #666;">Weekly Hours</div>
+                    <div class="hours-bar">
+                        {% widthratio hours_this_week team_profile.max_weekly_hours 100 as bar_percent %}
+                        <div class="hours-bar-fill {% if bar_percent > 100 %}danger{% elif bar_percent > 80 %}warning{% endif %}" style="width: {% if bar_percent > 100 %}100{% else %}{{ bar_percent|default:0 }}{% endif %}%"></div>
+                    </div>
+                    <div class="hours-text"><strong>{{ hours_this_week|floatformat:1|default:"0" }}</strong> / {{ team_profile.max_weekly_hours }} hrs</div>
+                </div>
+                {% endif %}
+                <div class="dash-card-body no-padding">
+                    {% if upcoming_shifts %}
+                    <ul class="schedule-list">
+                        {% for shift in upcoming_shifts %}
+                        <li class="schedule-item">
+                            <div class="date-block {{ shift.shift_type }}">
+                                <div class="month">{{ shift.date|date:"M" }}</div>
+                                <div class="day">{{ shift.date|date:"d" }}</div>
+                                <div class="weekday">{{ shift.date|date:"D" }}</div>
+                            </div>
+                            <div class="item-details">
+                                <div class="item-title">
+                                    {% if shift.shift_type == 'open_hours' %}Open Hours {% if shift.location %}@ {{ shift.location.name }}{% elif shift.location_group %}@ {{ shift.location_group.name }}{% endif %}
+                                    {% elif shift.shift_type == 'training' %}Training {% if shift.team_category %}- {{ shift.team_category }}{% endif %}
+                                    {% else %}Floater Shift{% endif %}
+                                </div>
+                                <div class="item-meta"><span class="shift-type-badge {{ shift.shift_type|slugify }}">{{ shift.get_shift_type_display }}</span></div>
+                            </div>
+                            <div class="item-time">{{ shift.start_time|time:"g:i A" }} – {{ shift.end_time|time:"g:i A" }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming shifts scheduled</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-col-4">
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>👥 Your Team</h3>
+                    <a href="{% url 'scheduling:view_schedule' %}" class="view-all">View All →</a>
+                </div>
+                <div class="dash-card-body no-padding">
+                    {% if team_members %}
+                    <div class="team-list">
+                        {% for member in team_members|slice:":6" %}
+                        <a href="{% url 'scheduling:view_schedule' %}?search={{ member.user.first_name }}" class="team-member-card">
+                            <div class="team-avatar">{{ member.user.first_name|slice:":1"|upper }}{{ member.user.last_name|slice:":1"|upper }}</div>
+                            <div class="team-member-info">
+                                <h5>{{ member.user.get_full_name|default:member.user.email }}</h5>
+                                <p>{{ member.team|default:"Team Member" }}</p>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% if team_members|length > 6 %}
+                    <div style="padding: 0.75rem 1.25rem; text-align: center; border-top: 1px solid #f0f0f0;">
+                        <a href="{% url 'scheduling:view_schedule' %}" style="color: var(--keppel); font-size: 0.85rem;">+ {{ team_members|length|add:"-6" }} more</a>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">👥</div><p>No team members found</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if team_profile.is_trainer %}
+        <div class="grid-col-6">
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>🎓 Your Training Sessions Today</h3>
+                    <a href="{% url 'team:my_training_sessions' %}" class="view-all">View All →</a>
+                </div>
+                <div class="dash-card-body no-padding">
+                    {% if my_training_sessions_today %}
+                    {% for session in my_training_sessions_today %}
+                    <div class="my-session-item">
+                        <div class="session-category-icon {{ session.training.category|slugify }}">
+                            {% if session.training.category == 'Laser' %}🔴{% elif session.training.category == '3D Printing' %}🖨️{% elif session.training.category == 'Woodworking' %}🪚{% elif session.training.category == 'Textile' %}🧵{% elif session.training.category == 'Metalworking' %}⚙️{% elif session.training.category == 'Vinyl' %}🎨{% elif session.training.category == 'Electronics' %}💡{% else %}📚{% endif %}
+                        </div>
+                        <div class="my-session-details">
+                            <div class="my-session-title">{{ session.training.name }}</div>
+                            <div class="my-session-meta">{{ session.start_time|time:"g:i A" }} – {{ session.end_time|time:"g:i A" }}{% if session.location %} • {{ session.location.name }}{% endif %}</div>
+                        </div>
+                        <div class="my-session-participants">
+                            <div class="participant-count">{{ session.current_participants }}/{{ session.max_participants }}</div>
+                            <div class="participant-label">signed up</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">🎓</div><p>No training sessions scheduled for today</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid-col-6">
+            <div class="dash-card">
+                <div class="dash-card-header"><h3>📋 Today's Machine Reservations</h3></div>
+                <div class="dash-card-body no-padding">
+                    {% if todays_reservations %}
+                    {% for res in todays_reservations|slice:":5" %}
+                    <div class="activity-item">
+                        <div class="activity-icon reservation">🔧</div>
+                        <div class="activity-content">
+                            <div class="activity-title">{{ res.machine.machine_name|default:"Machine" }}</div>
+                            <div class="activity-subtitle">{{ res.user.get_full_name|default:res.user.email }}</div>
+                        </div>
+                        <div class="activity-time">{{ res.start_time|time:"g:i A" }} – {{ res.end_time|time:"g:i A" }}</div>
+                    </div>
+                    {% endfor %}
+                    {% if todays_reservations|length > 5 %}
+                    <div style="padding: 0.75rem 1.25rem; text-align: center; border-top: 1px solid #f0f0f0;"><span style="color: #666; font-size: 0.85rem;">+ {{ todays_reservations|length|add:"-5" }} more</span></div>
+                    {% endif %}
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">📋</div><p>No reservations for today</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-col-6">
+            <div class="dash-card">
+                <div class="dash-card-header"><h3>📚 All Training Sessions Today</h3></div>
+                <div class="dash-card-body no-padding">
+                    {% if all_training_sessions_today %}
+                    {% for session in all_training_sessions_today|slice:":5" %}
+                    <div class="training-session-item">
+                        <div class="session-time-block">
+                            <div class="session-time">{{ session.start_time|time:"g:i A" }}</div>
+                            <div class="session-duration">{{ session.duration_minutes }} min</div>
+                        </div>
+                        <div class="session-details">
+                            <div class="session-title">{{ session.training.name }}</div>
+                            <div class="session-meta">
+                                <span class="session-trainer">👤 {{ session.trainer.get_full_name|default:session.trainer.email }}</span>
+                                <span class="session-spots {% if session.is_full %}full{% else %}available{% endif %}">👥 {{ session.current_participants }}/{{ session.max_participants }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if all_training_sessions_today|length > 5 %}
+                    <div style="padding: 0.75rem 1.25rem; text-align: center; border-top: 1px solid #f0f0f0;"><span style="color: #666; font-size: 0.85rem;">+ {{ all_training_sessions_today|length|add:"-5" }} more</span></div>
+                    {% endif %}
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">📚</div><p>No training sessions scheduled for today</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-col-6">
+            <div class="dash-card">
+                <div class="dash-card-header"><h3>🎯 My Registered Trainings</h3></div>
+                <div class="dash-card-body no-padding">
+                    {% if my_registered_trainings %}
+                    {% for booking in my_registered_trainings|slice:":4" %}
+                    <div class="my-session-item">
+                        <div class="date-block">
+                            <div class="month">{{ booking.session.date|date:"M" }}</div>
+                            <div class="day">{{ booking.session.date|date:"d" }}</div>
+                        </div>
+                        <div class="my-session-details">
+                            <div class="my-session-title">{{ booking.session.training.name }}</div>
+                            <div class="my-session-meta">{{ booking.session.start_time|time:"g:i A" }} – {{ booking.session.end_time|time:"g:i A" }} • with {{ booking.session.trainer.get_full_name|default:booking.session.trainer.email }}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="status-badge {% if booking.status == 'registered' %}confirmed{% elif booking.status == 'waitlisted' %}pending{% else %}{{ booking.status }}{% endif %}">{{ booking.get_status_display }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if my_registered_trainings|length > 4 %}
+                    <div style="padding: 0.75rem 1.25rem; text-align: center; border-top: 1px solid #f0f0f0;"><span style="color: #666; font-size: 0.85rem;">+ {{ my_registered_trainings|length|add:"-4" }} more</span></div>
+                    {% endif %}
+                    {% else %}
+                    <div class="empty-state"><div class="empty-state-icon">🎯</div><p>No upcoming training registrations</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

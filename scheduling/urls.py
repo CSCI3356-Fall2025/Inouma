@@ -58,4 +58,5 @@ urlpatterns = [
     # Team Member URLs
     path('my-availability/', views.my_availability, name='my_availability'),
     path('my-schedule/', views.my_schedule, name='my_schedule'),
+    path('api/my-preferences/', views.api_save_my_preferences, name='api_save_my_preferences'),
 ]

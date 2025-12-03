@@ -834,10 +834,11 @@ def my_availability(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'add':
-            try:
-                day_of_week = int(request.POST.get('day_of_week'))
-            except (TypeError, ValueError):
-                messages.error(request, 'Select a valid day.')
+            # Get list of selected days (multiple selection)
+            days_of_week = request.POST.getlist('days_of_week')
+            
+            if not days_of_week:
+                messages.error(request, 'Select at least one day.')
                 return redirect('scheduling:my_availability')
 
             start_str = request.POST.get('start_time') or None
@@ -857,16 +858,27 @@ def my_availability(request):
                 messages.error(request, 'End time must be after start time.')
                 return redirect('scheduling:my_availability')
 
-            Unavailability.objects.create(
-                user=request.user,
-                semester=active_semester,
-                day_of_week=day_of_week,
-                start_time=start,
-                end_time=end,
-                is_unavailable=True,
-                reason=reason,
-            )
-            messages.success(request, 'Unavailability saved.')
+            # Create unavailability for each selected day
+            created_count = 0
+            for day_str in days_of_week:
+                try:
+                    day_of_week = int(day_str)
+                    Unavailability.objects.create(
+                        user=request.user,
+                        semester=active_semester,
+                        day_of_week=day_of_week,
+                        start_time=start,
+                        end_time=end,
+                        is_unavailable=True,
+                        reason=reason,
+                    )
+                    created_count += 1
+                except (TypeError, ValueError):
+                    continue
+            
+            if created_count > 0:
+                day_word = "day" if created_count == 1 else "days"
+                messages.success(request, f'Unavailability saved for {created_count} {day_word}.')
             return redirect('scheduling:my_availability')
 
         if action == 'delete':
@@ -892,6 +904,8 @@ def my_availability(request):
     }
     
     return render(request, 'scheduling/my_availability.html', context)
+
+
 
 
 @login_required
@@ -1465,3 +1479,56 @@ def api_reject_request(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+
+@login_required
+@require_POST
+def api_save_my_preferences(request):
+    """Save the current user's scheduling preferences (shift preference & target hours)"""
+    try:
+        data = json.loads(request.body)
+        
+        shift_preference = data.get('shift_preference', 'no_preference')
+        target_hours = data.get('target_hours', 10)
+        
+        # Validate target hours (1-20)
+        try:
+            target_hours = int(target_hours)
+        except (TypeError, ValueError):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Target hours must be a number'
+            }, status=400)
+        
+        if target_hours < 1:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Minimum is 1 hour per week'
+            }, status=400)
+        
+        if target_hours > 20:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Maximum is 20 hours per week'
+            }, status=400)
+        
+        # Validate shift preference
+        valid_preferences = ['few_long', 'many_short', 'no_preference']
+        if shift_preference not in valid_preferences:
+            shift_preference = 'no_preference'
+        
+        # Get or create profile
+        profile, created = TeamMemberProfile.objects.get_or_create(
+            user=request.user
+        )
+        
+        profile.shift_preference = shift_preference
+        profile.max_weekly_hours = target_hours
+        profile.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
