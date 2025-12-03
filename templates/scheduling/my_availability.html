@@ -1,0 +1,197 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}My Availability - The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'trainer_dashboard' %}" class="breadcrumb-item">Trainer Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">My Unavailability</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.card h3 {
+    margin: 0 0 0.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem 1rem;
+    align-items: end;
+}
+
+label {
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.6rem 0.65rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+button {
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--gunmetal);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-weight: 700;
+}
+
+.entries {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: #eef2ff;
+    color: #4338ca;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.muted {
+    color: #6b7280;
+}
+</style>
+<script>
+function snapToQuarter(el){
+    if(!el.value) return;
+    const [h,m]=el.value.split(':').map(Number);
+    const total = h*60 + m;
+    const rounded = Math.min(23*60+45, Math.max(0, Math.round(total/15)*15));
+    const hh = String(Math.floor(rounded/60)).padStart(2,'0');
+    const mm = String(rounded%60).padStart(2,'0');
+    el.value = `${hh}:${mm}`;
+}
+document.addEventListener('DOMContentLoaded', () => {
+    ['start_time','end_time'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){
+            el.addEventListener('change', () => snapToQuarter(el));
+            el.addEventListener('blur', () => snapToQuarter(el));
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Unavailability</h1>
+        <p class="muted">Blocks are tied to the active semester{% if semester %} ({{ semester.name }}){% endif %}. Adding a new entry replaces any existing block for that weekday.</p>
+    </div>
+    <a href="{% url 'trainer_dashboard' %}" class="btn-primary" style="text-decoration:none;">← Trainer Dashboard</a>
+    </div>
+
+<div class="card">
+    <h3>Add or Update a Day</h3>
+    <form method="post" class="form-grid">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div>
+            <label for="day_of_week">Day of Week</label>
+            <select id="day_of_week" name="day_of_week" required>
+                <option value="">Select day</option>
+                {% for value,label in weekday_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="start_time">Start</label>
+            <input type="time" id="start_time" name="start_time" step="900" required>
+        </div>
+        <div>
+            <label for="end_time">End</label>
+            <input type="time" id="end_time" name="end_time" step="900" required>
+        </div>
+        <div>
+            <label for="reason">Reason (optional)</label>
+            <input type="text" id="reason" name="reason" placeholder="Class, work, etc.">
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-primary">Save Unavailability</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>My Current Blocks</h3>
+    {% if unavailabilities %}
+    <ul class="entries">
+        {% for entry in unavailabilities %}
+        <li class="entry">
+            <div>
+                <strong>{{ entry.get_day_of_week_display }}</strong>
+                <div class="muted">
+                    {% if entry.start_time and entry.end_time %}
+                        {{ entry.start_time }} - {{ entry.end_time }}
+                    {% else %}
+                        All day
+                    {% endif %}
+                </div>
+                {% if entry.reason %}<span class="badge">{{ entry.reason }}</span>{% endif %}
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                <button type="submit" class="btn-primary" style="background:#c53030;">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">You haven't added any unavailability yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

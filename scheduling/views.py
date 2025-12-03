@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 import json
 
 from .models import (
@@ -14,6 +14,18 @@ from .models import (
 )
 from locations.models import Location
 from .weekly_scheduler import WeeklyScheduler
+def _round_to_quarter(hour_minute):
+    """
+    Round a (hour, minute) tuple to nearest 15-minute mark.
+    Returns a datetime.time clamped to 23:45 max.
+    """
+    h, m = hour_minute
+    total = h * 60 + m
+    rounded = round(total / 15) * 15
+    rounded = max(0, min(23 * 60 + 45, rounded))
+    rh = rounded // 60
+    rm = rounded % 60
+    return dt_time(rh, rm)
 
 
 def is_staff_user(user):
@@ -818,6 +830,53 @@ def my_availability(request):
     profile, created = TeamMemberProfile.objects.get_or_create(
         user=request.user
     )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            try:
+                day_of_week = int(request.POST.get('day_of_week'))
+            except (TypeError, ValueError):
+                messages.error(request, 'Select a valid day.')
+                return redirect('scheduling:my_availability')
+
+            start_str = request.POST.get('start_time') or None
+            end_str = request.POST.get('end_time') or None
+            reason = request.POST.get('reason', '').strip()
+
+            start = datetime.strptime(start_str, "%H:%M").time() if start_str else None
+            end = datetime.strptime(end_str, "%H:%M").time() if end_str else None
+
+            # Snap to nearest 15 minutes
+            if start:
+                start = _round_to_quarter((start.hour, start.minute))
+            if end:
+                end = _round_to_quarter((end.hour, end.minute))
+
+            if start and end and end <= start:
+                messages.error(request, 'End time must be after start time.')
+                return redirect('scheduling:my_availability')
+
+            Unavailability.objects.create(
+                user=request.user,
+                semester=active_semester,
+                day_of_week=day_of_week,
+                start_time=start,
+                end_time=end,
+                is_unavailable=True,
+                reason=reason,
+            )
+            messages.success(request, 'Unavailability saved.')
+            return redirect('scheduling:my_availability')
+
+        if action == 'delete':
+            entry_id = request.POST.get('entry_id')
+            if entry_id:
+                Unavailability.objects.filter(
+                    id=entry_id, user=request.user, semester=active_semester
+                ).delete()
+                messages.success(request, 'Entry removed.')
+            return redirect('scheduling:my_availability')
     
     # Get existing unavailabilities
     unavailabilities = Unavailability.objects.filter(
@@ -828,7 +887,8 @@ def my_availability(request):
     context = {
         'semester': active_semester,
         'profile': profile,
-        'unavailabilities': unavailabilities
+        'unavailabilities': unavailabilities,
+        'weekday_choices': DailyOperatingHours.WEEKDAY_CHOICES,
     }
     
     return render(request, 'scheduling/my_availability.html', context)

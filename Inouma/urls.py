@@ -27,6 +27,7 @@ urlpatterns = [
     path('', views.landing_page, name='landing'),  # custom landing page
     path('home/', views.user_dashboard, name='home'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
+    path('trainer/', views.trainer_dashboard, name='trainer_dashboard'),
     path('user/', views.user_dashboard, name='user_dashboard'),
     path('reservations/', views.my_reservations, name='my_reservations'),
     path('reservations/api/create/<int:machine_id>/', views.create_reservation_api, name='reservation_create_api',),
