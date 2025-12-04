@@ -307,6 +307,7 @@ def api_available_trainings(request):
                     "id": user_booking.id,
                     "status": user_booking.status,
                     "waitlist_position": user_booking.waitlist_position,
+                    "confirmation_deadline": user_booking.confirmation_deadline.isoformat() if user_booking.confirmation_deadline else None,
                 } if user_booking else None,
             })
 
