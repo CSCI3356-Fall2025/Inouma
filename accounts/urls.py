@@ -37,4 +37,7 @@ urlpatterns = [
     # APIs
     path('api/training-reservations/', TrainingReservationView.as_view(), name='training_reservations'),
     path("api/trainers/<uuid:trainer_id>/availability/", TrainerAvailabilityView.as_view(), name="trainer_availability",),
+
+    # About Page
+    path('about/', views.about_hatchery, name='about_hatchery'),
 ]
