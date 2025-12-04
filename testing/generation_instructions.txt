@@ -6,8 +6,7 @@
 # OPTIONAL: Clean previous test data first
 # python manage.py shell < testing/cleanup_all_test_data.py
 
-# FOR DEMO (2 users only - RECOMMENDED):
-# Run these commands in order:
+FOR DEMO (2 users only):
 0. python manage.py shell < testing/generate_demo_location.py
 1. python manage.py shell < testing/generate_test_machines.py
 2. python manage.py shell < testing/generate_demo_users.py
