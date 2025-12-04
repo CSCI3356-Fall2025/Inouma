@@ -662,9 +662,8 @@
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
             <div class="view-toggle">
-                <button id="btnCalendarView" onclick="switchView('calendar')">📅 Calendar</button>
-                <button id="btnBlockView" class="active" onclick="switchView('blocks')">🧱 Blocks</button>
-                <button id="btnListView" onclick="switchView('list')">📋 List</button>
+                <button id="btnBlockView" class="active">🧱 Blocks</button>
+                <button id="btnListView">📋 List</button>
             </div>
             <button class="btn btn-secondary" onclick="openExportModal()">📥 Export</button>
             <button class="btn btn-primary" onclick="window.location.href='{% url 'scheduling:publish_schedule' %}'">🚀 Publish</button>
@@ -799,21 +798,9 @@
     </div>
 </div>
 
-<!-- Calendar View -->
-<div id="calendarView" style="display: none;">
-    <div class="gcal-wrapper">
-        <div class="gcal-header" id="calendarHeader">
-            <!-- Dynamically populated -->
-        </div>
-        <div class="gcal-scroll">
-            <div class="gcal-body" id="calendarBody"></div>
-        </div>
-    </div>
-</div>
-
 <!-- List View -->
 <div id="listView" style="display: none;">
-    <div class="gcal-wrapper" id="listContent"></div>
+    <div class="gcal-wrapper" id="listContent" style="min-height: 200px; padding: 1rem;"></div>
 </div>
 
 <!-- Block View -->
@@ -1016,19 +1003,37 @@ function loadSchedule() {
     const semesterId = document.getElementById('semesterSelect').value;
     if (!semesterId) { showEmptyState(); return; }
     
+    console.log('Loading schedule for semester:', semesterId);
+    
     fetch(`/scheduling/api/shifts/?semester_id=${semesterId}`)
-        .then(res => res.json())
+        .then(res => {
+            console.log('API Response status:', res.status);
+            return res.json();
+        })
         .then(data => {
+            console.log('API Response data:', data);
+            console.log('Shifts count:', data.shifts ? data.shifts.length : 0);
+            
             if (data.shifts && data.shifts.length > 0) {
                 allShifts = data.shifts.map(s => ({...s, user_id: parseInt(s.user_id)}));
+                console.log('Processed shifts:', allShifts.length);
+                
                 const userMap = new Map();
                 allShifts.forEach(s => { if (!userMap.has(s.user_id)) userMap.set(s.user_id, s.user); });
                 allUsers = Array.from(userMap, ([id, name]) => ({id, name}));
+                console.log('Unique users:', allUsers.length);
+                
                 showSchedule();
                 applyFilters();
-            } else { showEmptyState(); }
+            } else { 
+                console.warn('No shifts returned from API');
+                showEmptyState(); 
+            }
         })
-        .catch(() => showEmptyState());
+        .catch(err => {
+            console.error('Error loading schedule:', err);
+            showEmptyState();
+        });
 }
 
 function showEmptyState() {
@@ -1036,7 +1041,6 @@ function showEmptyState() {
     document.getElementById('statsCard').style.display = 'none';
     document.getElementById('filterBar').style.display = 'none';
     document.getElementById('memberSearchBar').style.display = 'none';
-    document.getElementById('calendarView').style.display = 'none';
     document.getElementById('listView').style.display = 'none';
     document.getElementById('blockView').style.display = 'none';
 }
@@ -1046,7 +1050,6 @@ function showSchedule() {
     document.getElementById('statsCard').style.display = 'block';
     document.getElementById('filterBar').style.display = 'block';
     document.getElementById('memberSearchBar').style.display = 'block';
-    document.getElementById('calendarView').style.display = currentView === 'calendar' ? 'block' : 'none';
     document.getElementById('blockView').style.display = currentView === 'blocks' ? 'block' : 'none';
     document.getElementById('listView').style.display = currentView === 'list' ? 'block' : 'none';
 }
@@ -1067,8 +1070,7 @@ function applyFilters() {
     
     updateStats();
     updateFilterSummary();
-    if (currentView === 'calendar') renderCalendar();
-    else if (currentView === 'list') renderListView();
+    if (currentView === 'list') renderListView();
     else if (currentView === 'blocks') renderBlockView();
 }
 
@@ -1190,132 +1192,43 @@ function clearAllFilters() {
 }
 
 function switchView(view) {
+    console.log('switchView called with:', view);
     currentView = view;
-    document.getElementById('btnCalendarView').classList.toggle('active', view === 'calendar');
     document.getElementById('btnBlockView').classList.toggle('active', view === 'blocks');
     document.getElementById('btnListView').classList.toggle('active', view === 'list');
-    document.getElementById('calendarView').style.display = view === 'calendar' ? 'block' : 'none';
     document.getElementById('blockView').style.display = view === 'blocks' ? 'block' : 'none';
     document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+    console.log('listView display:', document.getElementById('listView').style.display);
     applyFilters();
 }
 
 function changeBlockInterval(value) { blockInterval = parseInt(value); if (currentView === 'blocks') renderBlockView(); }
 
 // Render views
-function renderCalendar() {
-    const header = document.getElementById('calendarHeader');
-    const body = document.getElementById('calendarBody');
+function renderListView() {
+    console.log('=== renderListView START ===');
+    const content = document.getElementById('listContent');
+    console.log('listContent element:', content);
+    console.log('filteredShifts count:', filteredShifts.length);
     
-    // Get selected days in order
-    const selectedDays = Array.from(activeDayFilters).sort((a, b) => a - b);
-    
-    // Build header dynamically
-    header.innerHTML = '<div class="gcal-header-cell"></div>' + 
-        selectedDays.map(d => `<div class="gcal-header-cell">${DAYS[d]}</div>`).join('');
-    
-    body.innerHTML = '';
     if (!filteredShifts.length) { 
-        body.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; 
+        content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; 
+        console.log('No shifts, showing empty message');
         return; 
     }
     
-    let minHour = 24, maxHour = 0;
-    filteredShifts.forEach(s => { 
-        minHour = Math.min(minHour, parseInt(s.start.split(':')[0])); 
-        maxHour = Math.max(maxHour, parseInt(s.end.split(':')[0])); 
-    });
-    if (minHour > maxHour) { minHour = 9; maxHour = 17; }
-    const totalHours = maxHour - minHour + 1;
-    
-    // Group shifts by day
     const shiftsByDay = [[],[],[],[],[],[],[]];
     filteredShifts.forEach(s => { 
-        shiftsByDay[getDayIndex(s.date)].push(s); 
-    });
-    
-    // Time labels
-    const timesDiv = document.createElement('div'); 
-    timesDiv.className = 'gcal-times';
-    for (let h = minHour; h <= maxHour; h++) { 
-        const l = document.createElement('div'); 
-        l.className = 'gcal-time-label'; 
-        l.textContent = h + ':00'; 
-        timesDiv.appendChild(l); 
-    }
-    body.appendChild(timesDiv);
-    
-    // Day columns - only for selected days
-    const columnsDiv = document.createElement('div'); 
-    columnsDiv.className = 'gcal-columns';
-    
-    selectedDays.forEach(d => {
-        const dayCol = document.createElement('div');
-        dayCol.className = 'gcal-day-col';
-        dayCol.style.height = (totalHours * HOUR_HEIGHT) + 'px';
-        
-        for (let h = 0; h < totalHours; h++) { 
-            const l = document.createElement('div'); 
-            l.className = 'gcal-hour-line'; 
-            dayCol.appendChild(l); 
+        const dayIdx = getDayIndex(s.date);
+        if (dayIdx >= 0 && dayIdx < 7) {
+            shiftsByDay[dayIdx].push(s); 
+        } else {
+            console.warn('Invalid day index:', dayIdx, 'for date:', s.date);
         }
-        
-        const dayShifts = shiftsByDay[d];
-        if (dayShifts.length) {
-            const columns = layoutOverlappingEvents(dayShifts);
-            columns.forEach((colShifts, colIndex) => 
-                colShifts.forEach(shift => dayCol.appendChild(createEventElement(shift, colIndex, columns.length, minHour)))
-            );
-        }
-        columnsDiv.appendChild(dayCol);
     });
-    body.appendChild(columnsDiv);
-}
-
-function layoutOverlappingEvents(shifts) {
-    if (!shifts.length) return [];
-    const sorted = [...shifts].sort((a, b) => a.start !== b.start ? a.start.localeCompare(b.start) : b.end.localeCompare(a.end));
-    const columns = [];
-    sorted.forEach(shift => {
-        let placed = false;
-        for (let col of columns) { if (!col.some(s => s.start < shift.end && shift.start < s.end)) { col.push(shift); placed = true; break; } }
-        if (!placed) columns.push([shift]);
-    });
-    return columns;
-}
-
-function createEventElement(shift, colIndex, totalCols, minHour) {
-    const [sH, sM] = shift.start.split(':').map(Number);
-    const [eH, eM] = shift.end.split(':').map(Number);
-    const top = (sH - minHour) * 60 + sM;
-    const height = Math.max(20, (eH * 60 + eM) - (sH * 60 + sM));
-    const widthPct = 100 / totalCols, leftPct = colIndex * widthPct;
-    const typeClass = shift.shift_type.replace('_', '-');
-    const name = shift.user.includes('@') ? shift.user.split('@')[0] : shift.user;
     
-    // Build display name based on shift type
-    let displayName = name;
-    if (shift.shift_type === 'training' && shift.team) {
-        displayName = `${name} (${getCategoryDisplay(shift.team)})`;
-    } else if ((shift.shift_type === 'open_hours' || shift.shift_type === 'floater') && shift.location) {
-        // Show location/space for open hours and floater shifts
-        displayName = `${name} @ ${shift.location}`;
-    }
-    
-    const div = document.createElement('div');
-    div.className = `gcal-event ${typeClass}`;
-    div.style.cssText = `top:${top}px;height:${height}px;width:calc(${widthPct}% - 4px);left:calc(${leftPct}% + 2px)`;
-    div.innerHTML = `<div class="gcal-event-title">${displayName}</div><div class="gcal-event-time">${shift.start} – ${shift.end}</div>`;
-    div.onclick = () => viewShiftDetails(shift.id);
-    return div;
-}
-
-function renderListView() {
-    const content = document.getElementById('listContent');
-    if (!filteredShifts.length) { content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; return; }
-    
-    const shiftsByDay = [[],[],[],[],[],[],[]];
-    filteredShifts.forEach(s => { shiftsByDay[getDayIndex(s.date)].push(s); });
+    console.log('Shifts by day:', shiftsByDay.map((d, i) => `${DAYS[i]}: ${d.length}`).join(', '));
+    console.log('Active day filters:', Array.from(activeDayFilters));
     
     const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
     const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
@@ -1342,7 +1255,16 @@ function renderListView() {
         });
         html += '</div>';
     });
-    content.innerHTML = html || '<p style="padding:2rem;text-align:center;color:#666;">No shifts for selected days</p>';
+    
+    console.log('Generated HTML length:', html.length);
+    console.log('HTML preview:', html.substring(0, 200));
+    
+    if (html) {
+        content.innerHTML = html;
+    } else {
+        content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts for selected days</p>';
+    }
+    console.log('=== renderListView END ===');
 }
 
 function renderBlockView() {
@@ -1534,6 +1456,16 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeShift
 
 // Init
 document.addEventListener('DOMContentLoaded', async function() {
+    // Set up view toggle buttons
+    document.getElementById('btnBlockView').addEventListener('click', function() {
+        console.log('Block button clicked');
+        switchView('blocks');
+    });
+    document.getElementById('btnListView').addEventListener('click', function() {
+        console.log('List button clicked');
+        switchView('list');
+    });
+    
     await loadCategories();
     const select = document.getElementById('semesterSelect');
     if (select?.value) loadSchedule();

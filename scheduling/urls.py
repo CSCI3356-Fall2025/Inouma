@@ -59,4 +59,9 @@ urlpatterns = [
     path('my-availability/', views.my_availability, name='my_availability'),
     path('my-schedule/', views.my_schedule, name='my_schedule'),
     path('api/my-preferences/', views.api_save_my_preferences, name='api_save_my_preferences'),
+    
+    # ==========================================
+    # PUBLIC API - No Authentication Required
+    # ==========================================
+    path('api/public-hours/', views.api_public_hours, name='api_public_hours'),
 ]

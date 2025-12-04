@@ -160,6 +160,18 @@
 .indicator.training { background: #2196F3; }
 
 /* Holiday Calendar */
+.calendar-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 900px) {
+    .calendar-container {
+        grid-template-columns: 1fr;
+    }
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -189,6 +201,7 @@
     justify-content: center;
     font-size: 1rem;
     transition: all 0.2s;
+    position: relative;
 }
 
 .calendar-day:hover {
@@ -198,12 +211,23 @@
 .calendar-day.other-month {
     color: #ccc;
     background: #fafafa;
+    cursor: default;
 }
 
 .calendar-day.holiday {
     background: var(--cinnabar);
     color: white;
     font-weight: 600;
+}
+
+.calendar-day.selected {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    font-weight: 600;
+}
+
+.calendar-day.selected.holiday {
+    background: linear-gradient(135deg, var(--cinnabar) 50%, var(--sunglow) 50%);
 }
 
 .calendar-day.today {
@@ -220,6 +244,7 @@
 .calendar-nav h3 {
     font-size: 1.3rem;
     color: var(--gunmetal);
+    margin: 0;
 }
 
 .calendar-nav button {
@@ -235,9 +260,62 @@
     background: #f0f0f0;
 }
 
+/* Selection toolbar */
+.selection-toolbar {
+    background: var(--gunmetal);
+    color: white;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.selection-toolbar.hidden {
+    display: none;
+}
+
+.selection-count {
+    font-weight: 600;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.selection-actions button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-add-closure {
+    background: var(--sunglow);
+    color: var(--gunmetal);
+}
+
+.btn-add-closure:hover {
+    background: #e5b62c;
+}
+
+.btn-clear-selection {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.btn-clear-selection:hover {
+    background: rgba(255,255,255,0.3);
+}
+
 /* Holiday list */
 .holiday-list {
-    margin-top: 1.5rem;
+    margin-top: 0;
 }
 
 .holiday-item {
@@ -251,10 +329,75 @@
     border-left: 3px solid var(--cinnabar);
 }
 
+.holiday-item .holiday-info {
+    flex: 1;
+}
+
+.holiday-item .holiday-date {
+    font-weight: 600;
+    color: var(--gunmetal);
+}
+
+.holiday-item .holiday-reason {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
 .holiday-item .remove {
     cursor: pointer;
     color: var(--cinnabar);
     font-weight: bold;
+    font-size: 1.25rem;
+    padding: 0 0.5rem;
+}
+
+.holiday-item .remove:hover {
+    background: rgba(240, 82, 62, 0.1);
+    border-radius: 4px;
+}
+
+/* Group holiday items by reason */
+.holiday-group {
+    margin-bottom: 1rem;
+}
+
+.holiday-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--cinnabar);
+    color: white;
+    border-radius: 6px 6px 0 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.holiday-group-header .remove-group {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.holiday-group-header .remove-group:hover {
+    opacity: 1;
+}
+
+.holiday-group-dates {
+    background: #fff3e0;
+    padding: 0.75rem;
+    border-radius: 0 0 6px 6px;
+    border-left: 3px solid var(--cinnabar);
+}
+
+.holiday-group-dates .date-tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: white;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin: 0.25rem;
+    border: 1px solid #fcd34d;
 }
 
 /* Shift Requirements */
@@ -480,6 +623,7 @@
     background: white;
     border-radius: 12px;
     width: 90%;
+    max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -525,6 +669,71 @@
     justify-content: flex-end;
     gap: 0.5rem;
 }
+
+/* Selected dates preview in modal */
+.selected-dates-preview {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.selected-dates-preview h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+}
+
+.selected-dates-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.selected-date-tag {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Quick select buttons */
+.quick-select-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.quick-select-btn {
+    padding: 0.4rem 0.75rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-select-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Instructions */
+.calendar-instructions {
+    background: #f0f9ff;
+    border-left: 4px solid #0ea5e9;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.9rem;
+    color: #0369a1;
+}
 </style>
 {% endblock %}
 
@@ -557,7 +766,7 @@
         <button class="config-tab active" onclick="switchTab('operating-hours')">🕐 Operating Hours</button>
         <button class="config-tab" onclick="switchTab('groups')">📦 Location Groups</button>
         <button class="config-tab" onclick="switchTab('requirements')">📋 Shift Requirements</button>
-        <button class="config-tab" onclick="switchTab('holidays')">📅 Holidays</button>
+        <button class="config-tab" onclick="switchTab('holidays')">📅 Holidays & Closures</button>
     </div>
     
     <!-- Tab 1: Operating Hours -->
@@ -608,11 +817,27 @@
     
     <!-- Tab 4: Holidays -->
     <div id="tab-holidays" class="tab-content">
-        <p style="color: #666; margin-bottom: 1.5rem;">
-            Click on dates to mark them as holidays. The scheduler will skip these days.
-        </p>
+        <div class="calendar-instructions">
+            💡 <strong>Click on dates</strong> to select them, then click <strong>"Add Closures"</strong> to specify a reason. You can select multiple days at once (e.g., for Spring Break).
+        </div>
         
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <!-- Selection Toolbar -->
+        <div class="selection-toolbar hidden" id="selectionToolbar">
+            <span class="selection-count"><span id="selectedCount">0</span> date(s) selected</span>
+            <div class="selection-actions">
+                <button class="btn-clear-selection" onclick="clearSelection()">Clear Selection</button>
+                <button class="btn-add-closure" onclick="openClosureModal()">➕ Add Closures</button>
+            </div>
+        </div>
+        
+        <!-- Quick Select Buttons -->
+        <div class="quick-select-buttons">
+            <button class="quick-select-btn" onclick="selectWeekInMonth()">Select This Week</button>
+            <button class="quick-select-btn" onclick="selectNextWeek()">Select Next Week</button>
+            <button class="quick-select-btn" onclick="selectEntireMonth()">Select Entire Month</button>
+        </div>
+        
+        <div class="calendar-container">
             <div>
                 <div class="calendar-nav">
                     <button onclick="prevMonth()">← Prev</button>
@@ -625,9 +850,9 @@
             </div>
             
             <div>
-                <h3 style="margin-top: 0;">Selected Holidays (<span id="holidayCount">0</span>)</h3>
+                <h3 style="margin-top: 0;">Closures (<span id="holidayCount">0</span>)</h3>
                 <div id="holidayList" class="holiday-list">
-                    <p style="color: #999;">No holidays selected</p>
+                    <p style="color: #999;">No closures scheduled</p>
                 </div>
             </div>
         </div>
@@ -798,15 +1023,62 @@
     </div>
 </div>
 
+<!-- Add Closure Modal (Multi-date) -->
+<div id="closureModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Add Closures</h2>
+            <button class="modal-close" onclick="closeClosureModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Selected dates preview -->
+            <div class="selected-dates-preview">
+                <h4>📅 Selected Dates (<span id="modalDateCount">0</span>)</h4>
+                <div class="selected-dates-list" id="modalDatesList">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Reason for Closure <span style="color: var(--cinnabar);">*</span></label>
+                <input type="text" id="closureReason" class="form-control" placeholder="e.g., Spring Break, Christmas Break, University Holiday">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                    This reason will be displayed to users on the schedule page.
+                </p>
+            </div>
+            
+            <!-- Common reasons quick select -->
+            <div class="form-group">
+                <label style="font-size: 0.85rem; color: #666;">Quick Select:</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem;">
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('Spring Break')">Spring Break</button>
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('Winter Break')">Winter Break</button>
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('Thanksgiving Break')">Thanksgiving</button>
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('University Holiday')">University Holiday</button>
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('Staff Training')">Staff Training</button>
+                    <button type="button" class="quick-select-btn" onclick="setClosureReason('Maintenance')">Maintenance</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeClosureModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveClosures()">Add <span id="addClosureCount">0</span> Closure(s)</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 let currentSemester = null;
 let operatingHours = {};
 let shiftRequirements = [];
-let holidays = [];
+let holidays = []; // Array of {date: 'YYYY-MM-DD', reason: 'string'}
 let locationGroups = [];
 let calendarDate = new Date();
+
+// Multi-select for closures
+let selectedDates = new Set();
 
 // Load semester configuration
 function loadSemesterConfig() {
@@ -827,13 +1099,26 @@ function loadSemesterConfig() {
         currentSemester = configData.semester;
         operatingHours = configData.operating_hours || {};
         shiftRequirements = configData.shift_requirements || [];
-        holidays = configData.holidays || [];
+        
+        // Handle both old format (array of strings) and new format (array of objects)
+        const rawHolidays = configData.holidays || [];
+        holidays = rawHolidays.map(h => {
+            if (typeof h === 'string') {
+                return { date: h, reason: 'Holiday' };
+            }
+            return h;
+        });
+        
         locationGroups = groupsData.groups || [];
         
         // Set calendar to semester start
         if (currentSemester.start_date) {
             calendarDate = new Date(currentSemester.start_date);
         }
+        
+        // Clear selection
+        selectedDates.clear();
+        updateSelectionToolbar();
         
         renderOperatingHours();
         renderLocationGroups();
@@ -859,7 +1144,10 @@ function switchTab(tabId) {
     document.getElementById('tab-' + tabId).classList.add('active');
 }
 
-// Render Operating Hours
+// ==========================================
+// OPERATING HOURS
+// ==========================================
+
 function renderOperatingHours() {
     const container = document.getElementById('operatingHoursGrid');
     
@@ -881,16 +1169,13 @@ function renderOperatingHours() {
                 </label>
             </div>
             <div class="time-inputs" style="margin-top: 1rem;">
-                <!-- Open Hours Row -->
                 <div class="time-row" id="open-hours-row-${index}" style="${isClosed ? 'opacity: 0.4; pointer-events: none;' : ''}">
                     <label><span class="indicator open-hours"></span>Open Hours</label>
                     <input type="time" id="open-start-${index}" value="${dayData.open_hours_start || '09:00'}" onchange="updateOperatingHours()">
                     <span>to</span>
                     <input type="time" id="open-end-${index}" value="${dayData.open_hours_end || '17:00'}" onchange="updateOperatingHours()">
-                    ${isClosed ? '<span style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(Disabled - space closed)</span>' : ''}
                 </div>
                 
-                <!-- Training Row -->
                 <div class="time-row" id="training-row-${index}" style="${trainingDisabled ? 'opacity: 0.4;' : ''}">
                     <label><span class="indicator training"></span>Training</label>
                     <input type="time" id="training-start-${index}" value="${dayData.training_start || '09:00'}" 
@@ -921,11 +1206,9 @@ function toggleDayClosed(dayIndex, isClosed) {
     openHoursRow.style.opacity = isClosed ? '0.4' : '1';
     openHoursRow.style.pointerEvents = isClosed ? 'none' : 'auto';
     
-    // Show/hide the disable training option
     const trainingDisableLabel = document.getElementById(`training-disable-label-${dayIndex}`);
     trainingDisableLabel.style.display = isClosed ? 'flex' : 'none';
     
-    // If space is reopened, re-enable training
     if (!isClosed) {
         operatingHours[dayIndex].training_disabled = false;
         document.getElementById(`training-disabled-${dayIndex}`).checked = false;
@@ -955,7 +1238,145 @@ function updateOperatingHours() {
     });
 }
 
-// Render Shift Requirements
+// ==========================================
+// LOCATION GROUPS
+// ==========================================
+
+function renderLocationGroups() {
+    const container = document.getElementById('groupsList');
+    
+    if (locationGroups.length === 0) {
+        container.innerHTML = '<p style="color: #999; grid-column: 1/-1;">No location groups defined. Click "Create Group" to make one.</p>';
+        return;
+    }
+    
+    let html = '';
+    locationGroups.forEach(group => {
+        html += `
+        <div class="group-card">
+            <h4>
+                📦 ${group.name}
+                <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+                    <button onclick="editGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Edit</button>
+                    <button onclick="deleteGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; color: var(--cinnabar);">Delete</button>
+                </div>
+            </h4>
+            ${group.description ? `<p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">${group.description}</p>` : ''}
+            <div class="group-locations">
+                ${group.locations.map(loc => `<span class="group-location-tag">${loc.name}</span>`).join('')}
+            </div>
+        </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function openAddGroupModal() {
+    document.getElementById('groupModalTitle').textContent = 'Create Location Group';
+    document.getElementById('editGroupId').value = '';
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupDescription').value = '';
+    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => cb.checked = false);
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+function editGroup(groupId) {
+    const group = locationGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    document.getElementById('groupModalTitle').textContent = 'Edit Location Group';
+    document.getElementById('editGroupId').value = group.id;
+    document.getElementById('groupName').value = group.name;
+    document.getElementById('groupDescription').value = group.description || '';
+    
+    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => {
+        cb.checked = group.locations.some(loc => loc.id == cb.value);
+    });
+    
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+function closeGroupModal() {
+    document.getElementById('groupModal').style.display = 'none';
+}
+
+function saveGroup() {
+    const groupId = document.getElementById('editGroupId').value;
+    const name = document.getElementById('groupName').value.trim();
+    const description = document.getElementById('groupDescription').value.trim();
+    
+    const locationIds = [];
+    document.querySelectorAll('input[name="groupLocation"]:checked').forEach(cb => {
+        locationIds.push(parseInt(cb.value));
+    });
+    
+    if (!name) {
+        alert('Please enter a group name');
+        return;
+    }
+    
+    if (locationIds.length === 0) {
+        alert('Please select at least one location');
+        return;
+    }
+    
+    fetch('/scheduling/api/location-groups/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            id: groupId || null,
+            name: name,
+            description: description,
+            location_ids: locationIds
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (groupId) {
+                const index = locationGroups.findIndex(g => g.id == groupId);
+                if (index > -1) locationGroups[index] = data.group;
+            } else {
+                locationGroups.push(data.group);
+            }
+            renderLocationGroups();
+            closeGroupModal();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to save group');
+    });
+}
+
+function deleteGroup(groupId) {
+    if (!confirm('Delete this location group?')) return;
+    
+    fetch(`/scheduling/api/location-groups/${groupId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            locationGroups = locationGroups.filter(g => g.id !== groupId);
+            renderLocationGroups();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+// ==========================================
+// SHIFT REQUIREMENTS
+// ==========================================
+
 function renderRequirements() {
     const container = document.getElementById('requirementsGrid');
     
@@ -1015,149 +1436,7 @@ function renderRequirements() {
     container.innerHTML = html;
 }
 
-// Location Groups
-function renderLocationGroups() {
-    const container = document.getElementById('groupsList');
-    
-    if (locationGroups.length === 0) {
-        container.innerHTML = '<p style="color: #999; grid-column: 1/-1;">No location groups defined. Click "Create Group" to make one.</p>';
-        return;
-    }
-    
-    let html = '';
-    locationGroups.forEach(group => {
-        html += `
-        <div class="group-card">
-            <h4>
-                📦 ${group.name}
-                <div style="margin-left: auto; display: flex; gap: 0.5rem;">
-                    <button onclick="editGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Edit</button>
-                    <button onclick="deleteGroup(${group.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; color: var(--cinnabar);">Delete</button>
-                </div>
-            </h4>
-            ${group.description ? `<p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">${group.description}</p>` : ''}
-            <div class="group-locations">
-                ${group.locations.map(loc => `<span class="group-location-tag">${loc.name}</span>`).join('')}
-            </div>
-        </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
-function openAddGroupModal() {
-    document.getElementById('groupModalTitle').textContent = 'Create Location Group';
-    document.getElementById('editGroupId').value = '';
-    document.getElementById('groupName').value = '';
-    document.getElementById('groupDescription').value = '';
-    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => cb.checked = false);
-    document.getElementById('groupModal').style.display = 'flex';
-}
-
-function editGroup(groupId) {
-    const group = locationGroups.find(g => g.id === groupId);
-    if (!group) return;
-    
-    document.getElementById('groupModalTitle').textContent = 'Edit Location Group';
-    document.getElementById('editGroupId').value = group.id;
-    document.getElementById('groupName').value = group.name;
-    document.getElementById('groupDescription').value = group.description || '';
-    
-    // Check the locations
-    document.querySelectorAll('input[name="groupLocation"]').forEach(cb => {
-        cb.checked = group.locations.some(loc => loc.id == cb.value);
-    });
-    
-    document.getElementById('groupModal').style.display = 'flex';
-}
-
-function closeGroupModal() {
-    document.getElementById('groupModal').style.display = 'none';
-}
-
-function saveGroup() {
-    const groupId = document.getElementById('editGroupId').value;
-    const name = document.getElementById('groupName').value.trim();
-    const description = document.getElementById('groupDescription').value.trim();
-    
-    const locationIds = [];
-    document.querySelectorAll('input[name="groupLocation"]:checked').forEach(cb => {
-        locationIds.push(parseInt(cb.value));
-    });
-    
-    if (!name) {
-        alert('Please enter a group name');
-        return;
-    }
-    
-    if (locationIds.length === 0) {
-        alert('Please select at least one location');
-        return;
-    }
-    
-    fetch('/scheduling/api/location-groups/save/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            id: groupId || null,
-            name: name,
-            description: description,
-            location_ids: locationIds
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            if (groupId) {
-                // Update existing
-                const index = locationGroups.findIndex(g => g.id == groupId);
-                if (index > -1) locationGroups[index] = data.group;
-            } else {
-                // Add new
-                locationGroups.push(data.group);
-            }
-            renderLocationGroups();
-            closeGroupModal();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        alert('Failed to save group');
-    });
-}
-
-function deleteGroup(groupId) {
-    if (!confirm('Delete this location group? Any shift requirements using this group will need to be updated.')) return;
-    
-    fetch(`/scheduling/api/location-groups/${groupId}/delete/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            locationGroups = locationGroups.filter(g => g.id !== groupId);
-            renderLocationGroups();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        alert('Failed to delete group');
-    });
-}
-
 function openAddRequirementModal() {
-    // Reset the form
     for (let i = 0; i < 7; i++) {
         document.getElementById(`reqDay${i}`).checked = false;
     }
@@ -1169,7 +1448,6 @@ function openAddRequirementModal() {
             <button type="button" class="btn-remove-slot" onclick="removeTimeSlot(this)" style="display: none;">×</button>
         </div>
     `;
-    // Reset location/group checkboxes
     document.querySelectorAll('input[name="reqLocation"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('input[name="reqGroup"]').forEach(cb => cb.checked = false);
     document.getElementById('reqHosts').value = '1';
@@ -1182,29 +1460,19 @@ function closeRequirementModal() {
     document.getElementById('requirementModal').style.display = 'none';
 }
 
-// Day selection helpers
 function selectAllDays() {
-    for (let i = 0; i < 7; i++) {
-        document.getElementById(`reqDay${i}`).checked = true;
-    }
+    for (let i = 0; i < 7; i++) document.getElementById(`reqDay${i}`).checked = true;
 }
 
 function selectWeekdays() {
-    for (let i = 0; i < 5; i++) {
-        document.getElementById(`reqDay${i}`).checked = true;
-    }
-    for (let i = 5; i < 7; i++) {
-        document.getElementById(`reqDay${i}`).checked = false;
-    }
+    for (let i = 0; i < 5; i++) document.getElementById(`reqDay${i}`).checked = true;
+    for (let i = 5; i < 7; i++) document.getElementById(`reqDay${i}`).checked = false;
 }
 
 function clearDays() {
-    for (let i = 0; i < 7; i++) {
-        document.getElementById(`reqDay${i}`).checked = false;
-    }
+    for (let i = 0; i < 7; i++) document.getElementById(`reqDay${i}`).checked = false;
 }
 
-// Time slot management
 let slotCounter = 1;
 
 function addTimeSlot() {
@@ -1219,32 +1487,25 @@ function addTimeSlot() {
     `;
     container.insertAdjacentHTML('beforeend', slotHtml);
     slotCounter++;
-    
-    // Show remove buttons if more than one slot
     updateRemoveButtons();
 }
 
 function removeTimeSlot(button) {
-    const row = button.closest('.time-slot-row');
-    row.remove();
+    button.closest('.time-slot-row').remove();
     updateRemoveButtons();
 }
 
 function updateRemoveButtons() {
     const rows = document.querySelectorAll('.time-slot-row');
-    rows.forEach((row, index) => {
-        const btn = row.querySelector('.btn-remove-slot');
-        btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
+    rows.forEach(row => {
+        row.querySelector('.btn-remove-slot').style.display = rows.length > 1 ? 'inline-block' : 'none';
     });
 }
 
 function addRequirements() {
-    // Get selected days
     const selectedDays = [];
     for (let i = 0; i < 7; i++) {
-        if (document.getElementById(`reqDay${i}`).checked) {
-            selectedDays.push(i);
-        }
+        if (document.getElementById(`reqDay${i}`).checked) selectedDays.push(i);
     }
     
     if (selectedDays.length === 0) {
@@ -1252,14 +1513,11 @@ function addRequirements() {
         return;
     }
     
-    // Get time slots
     const timeSlots = [];
     document.querySelectorAll('.time-slot-row').forEach(row => {
         const start = row.querySelector('.slot-start').value;
         const end = row.querySelector('.slot-end').value;
-        if (start && end) {
-            timeSlots.push({ start, end });
-        }
+        if (start && end) timeSlots.push({ start, end });
     });
     
     if (timeSlots.length === 0) {
@@ -1267,7 +1525,6 @@ function addRequirements() {
         return;
     }
     
-    // Validate time slots
     for (const slot of timeSlots) {
         if (slot.end <= slot.start) {
             alert('End time must be after start time');
@@ -1283,23 +1540,14 @@ function addRequirements() {
         return;
     }
     
-    // Get selected locations and groups
     const selectedLocations = [];
     document.querySelectorAll('input[name="reqLocation"]:checked').forEach(cb => {
-        selectedLocations.push({
-            type: 'location',
-            id: parseInt(cb.value),
-            name: cb.dataset.name
-        });
+        selectedLocations.push({ type: 'location', id: parseInt(cb.value), name: cb.dataset.name });
     });
     
     const selectedGroups = [];
     document.querySelectorAll('input[name="reqGroup"]:checked').forEach(cb => {
-        selectedGroups.push({
-            type: 'group',
-            id: parseInt(cb.value),
-            name: cb.dataset.name
-        });
+        selectedGroups.push({ type: 'group', id: parseInt(cb.value), name: cb.dataset.name });
     });
     
     const allTargets = [...selectedGroups, ...selectedLocations];
@@ -1309,12 +1557,10 @@ function addRequirements() {
         return;
     }
     
-    // Create requirements for each day/slot/target combination
     let addedCount = 0;
     selectedDays.forEach(day => {
         timeSlots.forEach(slot => {
             allTargets.forEach(target => {
-                // Check for duplicates
                 const exists = shiftRequirements.some(r => 
                     r.day_of_week === day && 
                     r.time_start === slot.start && 
@@ -1372,7 +1618,10 @@ function deleteRequirement(reqId) {
     renderRequirements();
 }
 
-// Holiday Calendar
+// ==========================================
+// HOLIDAY CALENDAR - MULTI-SELECT
+// ==========================================
+
 function renderHolidayCalendar() {
     const container = document.getElementById('holidayCalendar');
     const monthLabel = document.getElementById('calendarMonth');
@@ -1382,13 +1631,11 @@ function renderHolidayCalendar() {
     
     monthLabel.textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
-    // Day headers
     let html = '';
     ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
         html += `<div class="calendar-header">${d}</div>`;
     });
     
-    // Get first day of month and total days
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const today = new Date().toISOString().split('T')[0];
@@ -1402,11 +1649,19 @@ function renderHolidayCalendar() {
     // Current month days
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const isHoliday = holidays.includes(dateStr);
+        const holidayObj = holidays.find(h => h.date === dateStr);
+        const isHoliday = !!holidayObj;
         const isToday = dateStr === today;
+        const isSelected = selectedDates.has(dateStr);
         
-        html += `<div class="calendar-day ${isHoliday ? 'holiday' : ''} ${isToday ? 'today' : ''}" 
-                     onclick="toggleHoliday('${dateStr}')">${d}</div>`;
+        let classes = 'calendar-day';
+        if (isHoliday) classes += ' holiday';
+        if (isToday) classes += ' today';
+        if (isSelected) classes += ' selected';
+        
+        html += `<div class="${classes}" 
+                     onclick="toggleDateSelection('${dateStr}')" 
+                     title="${isHoliday ? holidayObj.reason : ''}">${d}</div>`;
     }
     
     // Next month days
@@ -1421,6 +1676,102 @@ function renderHolidayCalendar() {
     container.innerHTML = html;
 }
 
+function toggleDateSelection(dateStr) {
+    if (selectedDates.has(dateStr)) {
+        selectedDates.delete(dateStr);
+    } else {
+        selectedDates.add(dateStr);
+    }
+    
+    updateSelectionToolbar();
+    renderHolidayCalendar();
+}
+
+function updateSelectionToolbar() {
+    const toolbar = document.getElementById('selectionToolbar');
+    const count = selectedDates.size;
+    
+    document.getElementById('selectedCount').textContent = count;
+    
+    if (count > 0) {
+        toolbar.classList.remove('hidden');
+    } else {
+        toolbar.classList.add('hidden');
+    }
+}
+
+function clearSelection() {
+    selectedDates.clear();
+    updateSelectionToolbar();
+    renderHolidayCalendar();
+}
+
+// Quick select functions
+function selectWeekInMonth() {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const today = new Date();
+    
+    // Find current week's dates in this month
+    const currentDay = today.getDate();
+    const dayOfWeek = today.getDay();
+    
+    // Start of week (Sunday)
+    const weekStart = new Date(today);
+    weekStart.setDate(currentDay - dayOfWeek);
+    
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        
+        if (d.getMonth() === month && d.getFullYear() === year) {
+            const dateStr = d.toISOString().split('T')[0];
+            selectedDates.add(dateStr);
+        }
+    }
+    
+    updateSelectionToolbar();
+    renderHolidayCalendar();
+}
+
+function selectNextWeek() {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const today = new Date();
+    
+    // Start of next week
+    const dayOfWeek = today.getDay();
+    const nextWeekStart = new Date(today);
+    nextWeekStart.setDate(today.getDate() + (7 - dayOfWeek));
+    
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(nextWeekStart);
+        d.setDate(nextWeekStart.getDate() + i);
+        
+        if (d.getMonth() === month && d.getFullYear() === year) {
+            const dateStr = d.toISOString().split('T')[0];
+            selectedDates.add(dateStr);
+        }
+    }
+    
+    updateSelectionToolbar();
+    renderHolidayCalendar();
+}
+
+function selectEntireMonth() {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        selectedDates.add(dateStr);
+    }
+    
+    updateSelectionToolbar();
+    renderHolidayCalendar();
+}
+
 function prevMonth() {
     calendarDate.setMonth(calendarDate.getMonth() - 1);
     renderHolidayCalendar();
@@ -1431,41 +1782,130 @@ function nextMonth() {
     renderHolidayCalendar();
 }
 
-function toggleHoliday(dateStr) {
-    const index = holidays.indexOf(dateStr);
-    if (index > -1) {
-        holidays.splice(index, 1);
-    } else {
-        holidays.push(dateStr);
-        holidays.sort();
+// ==========================================
+// CLOSURE MODAL
+// ==========================================
+
+function openClosureModal() {
+    if (selectedDates.size === 0) {
+        alert('Please select at least one date first');
+        return;
     }
+    
+    // Populate modal with selected dates
+    const sortedDates = Array.from(selectedDates).sort();
+    
+    document.getElementById('modalDateCount').textContent = sortedDates.length;
+    document.getElementById('addClosureCount').textContent = sortedDates.length;
+    
+    const datesList = document.getElementById('modalDatesList');
+    datesList.innerHTML = sortedDates.map(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00');
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+        return `<span class="selected-date-tag">${formatted}</span>`;
+    }).join('');
+    
+    document.getElementById('closureReason').value = '';
+    document.getElementById('closureModal').style.display = 'flex';
+    
+    setTimeout(() => document.getElementById('closureReason').focus(), 100);
+}
+
+function closeClosureModal() {
+    document.getElementById('closureModal').style.display = 'none';
+}
+
+function setClosureReason(reason) {
+    document.getElementById('closureReason').value = reason;
+}
+
+function saveClosures() {
+    const reason = document.getElementById('closureReason').value.trim();
+    
+    if (!reason) {
+        alert('Please enter a reason for the closure');
+        document.getElementById('closureReason').focus();
+        return;
+    }
+    
+    // Add all selected dates with this reason
+    const sortedDates = Array.from(selectedDates).sort();
+    let addedCount = 0;
+    
+    sortedDates.forEach(dateStr => {
+        // Check if already exists
+        const existingIndex = holidays.findIndex(h => h.date === dateStr);
+        if (existingIndex > -1) {
+            // Update existing
+            holidays[existingIndex].reason = reason;
+        } else {
+            // Add new
+            holidays.push({ date: dateStr, reason: reason });
+            addedCount++;
+        }
+    });
+    
+    // Sort holidays by date
+    holidays.sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Clear selection
+    selectedDates.clear();
+    updateSelectionToolbar();
+    
     renderHolidayCalendar();
     renderHolidayList();
+    closeClosureModal();
+    
+    alert(`Added ${addedCount} closure(s) for "${reason}"`);
 }
+
+// ==========================================
+// HOLIDAY LIST - GROUPED BY REASON
+// ==========================================
 
 function renderHolidayList() {
     const container = document.getElementById('holidayList');
     document.getElementById('holidayCount').textContent = holidays.length;
     
     if (holidays.length === 0) {
-        container.innerHTML = '<p style="color: #999;">No holidays selected</p>';
+        container.innerHTML = '<p style="color: #999;">No closures scheduled</p>';
         return;
     }
     
+    // Group by reason
+    const groupedByReason = {};
+    holidays.forEach(h => {
+        if (!groupedByReason[h.reason]) {
+            groupedByReason[h.reason] = [];
+        }
+        groupedByReason[h.reason].push(h.date);
+    });
+    
     let html = '';
-    holidays.forEach(dateStr => {
-        const date = new Date(dateStr + 'T00:00:00');
-        const formatted = date.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
+    
+    Object.entries(groupedByReason).forEach(([reason, dates]) => {
+        const formattedDates = dates.map(dateStr => {
+            const date = new Date(dateStr + 'T00:00:00');
+            return {
+                str: dateStr,
+                formatted: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            };
         });
         
         html += `
-        <div class="holiday-item">
-            <span>${formatted}</span>
-            <span class="remove" onclick="toggleHoliday('${dateStr}')">×</span>
+        <div class="holiday-group">
+            <div class="holiday-group-header">
+                <span>${reason} (${dates.length} day${dates.length > 1 ? 's' : ''})</span>
+                <span class="remove-group" onclick="removeClosureGroup('${reason}')" title="Remove all">🗑️</span>
+            </div>
+            <div class="holiday-group-dates">
+                ${formattedDates.map(d => `
+                    <span class="date-tag">
+                        ${d.formatted}
+                        <span style="cursor: pointer; margin-left: 0.25rem; color: #999;" onclick="removeSingleClosure('${d.str}')" title="Remove">×</span>
+                    </span>
+                `).join('')}
+            </div>
         </div>
         `;
     });
@@ -1473,14 +1913,29 @@ function renderHolidayList() {
     container.innerHTML = html;
 }
 
-// Save configuration
+function removeClosureGroup(reason) {
+    if (!confirm(`Remove all closures for "${reason}"?`)) return;
+    holidays = holidays.filter(h => h.reason !== reason);
+    renderHolidayCalendar();
+    renderHolidayList();
+}
+
+function removeSingleClosure(dateStr) {
+    holidays = holidays.filter(h => h.date !== dateStr);
+    renderHolidayCalendar();
+    renderHolidayList();
+}
+
+// ==========================================
+// SAVE CONFIGURATION
+// ==========================================
+
 function saveConfig() {
     if (!currentSemester) {
         alert('No semester selected');
         return;
     }
     
-    // Update operating hours from inputs
     updateOperatingHours();
     
     const payload = {
@@ -1502,7 +1957,7 @@ function saveConfig() {
     .then(data => {
         if (data.success) {
             alert('Configuration saved successfully!');
-            loadSemesterConfig(); // Reload to get updated IDs
+            loadSemesterConfig();
         } else {
             alert('Error saving: ' + (data.error || 'Unknown error'));
         }

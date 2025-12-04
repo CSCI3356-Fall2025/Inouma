@@ -4,10 +4,28 @@ from . import views
 app_name = 'team'
 
 urlpatterns = [
-    # Team Directory Page
+    # ==========================================
+    # TEAM MEMBER PAGES
+    # ==========================================
+    
+    # Team Dashboard - this is the trainerDashboard.html page
+    # Accessible to team members, trainers, leads, staff
+    path('dashboard/', views.team_dashboard, name='team_dashboard'),
+    
+    # My Training Sessions - for trainers to see sessions they're conducting
+    path('my-sessions/', views.my_training_sessions, name='my_training_sessions'),
+    
+    # ==========================================
+    # STAFF PAGES
+    # ==========================================
+    
+    # Team Directory Page (staff only)
     path('directory/', views.team_directory, name='team_directory'),
     
-    # API Endpoints
+    # ==========================================
+    # API ENDPOINTS
+    # ==========================================
+    
     path('api/members/', views.api_get_team_members, name='api_members'),
     path('api/members/create/', views.api_create_member, name='api_create_member'),
     path('api/members/<str:member_id>/update/', views.api_update_member, name='api_update_member'),
