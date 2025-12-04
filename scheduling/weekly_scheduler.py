@@ -115,7 +115,7 @@ class WeeklyScheduler:
         print(f"   ✓ {len(self.team_members)} team members, {total} total hours/week")
         
         # Load unavailability
-        for unav in Unavailability.objects.filter(semester=self.semester):
+        for unav in Unavailability.objects.filter(semester=self.semester, status='approved'):
             if unav.user_id not in self.unavailability_map:
                 self.unavailability_map[unav.user_id] = []
             self.unavailability_map[unav.user_id].append(

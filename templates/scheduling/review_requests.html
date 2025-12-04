@@ -556,6 +556,46 @@
     font-size: 0.8rem;
     color: #999;
 }
+
+/* Unavailability block approvals */
+.unavail-list {
+    display: grid;
+    gap: 0.75rem;
+}
+.unavail-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) 220px;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafafa;
+}
+.unavail-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.unavail-reason {
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+.status-pill {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.status-pill.pending { background: #fef3c7; color: #92400e; }
+.status-pill.approved { background: #d1fae5; color: #065f46; }
+.status-pill.rejected { background: #fee2e2; color: #991b1b; }
+.unavail-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
 </style>
 {% endblock %}
 
@@ -593,7 +633,7 @@
 <!-- Filters -->
 <div class="card">
     <div class="filter-bar">
-        <select id="semesterFilter" onchange="loadRequests()">
+        <select id="semesterFilter" onchange="loadRequests(); loadUnavailabilityRequests();">
             <option value="">All Semesters</option>
         </select>
         
@@ -615,6 +655,27 @@
     <div class="empty-state" id="emptyState" style="display: none;">
         <div class="empty-state-icon">📭</div>
         <p>There are no shift change requests matching your filters.</p>
+    </div>
+</div>
+
+<!-- Unavailability approvals -->
+<div class="card">
+    <div class="page-header" style="margin-bottom: 0.5rem;">
+        <div>
+            <h2 style="margin: 0;">Pending Unavailability</h2>
+            <p style="margin: 0.35rem 0 0; color: #666;">Approve or reject trainer unavailability before it hides availability.</p>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <div class="status-pill pending" id="unavailCount">0 pending</div>
+            <button class="btn-approve" style="max-width: 180px;" onclick="approveAllUnavailability()">Approve All</button>
+        </div>
+    </div>
+    <div id="unavailList" class="unavail-list">
+        <!-- Populated by JS -->
+    </div>
+    <div class="empty-state" id="unavailEmpty" style="display: none; padding: 2rem 1rem;">
+        <div class="empty-state-icon" style="font-size: 2.5rem;">⏳</div>
+        <p>No pending unavailability requests right now.</p>
     </div>
 </div>
 
@@ -645,10 +706,12 @@ let filteredRequests = [];
 let currentStatusFilter = 'all';
 let currentTypeFilter = 'all';
 let pendingRejectId = null;
+let unavailRequests = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSemesters();
     loadRequests();
+    loadUnavailabilityRequests();
 });
 
 function loadSemesters() {
@@ -687,6 +750,26 @@ function loadRequests() {
             allRequests = [];
             updateStats();
             renderRequests([]);
+        });
+}
+
+function loadUnavailabilityRequests() {
+    const semesterId = document.getElementById('semesterFilter').value;
+    let url = '/scheduling/api/unavailability/pending/';
+    if (semesterId) {
+        url += `?semester_id=${semesterId}`;
+    }
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            unavailRequests = data.requests || [];
+            renderUnavailabilityRequests(unavailRequests);
+        })
+        .catch(err => {
+            console.error('Error loading unavailability:', err);
+            unavailRequests = [];
+            renderUnavailabilityRequests([]);
         });
 }
 
@@ -840,6 +923,48 @@ function renderRequests(requests) {
     }).join('');
 }
 
+function renderUnavailabilityRequests(requests) {
+    const list = document.getElementById('unavailList');
+    const empty = document.getElementById('unavailEmpty');
+    const badge = document.getElementById('unavailCount');
+    badge.textContent = `${requests.length} pending`;
+    
+    if (!requests.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    list.innerHTML = requests.map(req => {
+        const timeRange = req.start && req.end ? `${req.start} – ${req.end}` : 'All day';
+        return `
+            <div class="unavail-row">
+                <div class="unavail-meta">
+                    <strong>${req.user}</strong>
+                    <span class="muted">${req.semester || 'No semester'}</span>
+                </div>
+                <div class="unavail-meta">
+                    <span class="request-info-label" style="letter-spacing:0;">Day</span>
+                    <span class="request-info-value">${req.day_label}</span>
+                </div>
+                <div class="unavail-meta">
+                    <span class="request-info-label" style="letter-spacing:0;">Time</span>
+                    <span class="request-info-value">${timeRange}</span>
+                </div>
+                <div class="unavail-meta">
+                    <span class="request-info-label" style="letter-spacing:0;">Reason</span>
+                    <span class="unavail-reason">${req.reason || '—'}</span>
+                </div>
+                <div class="unavail-actions">
+                    <button class="btn-approve" onclick="approveUnavailability(${req.id})">Approve</button>
+                    <button class="btn-reject" onclick="rejectUnavailability(${req.id})">Reject</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 function renderSwapDetails(request) {
     const otherAccepted = request.swap_accepted_by_other_user;
     
@@ -985,6 +1110,80 @@ function confirmReject() {
         console.error('Error:', err);
         closeRejectModal();
         alert('An error occurred while rejecting the request');
+    });
+}
+
+function approveUnavailability(id) {
+    fetch('/scheduling/api/unavailability/approve/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ id })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            loadUnavailabilityRequests();
+        } else {
+            alert(res.error || 'Could not approve entry');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('An error occurred while approving');
+    });
+}
+
+function rejectUnavailability(id) {
+    const notes = prompt('Optional note for rejection:', '') || '';
+    fetch('/scheduling/api/unavailability/reject/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ id, notes })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            loadUnavailabilityRequests();
+        } else {
+            alert(res.error || 'Could not reject entry');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('An error occurred while rejecting');
+    });
+}
+
+function approveAllUnavailability() {
+    const semesterId = document.getElementById('semesterFilter').value;
+    if (!confirm('Approve all pending unavailability' + (semesterId ? ' for this semester' : '') + '?')) {
+        return;
+    }
+    fetch('/scheduling/api/unavailability/approve-all/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ semester_id: semesterId || null })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            loadUnavailabilityRequests();
+        } else {
+            alert(res.error || 'Could not approve all');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('An error occurred while approving all');
     });
 }
 

@@ -333,6 +333,12 @@ class TeamMemberProfile(models.Model):
 class Unavailability(models.Model):
     """When a team member is unavailable during the week"""
     
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
@@ -355,6 +361,22 @@ class Unavailability(models.Model):
         help_text="If true, user is unavailable. If false, times indicate availability."
     )
     
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text="Pending items do not affect scheduling until approved"
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_unavailabilities'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    admin_notes = models.TextField(blank=True)
+    
     reason = models.CharField(max_length=200, blank=True, help_text="Optional reason")
     
     class Meta:
@@ -364,7 +386,7 @@ class Unavailability(models.Model):
     def __str__(self):
         status = "Unavailable" if self.is_unavailable else "Available"
         time_range = f"{self.start_time}-{self.end_time}" if self.start_time and self.end_time else "All day"
-        return f"{self.user.get_full_name()} - {self.get_day_of_week_display()} {time_range} ({status})"
+        return f"{self.user.get_full_name()} - {self.get_day_of_week_display()} {time_range} ({status}, {self.status})"
 
 
 # ============================================
