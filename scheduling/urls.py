@@ -45,6 +45,10 @@ urlpatterns = [
     path('api/team-members/save/', views.api_save_team_member, name='api_save_team_member'),
     path('api/categories/', views.api_get_categories, name='api_categories'),
     path('api/stats/', views.api_shift_stats, name='api_stats'),
+    path('api/unavailability/pending/', views.api_pending_unavailability, name='api_pending_unavailability'),
+    path('api/unavailability/approve/', views.api_approve_unavailability, name='api_approve_unavailability'),
+    path('api/unavailability/reject/', views.api_reject_unavailability, name='api_reject_unavailability'),
+    path('api/unavailability/approve-all/', views.api_approve_all_unavailability, name='api_approve_all_unavailability'),
     
     # API Endpoints - Publish Schedule
     path('api/publish/', views.api_publish_schedule, name='api_publish'),
@@ -64,4 +68,5 @@ urlpatterns = [
     # PUBLIC API - No Authentication Required
     # ==========================================
     path('api/public-hours/', views.api_public_hours, name='api_public_hours'),
+    path('api/model-week/', views.api_get_model_week, name='api_model_week'),
 ]

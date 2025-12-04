@@ -8,6 +8,7 @@ from locations.models import Location
 from datetime import date, time, timedelta, datetime
 from datetime import time as dt_time
 import json
+from django.utils import timezone
 
 from .models import (
     Semester, DailyOperatingHours, ShiftRequirement, LocationGroup,
@@ -760,9 +761,11 @@ def api_get_team_members(request):
                 slots = []
                 for slot in day_slots:
                     slots.append({
+                        'id': slot.id,
                         'start': slot.start_time.strftime('%H:%M') if slot.start_time else '09:00',
                         'end': slot.end_time.strftime('%H:%M') if slot.end_time else '17:00',
-                        'reason': slot.reason or ''
+                        'reason': slot.reason or '',
+                        'status': slot.status,
                     })
                 unavailability[i] = slots
         
@@ -875,7 +878,10 @@ def api_save_team_member(request):
                             day_of_week=day_of_week,
                             start_time=slot['start'],
                             end_time=slot['end'],
-                            reason=slot.get('reason', '')
+                            reason=slot.get('reason', ''),
+                            status='approved',
+                            reviewed_by=request.user,
+                            reviewed_at=timezone.now()
                         )
         
         return JsonResponse({'success': True})
@@ -885,6 +891,107 @@ def api_save_team_member(request):
         print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_GET
+def api_pending_unavailability(request):
+    """List pending unavailability requests for staff review"""
+    semester_id = request.GET.get('semester_id')
+    qs = Unavailability.objects.select_related('user', 'semester').filter(status='pending')
+    if semester_id:
+        qs = qs.filter(semester_id=semester_id)
+    
+    items = []
+    for item in qs:
+        items.append({
+            'id': item.id,
+            'user': item.user.get_full_name() or item.user.email,
+            'user_id': item.user_id,
+            'semester': item.semester.name if item.semester else None,
+            'semester_id': item.semester_id,
+            'day_of_week': item.day_of_week,
+            'day_label': item.get_day_of_week_display(),
+            'start': item.start_time.strftime('%H:%M') if item.start_time else None,
+            'end': item.end_time.strftime('%H:%M') if item.end_time else None,
+            'reason': item.reason,
+        })
+    
+    return JsonResponse({'requests': items})
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_approve_unavailability(request):
+    """Approve a pending unavailability entry"""
+    try:
+        data = json.loads(request.body)
+        entry_id = data.get('id')
+        notes = data.get('notes', '')
+        
+        if not entry_id:
+            return JsonResponse({'success': False, 'error': 'id is required'}, status=400)
+        
+        entry = get_object_or_404(Unavailability, id=entry_id)
+        entry.status = 'approved'
+        entry.reviewed_by = request.user
+        entry.reviewed_at = timezone.now()
+        entry.admin_notes = notes
+        entry.save()
+        
+        return JsonResponse({'success': True, 'status': entry.status})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_reject_unavailability(request):
+    """Reject a pending unavailability entry"""
+    try:
+        data = json.loads(request.body)
+        entry_id = data.get('id')
+        notes = data.get('notes', '')
+        
+        if not entry_id:
+            return JsonResponse({'success': False, 'error': 'id is required'}, status=400)
+        
+        entry = get_object_or_404(Unavailability, id=entry_id)
+        entry.status = 'rejected'
+        entry.reviewed_by = request.user
+        entry.reviewed_at = timezone.now()
+        entry.admin_notes = notes
+        entry.save()
+        
+        return JsonResponse({'success': True, 'status': entry.status})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_approve_all_unavailability(request):
+    """Approve all pending unavailability entries (optionally scoped to a semester)"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        semester_id = data.get('semester_id')
+        
+        pending = Unavailability.objects.filter(status='pending')
+        if semester_id:
+            pending = pending.filter(semester_id=semester_id)
+        
+        count = pending.update(
+            status='approved',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+        
+        return JsonResponse({'success': True, 'approved_count': count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
 
@@ -1035,6 +1142,9 @@ def my_availability(request):
                         start_time=start,
                         end_time=end,
                         is_unavailable=True,
+                        status='pending',
+                        reviewed_by=None,
+                        reviewed_at=None,
                         reason=reason,
                     )
                     created_count += 1
@@ -1807,5 +1917,61 @@ def api_public_hours(request):
             'operating_hours': {},
             'closures': []
         }, status=500)
+    
+
+
+@login_required
+def api_get_model_week(request):
+    """
+    Get model week (Week 0) shifts for display.
+    This is the template week that repeats throughout the semester.
+    """
+    from .models import ModelWeekShift
+    
+    semester_id = request.GET.get('semester_id')
+    
+    if not semester_id:
+        return JsonResponse({'shifts': [], 'error': 'No semester specified'})
+    
+    # Get model week shifts
+    shifts = ModelWeekShift.objects.filter(
+        semester_id=semester_id
+    ).select_related('user', 'location', 'location_group').order_by('day_of_week', 'start_time')
+    
+    data = []
+    for shift in shifts:
+        # Get location info
+        location_info = None
+        if shift.location:
+            location_info = shift.location.name
+        elif shift.location_group:
+            location_info = shift.location_group.name
+        
+        # Calculate duration
+        try:
+            duration = shift.duration_hours()
+        except Exception:
+            duration = 0
+        
+        data.append({
+            'id': shift.id,
+            'day_of_week': shift.day_of_week,
+            'start': shift.start_time.strftime('%H:%M'),
+            'end': shift.end_time.strftime('%H:%M'),
+            'user': shift.user.get_full_name() or shift.user.email,
+            'user_id': shift.user.id,
+            'shift_type': shift.shift_type,
+            'shift_type_display': shift.get_shift_type_display(),
+            'team': shift.team_category or '',
+            'location': location_info,
+            'duration_hours': round(duration, 2) if duration else 0
+        })
+    
+    return JsonResponse({
+        'shifts': data,
+        'count': len(data),
+        'semester_id': semester_id
+    })
+
 
 
