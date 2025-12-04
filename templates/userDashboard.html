@@ -277,36 +277,6 @@
             {% endif %}
         </div>
     </div>
-
-    <!-- Hatchery Hours (Dynamic from API) -->
-    <div class="dash-card grid-col-12">
-        <div class="dash-card-header">
-            <h3>🕐 Hatchery Hours</h3>
-            <a href="{% url 'about_hatchery' %}" class="view-all">View full schedule →</a>
-        </div>
-        <div class="dash-card-body">
-            <div class="hours-grid">
-                <div class="hours-section">
-                    <h4>Open Hours</h4>
-                    <ul class="hours-list" id="openHoursList">
-                        <li class="loading" style="border: none;">Loading...</li>
-                    </ul>
-                    <div class="hours-note" id="trainingNote" style="display: none;">
-                        ⚠️ Equipment trainings available during training hours
-                    </div>
-                </div>
-                <div class="hours-section">
-                    <h4>Upcoming Closures</h4>
-                    <ul class="hours-list" id="closuresList">
-                        <li class="loading" style="border: none;">Loading...</li>
-                    </ul>
-                    <p style="margin-top: 1rem; font-size: 0.8rem; color: #666;">
-                        <em>Closed on all university holidays and home football game days.</em>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
