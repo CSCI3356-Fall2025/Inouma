@@ -641,7 +641,7 @@
     <div class="tab-section active" id="machinesSection">
         <div class="machines-grid">
             {% for machine in machines %}
-            <div onclick="window.location.href='{% url 'machine_detail' machine.id %}'" class="machine-card {% if machine.status == 'broken' %}broken{% endif %}" data-machine-id="{{ machine.id }}">
+            <div class="machine-card clickable {% if machine.status == 'broken' %}broken{% endif %}" data-machine-id="{{ machine.id }}" data-machine-url="{% url 'machine_detail' machine.id %}">
                 <div class="machine-image">
                     {% if machine.image %}
                     <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
@@ -719,6 +719,15 @@ let selectedSession = null;
 let trainingData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle machine card clicks
+    document.querySelectorAll('.machine-card.clickable').forEach(card => {
+        card.addEventListener('click', function() {
+            const url = this.getAttribute('data-machine-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
     // Load training requirements
     loadTrainingRequirements();
     
@@ -911,7 +920,14 @@ function getWeekStart(date) {
 }
 
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    if (!date) return '';
+    // Ensure we have a Date object
+    const d = date instanceof Date ? date : new Date(date);
+    // Return YYYY-MM-DD format
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function updateWeekRange() {
