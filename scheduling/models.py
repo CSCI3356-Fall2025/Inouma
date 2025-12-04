@@ -609,3 +609,76 @@ class ShiftChangeRequest(models.Model):
     
     def __str__(self):
         return f"{self.get_request_type_display()} - {self.requested_by.get_full_name()} ({self.status})"
+    
+
+
+class ModelWeekShift(models.Model):
+    """
+    A template shift for the model week (Week 0).
+    This is a single week pattern that repeats throughout the semester.
+    Used by view_schedule.html to show the weekly template.
+    """
+    
+    SHIFT_TYPE_CHOICES = [
+        ('open_hours', 'Open Hours Hosting'),
+        ('training', 'Training Available'),
+        ('floater', 'Floater'),
+    ]
+    
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='model_week_shifts')
+    
+    # Who and when (day of week, not specific date)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='model_week_shifts'
+    )
+    day_of_week = models.IntegerField(choices=DailyOperatingHours.WEEKDAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    
+    # What type of shift
+    shift_type = models.CharField(max_length=20, choices=SHIFT_TYPE_CHOICES)
+    
+    # For open hours: which location/group
+    location = models.ForeignKey(
+        Location, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='model_week_shifts'
+    )
+    location_group = models.ForeignKey(
+        LocationGroup, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='model_week_shifts'
+    )
+    
+    # For training: which team/category
+    team_category = models.CharField(
+        max_length=50, 
+        blank=True,
+        null=True,
+        help_text="Machine category for training availability"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['day_of_week', 'start_time']
+        verbose_name = 'Model Week Shift'
+        verbose_name_plural = 'Model Week Shifts'
+    
+    def __str__(self):
+        day_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][self.day_of_week]
+        return f"{self.user.get_full_name()} - {day_name} {self.start_time}-{self.end_time} ({self.get_shift_type_display()})"
+    
+    def duration_hours(self):
+        """Calculate shift duration in hours"""
+        from datetime import datetime, date
+        start = datetime.combine(date.today(), self.start_time)
+        end = datetime.combine(date.today(), self.end_time)
+        duration = end - start
+        return duration.total_seconds() / 3600

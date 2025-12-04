@@ -64,4 +64,5 @@ urlpatterns = [
     # PUBLIC API - No Authentication Required
     # ==========================================
     path('api/public-hours/', views.api_public_hours, name='api_public_hours'),
+    path('api/model-week/', views.api_get_model_week, name='api_model_week'),
 ]
