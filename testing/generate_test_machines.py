@@ -7,6 +7,9 @@ Or copy/paste into Django shell.
 """
 
 import random
+import requests
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 # Machine types by category with realistic counts
 MACHINE_DATA = {
@@ -63,6 +66,63 @@ MACHINE_DATA = {
     ],
 }
 
+# Image IDs by category (using Picsum Photos - reliable free image service)
+# Each category gets a consistent seed for reproducible images
+CATEGORY_IMAGE_SEEDS = {
+    '3D Printing': 101,
+    'Laser': 102,
+    'Woodworking': 103,
+    'Textile': 104,
+    'Metalworking': 105,
+    'Vinyl': 106,
+    'Electronics': 107,
+}
+
+def fetch_machine_image(machine_name, category):
+    """
+    Fetch an actual image for a machine from Picsum Photos.
+    Uses category-based seeds to get consistent but varied images.
+    Returns an InMemoryUploadedFile that can be assigned to machine.image
+    """
+    # Get seed for category (ensures consistent images per category)
+    base_seed = CATEGORY_IMAGE_SEEDS.get(category, 100)
+    # Add variation based on machine name hash for variety
+    name_hash = hash(machine_name) % 50
+    seed = base_seed + name_hash
+    
+    # Use Picsum Photos API (free, reliable, no API key needed)
+    # Format: https://picsum.photos/seed/{seed}/800/600
+    image_url = f"https://picsum.photos/seed/{seed}/800/600"
+    
+    try:
+        # Fetch image with a timeout
+        response = requests.get(image_url, timeout=10, allow_redirects=True)
+        response.raise_for_status()
+        
+        # Verify it's actually an image
+        if not response.headers.get('content-type', '').startswith('image/'):
+            raise ValueError("Response is not an image")
+        
+        # Create BytesIO from response content
+        img_io = BytesIO(response.content)
+        img_io.seek(0)
+        
+        # Create InMemoryUploadedFile
+        filename = f"{machine_name.replace(' ', '_').replace('#', '').replace('/', '_')}.jpg"
+        image_file = InMemoryUploadedFile(
+            img_io,
+            'ImageField',
+            filename,
+            'image/jpeg',
+            len(response.content),
+            None
+        )
+        
+        return image_file
+    except Exception as e:
+        print(f"   ⚠️  Warning: Could not fetch image for {machine_name}: {e}")
+        return None
+
 def generate_machines():
     """Generate test machines in the database."""
     from machines.models import Machine, MachineCategory
@@ -104,6 +164,9 @@ def generate_machines():
                 if Machine.objects.filter(name=name, machine_name=machine_name).exists():
                     continue
                 
+                # Fetch actual image from Unsplash
+                image_file = fetch_machine_image(name, category)
+                
                 # Create machine with all required fields
                 machine = Machine.objects.create(
                     name=name,
@@ -116,6 +179,7 @@ def generate_machines():
                     model_number='',
                     documentation_url='',
                     mac_address='',
+                    image=image_file if image_file else None,
                 )
                 
                 # Set category FK if it exists
