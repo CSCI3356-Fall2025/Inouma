@@ -66,6 +66,21 @@
     color: #666;
 }
 
+.semester-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    flex-wrap: wrap;
+}
+
+.semester-select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    min-width: 220px;
+}
+
 /* Calendar Controls */
 .calendar-controls {
     display: flex;
@@ -545,6 +560,32 @@
     </div>
 </div>
 
+<div id="calendarEmptyHint" style="display:none; margin: 0.5rem 0 1rem; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem;">
+</div>
+
+{% if semesters_with_shifts %}
+<div class="semester-picker">
+    <div style="font-weight: 600; color: var(--gunmetal);">Semester</div>
+    <select id="semesterSelect" class="semester-select" onchange="switchSemester(this.value)">
+        {% for sem in semesters_with_shifts %}
+        <option value="{{ sem.id }}" {% if semester and sem.id == semester.id %}selected{% endif %}>
+            {{ sem.name }}{% if active_semester and sem.id == active_semester.id %} (Active){% endif %}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
+{% if active_semester and semester and active_semester.id != semester.id %}
+<div class="alert alert-warning" role="alert">
+    No shifts were found in {{ active_semester.name }}; showing {{ semester.name }} instead.
+</div>
+{% elif not active_semester and semester %}
+<div class="alert alert-info" role="alert">
+    Showing schedule for {{ semester.name }}.
+</div>
+{% endif %}
+
 <!-- Stats Row -->
 <div class="stats-row">
     <div class="stat-card">
@@ -573,6 +614,7 @@
     <div class="view-toggle">
         <button class="view-btn active" onclick="switchCalendarView('month')" id="monthViewBtn">Month</button>
         <button class="view-btn" onclick="switchCalendarView('week')" id="weekViewBtn">Week</button>
+        <button class="today-btn" style="margin-left:0.75rem;" onclick="manualRender()">Reload Calendar</button>
     </div>
 </div>
 
@@ -640,25 +682,42 @@
     </div>
 </div>
 
-<script>
-// Shift data from Django
-const shifts = [
-    {% for shift in shifts %}
-    {
-        id: {{ shift.id }},
-        date: '{{ shift.date|date:"Y-m-d" }}',
-        start_time: '{{ shift.start_time|time:"H:i" }}',
-        end_time: '{{ shift.end_time|time:"H:i" }}',
-        shift_type: '{{ shift.shift_type }}',
-        shift_type_display: '{{ shift.get_shift_type_display }}',
-        status: '{{ shift.status }}',
-        location: '{% if shift.location %}{{ shift.location.name }}{% elif shift.location_group %}{{ shift.location_group.name }}{% else %}TBD{% endif %}',
-        team_category: '{% if shift.team_category %}{{ shift.team_category }}{% endif %}'
-    }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-];
+<!-- Fallback List View if calendar fails -->
+<div class="calendar-card" id="calendarFallbackList" style="display:none; margin-top:1rem; padding:1rem;">
+    <h3 style="margin-top:0; color: var(--gunmetal);">Shifts (fallback view)</h3>
+    <div id="calendarFallbackContent" style="color:#444;"></div>
+</div>
 
-let currentDate = new Date();
+<script id="shiftsData" type="application/json">{{ shifts_json|safe }}</script>
+
+<script>
+// Shift data from Django (JSON encoded to avoid breaking on quotes/special chars)
+const rawShifts = JSON.parse(document.getElementById('shiftsData').textContent || '[]');
+
+// Normalize dates using local time (avoid UTC shifting) and sort to keep rendering stable
+const shifts = rawShifts
+    .map(s => {
+        const parts = (s.date || '').split('-').map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) return null;
+        const dateObj = new Date(parts[0], parts[1] - 1, parts[2]); // local date to avoid timezone offsets
+        const normalizedDate = formatDateISO(dateObj); // YYYY-MM-DD from local date
+        return { ...s, date: normalizedDate, dateObj };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+        if (a.date === b.date) return a.start_time.localeCompare(b.start_time);
+        return a.date.localeCompare(b.date);
+    });
+
+// Index shifts by date for quick lookups
+const shiftsByDate = shifts.reduce((acc, s) => {
+    if (!acc[s.date]) acc[s.date] = [];
+    acc[s.date].push(s);
+    return acc;
+}, {});
+
+const firstShiftDate = shifts.length ? parseLocalDate(shifts[0].date) : null;
+let currentDate = firstShiftDate || new Date();
 let currentView = 'month';
 
 // Initialize
@@ -666,6 +725,12 @@ document.addEventListener('DOMContentLoaded', function() {
     renderCalendar();
     calculateStats();
 });
+
+function manualRender() {
+    renderCalendar();
+    console.log('Manual render triggered. Dates present:', Object.keys(shiftsByDate));
+    console.log('currentDate', currentDate, 'firstShift', shifts[0]?.date);
+}
 
 function switchCalendarView(view) {
     currentView = view;
@@ -685,6 +750,43 @@ function renderCalendar() {
     } else {
         renderWeekView();
     }
+    
+    // Fallback: if nothing rendered, show list
+    const renderedBlocks = document.querySelectorAll('.shift-block').length;
+    const fallbackCard = document.getElementById('calendarFallbackList');
+    const fallbackContent = document.getElementById('calendarFallbackContent');
+    if (shifts.length > 0 && renderedBlocks === 0) {
+        if (fallbackCard && fallbackContent) {
+            const byDate = {};
+            shifts.forEach(s => {
+                if (!byDate[s.date]) byDate[s.date] = [];
+                byDate[s.date].push(s);
+            });
+            const dates = Object.keys(byDate).sort();
+            fallbackContent.innerHTML = dates.map(d => {
+                const items = byDate[d]
+                    .sort((a,b)=>a.start_time.localeCompare(b.start_time))
+                    .map(s => `<div style="margin:4px 0; padding:6px 8px; border-left:3px solid #ccc; background:#f8f8f8;">
+                        <strong>${formatDateDisplay(d)}</strong> • ${formatTimeDisplay(s.start_time)} - ${formatTimeDisplay(s.end_time)} • ${s.shift_type_display || s.shift_type}
+                        ${s.location ? ` • ${s.location}` : ''}
+                    </div>`).join('');
+                return `<div style="margin-bottom:8px;">${items}</div>`;
+            }).join('');
+            fallbackCard.style.display = 'block';
+        }
+    } else if (fallbackCard) {
+        fallbackCard.style.display = 'none';
+    }
+    
+    // If we have shifts but rendered none, surface a hint
+    if (shifts.length > 0 && document.querySelectorAll('.shift-block').length === 0) {
+        const hint = document.getElementById('calendarEmptyHint');
+        if (hint) {
+            const sample = shifts.slice(0, 3).map(s => `${s.date} ${s.start_time}`).join(', ');
+            hint.style.display = 'block';
+            hint.textContent = `Shifts exist but did not render here. First few: ${sample}`;
+        }
+    }
 }
 
 function renderMonthView() {
@@ -700,28 +802,36 @@ function renderMonthView() {
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     
     const today = new Date();
-    const todayStr = formatDate(today);
+    const todayStr = formatDateISO(today);
     
     let html = '';
     
     // Previous month days
     for (let i = firstDay - 1; i >= 0; i--) {
         const day = daysInPrevMonth - i;
-        const dateStr = formatDate(new Date(year, month - 1, day));
-        html += `<div class="calendar-day other-month">
+        const d = new Date(year, month - 1, day);
+        const dateStr = formatDateISO(d); // YYYY-MM-DD to match shift data
+        if (i === firstDay - 1) {
+            console.log('Sample prev month dateStr', dateStr, 'raw', d);
+        }
+        html += `<div class="calendar-day other-month" data-date="${dateStr}">
             <div class="day-number">${day}</div>
-            <div class="day-shifts">${renderShiftsForDate(dateStr)}</div>
+            <div class="day-shifts"></div>
         </div>`;
     }
     
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = formatDate(new Date(year, month, day));
+        const d = new Date(year, month, day);
+        const dateStr = formatDateISO(d); // YYYY-MM-DD to match shift data
         const isToday = dateStr === todayStr;
+        if (day === 1) {
+            console.log('Sample current month dateStr', dateStr, 'raw', d);
+        }
         
-        html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+        html += `<div class="calendar-day ${isToday ? 'today' : ''}" data-date="${dateStr}">
             <div class="day-number">${day}</div>
-            <div class="day-shifts">${renderShiftsForDate(dateStr)}</div>
+            <div class="day-shifts"></div>
         </div>`;
     }
     
@@ -730,15 +840,20 @@ function renderMonthView() {
     const remaining = 7 - (totalCells % 7);
     if (remaining < 7) {
         for (let i = 1; i <= remaining; i++) {
-            const dateStr = formatDate(new Date(year, month + 1, i));
-            html += `<div class="calendar-day other-month">
+            const d = new Date(year, month + 1, i);
+            const dateStr = formatDateISO(d); // YYYY-MM-DD to match shift data
+            if (i === 1) {
+                console.log('Sample next month dateStr', dateStr, 'raw', d);
+            }
+            html += `<div class="calendar-day other-month" data-date="${dateStr}">
                 <div class="day-number">${i}</div>
-                <div class="day-shifts">${renderShiftsForDate(dateStr)}</div>
+                <div class="day-shifts"></div>
             </div>`;
         }
     }
     
     document.getElementById('calendarBody').innerHTML = html;
+    populateMonthCells();
 }
 
 function renderWeekView() {
@@ -755,7 +870,7 @@ function renderWeekView() {
     document.getElementById('calendarTitle').textContent = `${startMonth} - ${endMonth}`;
     
     const today = new Date();
-    const todayStr = formatDate(today);
+    const todayStr = formatDateISO(today);
     
     // Build header
     let html = '<div class="week-header">';
@@ -764,7 +879,7 @@ function renderWeekView() {
     for (let i = 0; i < 7; i++) {
         const date = new Date(startOfWeek);
         date.setDate(startOfWeek.getDate() + i);
-        const dateStr = formatDate(date);
+        const dateStr = formatDateISO(date);
         const isToday = dateStr === todayStr;
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
         
@@ -784,7 +899,7 @@ function renderWeekView() {
         for (let i = 0; i < 7; i++) {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + i);
-            const dateStr = formatDate(date);
+            const dateStr = formatDateISO(date);
             const isToday = dateStr === todayStr;
             
             // Find shifts that overlap with this hour
@@ -806,12 +921,48 @@ function renderWeekView() {
     document.getElementById('weekGrid').innerHTML = html;
 }
 
+function createShiftBlockElement(s) {
+    const el = document.createElement('div');
+    el.className = `shift-block ${s.shift_type}`;
+    el.setAttribute('onclick', `showShiftDetail(${s.id})`);
+    const time = document.createElement('span');
+    time.className = 'shift-time';
+    time.textContent = formatTimeDisplay(s.start_time);
+    el.appendChild(time);
+    if (s.location) {
+        const loc = document.createElement('span');
+        loc.innerHTML = ` • ${truncate(s.location, 10)}`;
+        el.appendChild(loc);
+    }
+    return el;
+}
+
+function populateMonthCells() {
+    // Clear any existing blocks
+    document.querySelectorAll('.calendar-day .day-shifts').forEach(c => c.innerHTML = '');
+    const availableDates = Array.from(document.querySelectorAll('.calendar-day')).map(el => el.getAttribute('data-date'));
+    let appended = 0;
+    shifts.forEach(s => {
+        if (!s.date) return;
+        const cell = document.querySelector(`.calendar-day[data-date="${s.date}"] .day-shifts`);
+        if (cell) {
+            cell.appendChild(createShiftBlockElement(s));
+            appended += 1;
+        } else if (appended === 0) {
+            // log first missing only to avoid noise
+            console.warn('No calendar cell found for date', s.date);
+        }
+    });
+    console.log('populateMonthCells appended', appended, 'of', shifts.length, 'shifts. Available dates count', availableDates.length, 'sample', availableDates.slice(0, 15));
+}
+
 function renderShiftsForDate(dateStr) {
-    const dayShifts = shifts.filter(s => s.date === dateStr);
+    const target = parseLocalDate(dateStr);
+    const list = target ? shifts.filter(s => s.dateObj && isSameDay(s.dateObj, target)) : [];
     
-    if (dayShifts.length === 0) return '';
+    if (!list || list.length === 0) return '';
     
-    return dayShifts.map(s => `
+    return list.map(s => `
         <div class="shift-block ${s.shift_type}" onclick="showShiftDetail(${s.id})">
             <span class="shift-time">${formatTimeDisplay(s.start_time)}</span>
             ${s.location ? `<span> • ${truncate(s.location, 10)}</span>` : ''}
@@ -820,19 +971,21 @@ function renderShiftsForDate(dateStr) {
 }
 
 function getShiftsForHour(dateStr, hour) {
-    return shifts.filter(s => {
-        if (s.date !== dateStr) return false;
+    const target = parseLocalDate(dateStr);
+    const list = target ? shifts.filter(s => s.dateObj && isSameDay(s.dateObj, target)) : [];
+    return list.filter(s => {
         const startHour = parseInt(s.start_time.split(':')[0]);
         const endHour = parseInt(s.end_time.split(':')[0]);
         return hour >= startHour && hour < endHour;
     });
 }
 
+
 function showShiftDetail(shiftId) {
     const shift = shifts.find(s => s.id === shiftId);
     if (!shift) return;
     
-    const date = new Date(shift.date + 'T00:00:00');
+    const date = parseLocalDate(shift.date);
     const formattedDate = date.toLocaleDateString('en-US', { 
         weekday: 'long', 
         month: 'long', 
@@ -919,7 +1072,8 @@ function calculateStats() {
     let totalHours = 0;
     
     shifts.forEach(s => {
-        const shiftDate = new Date(s.date + 'T00:00:00');
+        const shiftDate = parseLocalDate(s.date);
+        if (!shiftDate) return;
         
         // This week count
         if (shiftDate >= startOfWeek && shiftDate < endOfWeek) {
@@ -937,12 +1091,40 @@ function calculateStats() {
     document.getElementById('totalHours').textContent = Math.round(totalHours);
 }
 
+function switchSemester(semesterId) {
+    const url = new URL(window.location.href);
+    if (semesterId) {
+        url.searchParams.set('semester', semesterId);
+    } else {
+        url.searchParams.delete('semester');
+    }
+    window.location.href = url.toString();
+}
+
 // Helper functions
-function formatDate(date) {
+function formatDateISO(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+function formatDateDisplay(str) {
+    const d = parseLocalDate(str);
+    if (!d) return str;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function parseLocalDate(str) {
+    const parts = (str || '').split('-').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth() === b.getMonth() &&
+           a.getDate() === b.getDate();
 }
 
 function formatTimeDisplay(time24) {
