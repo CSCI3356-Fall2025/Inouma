@@ -6,8 +6,7 @@
 # OPTIONAL: Clean previous test data first
 # python manage.py shell < testing/cleanup_all_test_data.py
 
-# FOR DEMO (2 users only - RECOMMENDED):
-# Run these commands in order:
+FOR DEMO (2 users only):
 0. python manage.py shell < testing/generate_demo_location.py
 1. python manage.py shell < testing/generate_test_machines.py
 2. python manage.py shell < testing/generate_demo_users.py
@@ -17,6 +16,12 @@
 6. python manage.py shell < testing/generate_test_certifications.py
 7. python manage.py shell < testing/generate_demo_training_sessions.py
 8. python manage.py shell < testing/link_machines_to_trainings.py
+
+
+# FOR BOOKABLE TRAINING SESSIONS:
+# Replace Step 7 above with below:
+7. python manage.py generate_training_sessions --days 120
+
 
 # FOR FULL TEST SETUP (50 users):
 # Replace step 2 with:
