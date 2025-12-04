@@ -400,7 +400,15 @@ def api_my_training_bookings(request):
     
     bookings = TrainingBooking.objects.filter(
         user=request.user
-    ).select_related('session', 'session__training', 'session__trainer', 'session__location')
+    ).select_related('session', 'session__training', 'session__trainer', 'session__location', 'session__source_shift')
+    
+    # Filter out bookings for sessions that don't have a valid source_shift
+    # (sessions should be linked to actual shifts in the schedule)
+    bookings = bookings.filter(
+        session__source_shift__isnull=False,
+        session__source_shift__status='scheduled',
+        session__source_shift__shift_type='training'
+    )
     
     if status_filter == 'active':
         bookings = bookings.filter(

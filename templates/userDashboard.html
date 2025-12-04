@@ -67,10 +67,29 @@
 
 /* Upcoming Items List */
 .upcoming-list { list-style: none; margin: 0; padding: 0; }
-.upcoming-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.upcoming-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; align-items: center; }
 .upcoming-item:last-child { border-bottom: none; }
 .upcoming-item:hover { background: #fafafa; }
-.upcoming-item a { text-decoration: none; color: inherit; display: flex; gap: 1rem; width: 100%; }
+.upcoming-item a { text-decoration: none; color: inherit; display: flex; gap: 1rem; flex: 1; }
+.btn-cancel-training {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.btn-cancel-training:hover {
+    background: #dc2626;
+}
 
 /* Date Block */
 .date-block { min-width: 50px; text-align: center; padding: 0.5rem; background: var(--gunmetal); border-radius: 8px; color: white; }
@@ -429,7 +448,7 @@ async function loadUpcomingTrainings() {
                 
                 return `
                     <li class="upcoming-item">
-                        <a href="/reservations/my-progress/">
+                        <a href="/reservations/my-progress/" style="flex: 1;">
                             <div class="date-block training">
                                 <div class="month">${date.toLocaleDateString('en-US', { month: 'short' })}</div>
                                 <div class="day">${date.getDate()}</div>
@@ -446,6 +465,9 @@ async function loadUpcomingTrainings() {
                                 <span class="status-badge ${statusClass}">${statusText}</span>
                             </div>
                         </a>
+                        <button class="btn-cancel-training" onclick="event.stopPropagation(); cancelTrainingBooking(${b.id})" title="Cancel booking">
+                            ✕
+                        </button>
                     </li>
                 `;
             }).join('');
@@ -546,6 +568,74 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+async function cancelTrainingBooking(bookingId) {
+    if (!confirm('Are you sure you want to cancel this training session booking?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/reservations/api/training-bookings/${bookingId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Training session cancelled', 'success');
+            loadUpcomingTrainings(); // Reload the list
+            loadTrainingProgress(); // Update progress stats
+        } else {
+            showToast(data.error || 'Failed to cancel booking', 'error');
+        }
+    } catch (err) {
+        console.error('Error cancelling booking:', err);
+        showToast('Failed to cancel booking', 'error');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 </script>
 {% endblock %}

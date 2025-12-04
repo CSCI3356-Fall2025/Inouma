@@ -440,6 +440,70 @@ def staff_machine_directory(request):
 
 @login_required
 @user_passes_test(is_superuser)
+def api_update_machine(request, machine_id):
+    """API endpoint to update machine details"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        machine = get_object_or_404(Machine, id=machine_id)
+        data = json.loads(request.body)
+        
+        # Update basic fields
+        if 'name' in data:
+            machine.name = data['name'].strip()
+        if 'machine_name' in data:
+            machine.machine_name = data['machine_name'].strip()
+        if 'category' in data:
+            machine.category = data['category'].strip()
+        if 'description' in data:
+            machine.description = data['description']
+        if 'year_bought' in data:
+            machine.year_bought = data['year_bought'] if data['year_bought'] else None
+        if 'mac_address' in data:
+            machine.mac_address = data['mac_address']
+        
+        # Handle location
+        if 'location_id' in data:
+            location_id = data['location_id']
+            if location_id:
+                try:
+                    machine.location = Location.objects.get(id=location_id)
+                except Location.DoesNotExist:
+                    pass
+            else:
+                machine.location = None
+        
+        # Handle reservation setting
+        if 'is_reservable' in data:
+            if hasattr(machine, 'is_reservable'):
+                machine.is_reservable = data['is_reservable']
+        
+        # Handle legacy training levels
+        if 'requires_level_1' in data and hasattr(machine, 'requires_level_1'):
+            machine.requires_level_1 = data['requires_level_1']
+        if 'requires_level_2' in data and hasattr(machine, 'requires_level_2'):
+            machine.requires_level_2 = data['requires_level_2']
+        if 'requires_level_3' in data and hasattr(machine, 'requires_level_3'):
+            machine.requires_level_3 = data['requires_level_3']
+        
+        machine.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Machine "{machine.machine_name}" updated successfully!'
+        })
+        
+    except Machine.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Machine not found'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(is_superuser)
 def machine_detail_api(request, machine_id):
     """API endpoint to get comprehensive machine details for modal"""
     try:

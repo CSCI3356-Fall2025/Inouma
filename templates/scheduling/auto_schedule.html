@@ -12,6 +12,7 @@
 {% endblock %}
 
 {% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
 <style>
 :root {
     --gunmetal: #293242;
@@ -1063,7 +1064,10 @@ function clearSchedule() {
     .then(result => {
         closeClearModal();
         if (result.success) {
-            alert(`Cleared ${result.deleted_count} shifts`);
+            const msg = result.model_week_count !== undefined 
+                ? `Cleared ${result.deleted_count} shifts (${result.shift_count} scheduled, ${result.model_week_count} model week)`
+                : `Cleared ${result.deleted_count} shifts`;
+            alert(msg);
             loadSemesterData();
         } else {
             alert('Error: ' + (result.error || 'Failed to clear schedule'));
@@ -1094,6 +1098,15 @@ function getCookie(name) {
             }
         }
     }
+    
+    // Fallback: try to get CSRF token from meta tag if cookie not found
+    if (!cookieValue && name === 'csrftoken') {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+            cookieValue = metaTag.getAttribute('content');
+        }
+    }
+    
     return cookieValue;
 }
 </script>

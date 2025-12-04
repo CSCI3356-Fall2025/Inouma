@@ -1099,7 +1099,18 @@ function applyFilters() {
         if (!activeTypeFilters.has(shift.shift_type)) return false;
         const dayIndex = getDayIndex(shift);  // Pass whole shift object
         if (!activeDayFilters.has(dayIndex)) return false;
-        if (activeTeamFilters.size > 0 && shift.shift_type === 'training' && !activeTeamFilters.has(shift.team)) return false;
+        
+        // Team filter: handle empty strings and case-insensitive matching
+        if (activeTeamFilters.size > 0 && shift.shift_type === 'training') {
+            const shiftTeam = (shift.team || '').trim();
+            if (!shiftTeam) return false; // Exclude training shifts without team/category
+            // Check if any active filter matches (case-insensitive)
+            const matches = Array.from(activeTeamFilters).some(filterTeam => {
+                return shiftTeam.toLowerCase() === filterTeam.toLowerCase();
+            });
+            if (!matches) return false;
+        }
+        
         if (activeUserFilters.size > 0 && !activeUserFilters.has(shift.user_id)) return false;
         if (shift.start < timeStart || shift.end > timeEnd) return false;
         return true;

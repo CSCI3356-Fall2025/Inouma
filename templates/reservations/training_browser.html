@@ -912,16 +912,21 @@ async function bookSession(sessionId) {
         });
 
         const data = await response.json();
+        console.log('Booking response:', data);
 
         if (data.success) {
             showToast(data.message || 'Session booked', 'success');
             closeSessionModal();
             loadSessions();
         } else {
-            showToast(data.error || 'Failed to book session', 'error');
+            // Show the actual error message from the API
+            const errorMsg = data.error || data.message || 'Failed to book session';
+            console.error('Booking error:', errorMsg);
+            showToast(errorMsg, 'error');
         }
     } catch (err) {
-        showToast('Failed to book session', 'error');
+        console.error('Booking exception:', err);
+        showToast(`Failed to book session: ${err.message}`, 'error');
     }
 }
 

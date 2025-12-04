@@ -517,6 +517,50 @@ def run_auto_scheduler(request):
         scheduler = WeeklyScheduler(semester)
         result = scheduler.run()
         
+        # Generate TrainingSessions from training shifts
+        if result['success']:
+            try:
+                from reservations.services import TrainingSessionService
+                from datetime import timedelta
+                from django.utils import timezone
+                
+                # Generate sessions for the next 60 days (2 months ahead)
+                today = timezone.now().date()
+                end_date = today + timedelta(days=60)
+                
+                # Get all training shifts in the date range
+                training_shifts = Shift.objects.filter(
+                    semester=semester,
+                    shift_type='training',
+                    date__gte=today,
+                    date__lte=end_date,
+                    status='scheduled'
+                )
+                
+                sessions_created = 0
+                shifts_processed = 0
+                shifts_failed = 0
+                
+                for shift in training_shifts:
+                    try:
+                        sessions = TrainingSessionService.generate_sessions_from_shift(shift)
+                        sessions_created += len(sessions)
+                        shifts_processed += 1
+                    except Exception as shift_error:
+                        shifts_failed += 1
+                        print(f"Warning: Failed to generate session from shift {shift.id}: {shift_error}")
+                
+                if sessions_created > 0:
+                    result['message'] += f'. Generated {sessions_created} training sessions from {shifts_processed} shifts.'
+                elif shifts_failed > 0:
+                    result['message'] += f'. Warning: Could not generate sessions from {shifts_failed} shifts (check logs).'
+            except Exception as e:
+                # Don't fail the whole operation if session generation fails
+                print(f"Warning: Could not generate training sessions: {e}")
+                import traceback
+                traceback.print_exc()
+                result['message'] += f'. Warning: Session generation failed: {str(e)}'
+        
         # Format conflicts for response
         conflicts_formatted = [
             {
@@ -548,7 +592,7 @@ def run_auto_scheduler(request):
 
 @login_required
 def clear_schedule(request, semester_id):
-    """Clear all shifts for a semester"""
+    """Clear all shifts for a semester (both Shift and ModelWeekShift)"""
     # Check staff permission manually for better AJAX error handling
     if not (request.user.is_staff or request.user.is_superuser):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
@@ -558,7 +602,20 @@ def clear_schedule(request, semester_id):
     semester = get_object_or_404(Semester, id=semester_id)
     
     if request.method == 'POST':
-        count = Shift.objects.filter(semester=semester).delete()[0]
+        from .models import ModelWeekShift
+        
+        # First, delete TrainingSession objects linked to shifts in this semester
+        # (must do this BEFORE deleting shifts, since sessions reference shifts)
+        from reservations.models import TrainingSession
+        session_count = TrainingSession.objects.filter(
+            source_shift__semester=semester
+        ).delete()[0]
+        
+        # Then clear both Shift objects (actual scheduled shifts) and ModelWeekShift (model week template)
+        shift_count = Shift.objects.filter(semester=semester).delete()[0]
+        model_week_count = ModelWeekShift.objects.filter(semester=semester).delete()[0]
+        
+        total_count = shift_count + model_week_count
         
         # Check if it's an AJAX/fetch request (multiple ways to detect)
         is_ajax = (
@@ -571,11 +628,14 @@ def clear_schedule(request, semester_id):
         if is_ajax:
             return JsonResponse({
                 'success': True,
-                'deleted_count': count,
-                'message': f'Cleared {count} shifts from {semester.name}'
+                'deleted_count': total_count,
+                'shift_count': shift_count,
+                'model_week_count': model_week_count,
+                'session_count': session_count,
+                'message': f'Cleared {total_count} shifts ({shift_count} scheduled, {model_week_count} model week) and {session_count} training sessions from {semester.name}'
             })
         
-        messages.success(request, f'Cleared {count} shifts from {semester.name}')
+        messages.success(request, f'Cleared {total_count} shifts from {semester.name}')
         return redirect('scheduling:schedule_landing')
     
     # For GET requests, check if it's expecting JSON

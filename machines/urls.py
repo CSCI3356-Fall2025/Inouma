@@ -15,6 +15,7 @@ urlpatterns = [
     path('staff/machines/add/', views.machine_management, name='add_machine'),
     path('staff/machines/edit/<int:machine_id>/', views.edit_machine, name='edit_machine'),
     path('staff/machines/detail/<int:machine_id>/', views.machine_detail_api, name='machine_detail_api'),
+    path('staff/machines/update/<int:machine_id>/', views.api_update_machine, name='api_update_machine'),
     path('staff/remove-machine/<int:machine_id>/', views.remove_machine, name='remove_machine'),
     
     # Category Management

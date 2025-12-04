@@ -1,0 +1,128 @@
+# DEMO SETUP INSTRUCTIONS
+# =======================
+# 
+# This will create:
+# - 50 users for schedule generation (test3@gmail.com through test52@gmail.com)
+# - 2 demo users (test1@gmail.com and test2@gmail.com) for testing
+# - All necessary machines, trainings, certifications, and sessions
+#
+# Run these commands from the Inouma folder (where manage.py is located)
+# Make sure your virtual environment is activated: source ../env_site/bin/activate
+#
+# ============================================================================
+# STEP 0: OPTIONAL - Clean previous test data
+# ============================================================================
+# python manage.py shell < testing/cleanup_all_test_data.py
+#
+# ============================================================================
+# STEP 1: Create Location (REQUIRED FIRST)
+# ============================================================================
+python manage.py shell < testing/generate_demo_location.py
+#
+# ============================================================================
+# STEP 2: Create Machines
+# ============================================================================
+python manage.py shell < testing/generate_test_machines.py
+#
+# ============================================================================
+# STEP 3: Create 50 Users for Schedule Generation
+# ============================================================================
+python manage.py shell < testing/generate_test_users.py
+#
+# This creates 50 users (test3@gmail.com through test52@gmail.com)
+# These users will be used for auto-scheduling
+#
+# ============================================================================
+# STEP 4: Create 2 Demo Users (test1 and test2)
+# ============================================================================
+python manage.py shell < testing/generate_demo_users.py
+#
+# This creates:
+# - test1@gmail.com: User with NO certifications (for demo use cases 1 & 4)
+# - test2@gmail.com: User with certifications (for demo use cases 2 & 3)
+#
+# ============================================================================
+# STEP 5: Create Schedule Requirements
+# ============================================================================
+python manage.py shell < testing/generate_test_requirements.py
+#
+# ============================================================================
+# STEP 6: Create User Unavailabilities
+# ============================================================================
+python manage.py shell < testing/generate_test_unavailabilities.py
+#
+# ============================================================================
+# STEP 7: Create Training Courses
+# ============================================================================
+python manage.py shell < testing/generate_trainings.py
+#
+# ============================================================================
+# STEP 8: Assign Certifications to Demo Users
+# ============================================================================
+python manage.py shell < testing/generate_test_certifications.py
+#
+# This assigns Level 1 certifications to test2@gmail.com only
+# test1@gmail.com will have 0 certifications
+#
+# ============================================================================
+# STEP 9: Generate Training Sessions
+# ============================================================================
+python manage.py shell < testing/generate_demo_training_sessions.py
+#
+# ============================================================================
+# STEP 10: Link Machines to Trainings
+# ============================================================================
+python manage.py shell < testing/link_machines_to_trainings.py
+#
+# ============================================================================
+# STEP 11: Make Demo Users Trainers (Optional)
+# ============================================================================
+python manage.py shell < testing/make_test_users_trainers.py
+#
+# This makes test1@gmail.com and test2@gmail.com eligible to lead training sessions
+#
+# ============================================================================
+# STEP 12: Update Demo Users for Shifts (Optional)
+# ============================================================================
+python manage.py shell < testing/update_test_users_for_shifts.py
+#
+# This ensures test1@gmail.com and test2@gmail.com are properly configured
+# for the auto-scheduler to assign them shifts
+#
+# ============================================================================
+# AFTER SETUP
+# ============================================================================
+# Start the server:
+# python manage.py runserver
+#
+# ============================================================================
+# DEMO USER CREDENTIALS
+# ============================================================================
+# test1@gmail.com / testpass123
+#   - No certifications
+#   - Use for: User with no training selecting training
+#   - Use for: User without training trying to reserve machine
+#
+# test2@gmail.com / testpass123
+#   - Has all Level 1 certifications
+#   - Use for: User with some training selecting training
+#   - Use for: User with training reserving machine
+#
+# ============================================================================
+# QUICK SETUP (All Steps at Once)
+# ============================================================================
+# You can also use the automated script:
+# bash testing/setup_demo.sh
+#
+# Then run the additional steps:
+# python manage.py shell < testing/make_test_users_trainers.py
+# python manage.py shell < testing/update_test_users_for_shifts.py
+#
+# ============================================================================
+# NOTES
+# ============================================================================
+# - Total users: 52 (50 for scheduling + 2 for demo)
+# - The 50 users (test3-test52) are distributed across teams/categories
+# - test1 and test2 are reserved specifically for demo purposes
+# - After setup, you can run the auto-scheduler to assign shifts to all 52 users
+
