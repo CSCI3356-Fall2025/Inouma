@@ -498,16 +498,21 @@ async function loadTrainingProgress() {
     const container = document.getElementById('progressContainer');
     
     try {
-        const [catResponse, bookingsResponse] = await Promise.all([
+        // Fetch categories, bookings, AND training records (certifications)
+        const [catResponse, bookingsResponse, recordsResponse] = await Promise.all([
             fetch('/api/categories/'),
-            fetch('/reservations/api/my-training-bookings/?status=all')
+            fetch('/reservations/api/my-training-bookings/?status=all'),
+            fetch('/reservations/api/my-training-records/')
         ]);
         
         const catData = await catResponse.json();
         const bookingsData = await bookingsResponse.json();
+        const recordsData = await recordsResponse.json();
         
         if (catData.categories && catData.categories.length > 0) {
             const completedByCategory = {};
+            
+            // Count from bookings
             if (bookingsData.success && bookingsData.bookings) {
                 bookingsData.bookings.forEach(b => {
                     if (b.status === 'completed') {
@@ -517,6 +522,15 @@ async function loadTrainingProgress() {
                 });
             }
             
+            // Count from training records (certifications)
+            if (recordsData.success && recordsData.records) {
+                recordsData.records.forEach(r => {
+                    const cat = r.category || 'Other';
+                    completedByCategory[cat] = (completedByCategory[cat] || 0) + 1;
+                });
+            }
+            
+            // Render progress bars (show top 4 categories)
             const categories = catData.categories.slice(0, 4);
             container.innerHTML = categories.map(cat => {
                 const completed = completedByCategory[cat.name] || 0;

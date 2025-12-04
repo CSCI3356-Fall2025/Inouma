@@ -541,31 +541,38 @@ async function loadSessions() {
     const startDate = formatDate(currentWeekStart);
     const endDate = formatDate(new Date(currentWeekStart.getTime() + 13 * 24 * 60 * 60 * 1000));
 
-    let url = "{% url 'reservations:api_available_trainings' %}" + `?startdate=${encodeURIComponent(startDate)}&enddate=${encodeURIComponent(endDate)}`;
+    let url = "{% url 'reservations:api_available_trainings' %}" + `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
     if (category) url += `&category=${encodeURIComponent(category)}`;
 
     try {
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
 
         if (data.success) {
             allSessions = data.sessions || [];
+            console.log(`Loaded ${allSessions.length} training sessions`);
 
             if (level) {
                 const lvl = parseInt(level, 10);
-                allSessions = allSessions.filter(s => s.traininglevel === lvl);
+                allSessions = allSessions.filter(s => s.training_level === lvl);
             }
             if (availableOnly) {
-                allSessions = allSessions.filter(s => s.status === 'available' || s.userbooking);
+                allSessions = allSessions.filter(s => s.status === 'available' || s.user_booking);
             }
 
             renderCurrentView();
         } else {
+            console.error('API error:', data.error);
             showToast(data.error || 'Failed to load sessions', 'error');
         }
     } catch (err) {
         console.error('Error loading sessions:', err);
-        showToast('Failed to load sessions', 'error');
+        showToast(`Failed to load sessions: ${err.message}`, 'error');
     }
 }
 
@@ -613,7 +620,7 @@ function renderSessionCard(session) {
     const isFull = session.isfull && !hasBooking;
 
     let statusClass = 'available';
-    let statusText = `${session.availablespots} spot${session.availablespots !== 1 ? 's' : ''}`;
+    let statusText = `${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}`;
 
     if (hasBooking) {
         if (isWaitlisted) {
@@ -631,12 +638,12 @@ function renderSessionCard(session) {
     return `
         <div class="session-card ${hasBooking ? 'booked' : ''} ${isFull ? 'full' : ''}" 
              onclick="openSessionModal(${session.id})">
-            <div class="session-time">${formatTime(session.starttime)} - ${formatTime(session.endtime)}</div>
+            <div class="session-time">${formatTime(session.start_time)} - ${formatTime(session.end_time)}</div>
             <div class="session-name">
-                <span class="level-badge level-${session.traininglevel}">L${session.traininglevel}</span>
-                ${escapeHtml(session.trainingname)}
+                <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                ${escapeHtml(session.training_name)}
             </div>
-            <div class="session-trainer">with ${escapeHtml(session.trainername)}</div>
+            <div class="session-trainer">with ${escapeHtml(session.trainer_name)}</div>
             <span class="session-status ${statusClass}">${statusText}</span>
         </div>
     `;
@@ -683,7 +690,7 @@ function renderList() {
         } else if (isFull) {
             statusHtml = `<span class="session-status full">Full</span>`;
         } else {
-            statusHtml = `<span class="session-status available">${session.availablespots} spot${session.availablespots !== 1 ? 's' : ''}</span>`;
+            statusHtml = `<span class="session-status available">${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}</span>`;
         }
 
         return `
@@ -694,11 +701,11 @@ function renderList() {
                 </div>
                 <div>
                     <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                        <span class="level-badge level-${session.traininglevel}">L${session.traininglevel}</span>
-                        ${escapeHtml(session.trainingname)}
+                        <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                        ${escapeHtml(session.training_name)}
                     </div>
                     <div style="font-size: 0.85rem; color: #666;">
-                        ${formatTime(session.starttime)} - ${formatTime(session.endtime)} • with ${escapeHtml(session.trainername)}
+                        ${formatTime(session.start_time)} - ${formatTime(session.end_time)} • with ${escapeHtml(session.trainer_name)}
                     </div>
                     <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
                         ${escapeHtml(session.category)} ${session.location ? '• ' + escapeHtml(session.location) : ''}
@@ -752,22 +759,22 @@ function openSessionModal(sessionId) {
     const hasBooking = !!session.userbooking;
 
     document.getElementById('modalTitle').innerHTML = `
-        <span class="level-badge level-${session.traininglevel}">Level ${session.traininglevel}</span>
-        ${escapeHtml(session.trainingname)}
+        <span class="level-badge level-${session.training_level}">Level ${session.training_level}</span>
+        ${escapeHtml(session.training_name)}
     `;
 
     let bodyHtml = `
         <div style="margin-bottom: 1rem;">
             <p style="color: #666; margin: 0;">
                 <strong>${WEEKDAYS_FULL[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}</strong><br>
-                ${formatTime(session.starttime)} - ${formatTime(session.endtime)} (${session.durationminutes} min)
+                ${formatTime(session.start_time)} - ${formatTime(session.end_time)} (${session.duration_minutes} min)
             </p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
                 <div style="font-size: 0.8rem; color: #888;">Trainer</div>
-                <div>${escapeHtml(session.trainername)}</div>
+                <div>${escapeHtml(session.trainer_name)}</div>
             </div>
             <div>
                 <div style="font-size: 0.8rem; color: #888;">Category</div>
@@ -899,6 +906,7 @@ async function confirmWaitlist(bookingId) {
 }
 
 function formatTime(timeStr) {
+    if (!timeStr) return '';
     const [hours, minutes] = timeStr.split(':');
     const h = parseInt(hours, 10);
     const ampm = h >= 12 ? 'PM' : 'AM';

@@ -35,8 +35,21 @@ def is_staff_or_admin(user):
 
 
 def is_team_member(user):
-    from team.models import TeamMember
-    return TeamMember.objects.filter(user=user, is_active=True).exists()
+    # Consider role/flags on the User model and scheduling profile
+    if getattr(user, 'role', '') == 'Team Member':
+        return True
+    if getattr(user, 'is_trainer', False) or getattr(user, 'is_team_lead', False):
+        return True
+    if user.is_staff:
+        return True
+    # Fallback: check scheduling profile if it exists
+    try:
+        profile = getattr(user, 'team_profile', None)
+        if profile and (profile.is_trainer or profile.is_team_lead):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 # ============================================================================
@@ -214,71 +227,79 @@ def api_my_reservations(request):
 @login_required
 def api_available_trainings(request):
     """Get available training sessions for booking."""
-    category = request.GET.get('category', '')
-    training_id = request.GET.get('training_id')
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
+    try:
+        category = request.GET.get('category', '')
+        training_id = request.GET.get('training_id')
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
 
-    # Parse dates
-    if start_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    else:
-        start_date = timezone.now().date()
+        # Parse dates
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        else:
+            start_date = timezone.now().date()
 
-    if end_date_str:
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-    else:
-        end_date = start_date + timedelta(days=14)
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            end_date = start_date + timedelta(days=14)
 
-    # Optional specific training
-    training = None
-    if training_id:
-        from machines.models import Training
-        training = Training.objects.filter(id=training_id).first()
+        # Optional specific training
+        training = None
+        if training_id:
+            from machines.models import Training
+            training = Training.objects.filter(id=training_id).first()
 
-    # Use TrainingSessionService so ids match api_book_training
-    sessions = TrainingSessionService.get_available_sessions(
-        category=category if category else None,
-        training=training,
-        start_date=start_date,
-        end_date=end_date,
-        user=request.user,
-    )
+        # Use TrainingSessionService so ids match api_book_training
+        sessions = TrainingSessionService.get_available_sessions(
+            category=category if category else None,
+            training=training,
+            start_date=start_date,
+            end_date=end_date,
+            user=request.user,
+        )
 
-    data = []
-    for s in sessions:
-        # Does the current user already have a booking for this session?
-        user_booking = s.bookings.filter(user=request.user).exclude(
-            status__in=['cancelled', 'no_show']
-        ).first()
+        data = []
+        for s in sessions:
+            # Does the current user already have a booking for this session?
+            user_booking = s.bookings.filter(user=request.user).exclude(
+                status__in=['cancelled', 'no_show']
+            ).first()
 
-        data.append({
-            "id": s.id,
-            "training_id": s.training_id,
-            "training_name": s.training.name,
-            "training_level": s.training.level,
-            "category": s.training.category,
-            "trainer_id": s.trainer_id,
-            "trainer_name": s.trainer.get_full_name() or s.trainer.email,
-            "date": str(s.date),
-            "start_time": s.start_time.strftime("%H:%M"),
-            "end_time": s.end_time.strftime("%H:%M"),
-            "duration_minutes": s.duration_minutes,
-            "location": s.location.name if s.location else None,
-            "max_participants": s.max_participants,
-            "current_participants": s.current_participants,
-            "available_spots": s.available_spots,
-            "waitlist_count": s.waitlist_count,
-            "status": s.status,
-            "is_full": s.is_full,
-            "user_booking": {
-                "id": user_booking.id,
-                "status": user_booking.status,
-                "waitlist_position": user_booking.waitlist_position,
-            } if user_booking else None,
-        })
+            data.append({
+                "id": s.id,
+                "training_id": s.training_id,
+                "training_name": s.training.name,
+                "training_level": s.training.level,
+                "category": s.training.category,
+                "trainer_id": s.trainer_id,
+                "trainer_name": s.trainer.get_full_name() or s.trainer.email,
+                "date": str(s.date),
+                "start_time": s.start_time.strftime("%H:%M"),
+                "end_time": s.end_time.strftime("%H:%M"),
+                "duration_minutes": s.duration_minutes,
+                "location": s.location.name if s.location else None,
+                "max_participants": s.max_participants,
+                "current_participants": s.current_participants,
+                "available_spots": s.available_spots,
+                "waitlist_count": s.waitlist_count,
+                "status": s.status,
+                "is_full": s.is_full,
+                "user_booking": {
+                    "id": user_booking.id,
+                    "status": user_booking.status,
+                    "waitlist_position": user_booking.waitlist_position,
+                } if user_booking else None,
+            })
 
-    return JsonResponse({"success": True, "sessions": data})
+        return JsonResponse({"success": True, "sessions": data})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "success": False,
+            "error": f"Error loading sessions: {str(e)}"
+        }, status=500)
 
 
 
@@ -396,6 +417,32 @@ def api_my_training_bookings(request):
         })
     
     return JsonResponse({'success': True, 'bookings': data})
+
+
+@login_required
+def api_my_training_records(request):
+    """Get current user's training records (certifications)."""
+    from machines.models import UserTrainingRecord
+    
+    records = UserTrainingRecord.objects.filter(
+        user=request.user,
+        status='completed'
+    ).select_related('training').order_by('-completed_at')
+    
+    data = []
+    for r in records:
+        data.append({
+            'id': r.id,
+            'training_id': r.training_id,
+            'training_name': r.training.name,
+            'training_level': r.training.level,
+            'category': r.training.category,
+            'completed_at': r.completed_at.isoformat() if r.completed_at else None,
+            'expires_at': r.expires_at.isoformat() if r.expires_at else None,
+            'is_valid': r.is_valid,
+        })
+    
+    return JsonResponse({'success': True, 'records': data})
 
 
 # ============================================================================
