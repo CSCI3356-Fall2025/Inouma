@@ -3,6 +3,10 @@
 
 {% block title %}Dashboard - The Hatchery{% endblock %}
 
+{% block breadcrumb %}
+<span class="breadcrumb-item">User Dashboard</span>
+{% endblock %}
+
 {% block extra_head %}
 <style>
 :root {
@@ -27,75 +31,27 @@
     gap: 1rem;
 }
 
-.welcome-text h1 {
-    margin: 0 0 0.5rem;
-    font-size: 1.75rem;
-}
+.welcome-text h1 { margin: 0 0 0.5rem; font-size: 1.75rem; }
+.welcome-text p { margin: 0; opacity: 0.85; }
 
-.welcome-text p {
-    margin: 0;
-    opacity: 0.85;
-}
-
-.welcome-stats {
-    display: flex;
-    gap: 2rem;
-}
-
-.welcome-stat {
-    text-align: center;
-}
-
-.welcome-stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--sunglow);
-}
-
-.welcome-stat-label {
-    font-size: 0.8rem;
-    opacity: 0.8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+.welcome-stats { display: flex; gap: 2rem; }
+.welcome-stat { text-align: center; }
+.welcome-stat-value { font-size: 2rem; font-weight: 700; color: var(--sunglow); }
+.welcome-stat-label { font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Dashboard Grid */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 1.5rem;
-}
-
-.grid-col-8 {
-    grid-column: span 8;
-}
-
-.grid-col-4 {
-    grid-column: span 4;
-}
-
-.grid-col-6 {
-    grid-column: span 6;
-}
-
-.grid-col-12 {
-    grid-column: span 12;
-}
+.dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
+.grid-col-8 { grid-column: span 8; }
+.grid-col-4 { grid-column: span 4; }
+.grid-col-6 { grid-column: span 6; }
+.grid-col-12 { grid-column: span 12; }
 
 @media (max-width: 1100px) {
-    .grid-col-8, .grid-col-4, .grid-col-6 {
-        grid-column: span 12;
-    }
+    .grid-col-8, .grid-col-4, .grid-col-6 { grid-column: span 12; }
 }
 
 /* Dashboard Cards */
-.dash-card {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    overflow: hidden;
-}
-
+.dash-card { background: white; border-radius: 12px; border: 1px solid #e9ecef; overflow: hidden; }
 .dash-card-header {
     padding: 1rem 1.25rem;
     border-bottom: 1px solid #e9ecef;
@@ -103,386 +59,94 @@
     justify-content: space-between;
     align-items: center;
 }
-
-.dash-card-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--gunmetal);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.dash-card-header .view-all {
-    color: var(--sunglow);
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.dash-card-header .view-all:hover {
-    text-decoration: underline;
-}
-
-.dash-card-body {
-    padding: 1.25rem;
-}
-
-.dash-card-body.no-padding {
-    padding: 0;
-}
+.dash-card-header h3 { margin: 0; font-size: 1rem; color: var(--gunmetal); display: flex; align-items: center; gap: 0.5rem; }
+.dash-card-header .view-all { color: var(--sunglow); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+.dash-card-header .view-all:hover { text-decoration: underline; }
+.dash-card-body { padding: 1.25rem; }
+.dash-card-body.no-padding { padding: 0; }
 
 /* Upcoming Items List */
-.upcoming-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.upcoming-item {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.15s;
-}
-
-.upcoming-item:last-child {
-    border-bottom: none;
-}
-
-.upcoming-item:hover {
-    background: #fafafa;
-}
-
-.upcoming-item a {
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    gap: 1rem;
-    width: 100%;
-}
+.upcoming-list { list-style: none; margin: 0; padding: 0; }
+.upcoming-item { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.upcoming-item:last-child { border-bottom: none; }
+.upcoming-item:hover { background: #fafafa; }
+.upcoming-item a { text-decoration: none; color: inherit; display: flex; gap: 1rem; width: 100%; }
 
 /* Date Block */
-.date-block {
-    min-width: 50px;
-    text-align: center;
-    padding: 0.5rem;
-    background: var(--gunmetal);
-    border-radius: 8px;
-    color: white;
-}
-
-.date-block .month {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    opacity: 0.8;
-}
-
-.date-block .day {
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.date-block .weekday {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    opacity: 0.7;
-}
-
-.date-block.today {
-    background: var(--sunglow);
-    color: var(--gunmetal);
-}
-
-.date-block.training {
-    background: var(--keppel);
-}
+.date-block { min-width: 50px; text-align: center; padding: 0.5rem; background: var(--gunmetal); border-radius: 8px; color: white; }
+.date-block .month { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+.date-block .day { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.date-block .weekday { font-size: 0.6rem; text-transform: uppercase; opacity: 0.7; }
+.date-block.today { background: var(--sunglow); color: var(--gunmetal); }
+.date-block.training { background: var(--keppel); }
 
 /* Item Details */
-.item-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.item-title {
-    font-weight: 600;
-    color: var(--gunmetal);
-    margin-bottom: 0.25rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.item-meta {
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.item-meta span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.item-time {
-    font-weight: 500;
-    color: var(--gunmetal);
-    font-size: 0.85rem;
-    white-space: nowrap;
-}
+.item-details { flex: 1; min-width: 0; }
+.item-title { font-weight: 600; color: var(--gunmetal); margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 0.85rem; color: #666; }
+.item-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+.item-time { font-weight: 500; color: var(--gunmetal); font-size: 0.85rem; white-space: nowrap; }
 
 /* Status Badges */
-.status-badge {
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge.confirmed {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.registered {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.status-badge.waitlisted {
-    background: #fef3c7;
-    color: #92400e;
-}
+.status-badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+.status-badge.confirmed { background: #d1fae5; color: #065f46; }
+.status-badge.registered { background: #dbeafe; color: #1e40af; }
+.status-badge.waitlisted { background: #fef3c7; color: #92400e; }
 
 /* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #999;
-}
-
-.empty-state-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.empty-state p {
-    margin: 0 0 1rem;
-}
-
-.empty-state .btn-link {
-    color: var(--sunglow);
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.empty-state .btn-link:hover {
-    text-decoration: underline;
-}
-
-/* Certifications Grid */
-.certs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.cert-card {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 1rem;
-    position: relative;
-    border-left: 4px solid var(--keppel);
-}
-
-.cert-card.expired {
-    border-left-color: var(--cinnabar);
-    opacity: 0.7;
-}
-
-.cert-name {
-    font-weight: 600;
-    color: var(--gunmetal);
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.cert-meta {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-.cert-status {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--keppel);
-}
-
-.cert-status.expired {
-    background: var(--cinnabar);
-}
+.empty-state { text-align: center; padding: 2rem; color: #999; }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state p { margin: 0 0 1rem; }
+.btn-link { color: var(--sunglow); text-decoration: none; font-weight: 500; }
+.btn-link:hover { text-decoration: underline; }
 
 /* Quick Actions */
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-}
-
+.quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
 .quick-action {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 1.25rem 1rem;
-    background: #f8f9fa;
-    border-radius: 10px;
-    text-decoration: none;
-    color: var(--gunmetal);
-    transition: all 0.15s;
-    text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 1.25rem 1rem; background: #f8f9fa; border-radius: 10px;
+    text-decoration: none; color: var(--gunmetal); transition: all 0.15s; text-align: center;
 }
+.quick-action:hover { background: var(--sunglow); transform: translateY(-2px); }
+.quick-action-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+.quick-action-label { font-size: 0.85rem; font-weight: 500; }
 
-.quick-action:hover {
-    background: var(--sunglow);
-    transform: translateY(-2px);
-}
+/* Certifications Grid */
+.certs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.cert-card { background: #f8f9fa; border-radius: 10px; padding: 1rem; position: relative; border-left: 4px solid var(--keppel); }
+.cert-card.expired { border-left-color: var(--cinnabar); opacity: 0.7; }
+.cert-name { font-weight: 600; color: var(--gunmetal); margin-bottom: 0.5rem; font-size: 0.95rem; }
+.cert-meta { font-size: 0.8rem; color: #666; }
 
-.quick-action-icon {
-    font-size: 1.75rem;
-    margin-bottom: 0.5rem;
-}
-
-.quick-action-label {
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-/* Hours Card */
-.hours-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
-@media (max-width: 600px) {
-    .hours-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.hours-section h4 {
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-    color: var(--gunmetal);
-}
-
-.hours-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.hours-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.4rem 0;
-    font-size: 0.85rem;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.hours-list li:last-child {
-    border-bottom: none;
-}
-
-.hours-list .day {
-    color: #666;
-}
-
-.hours-list .time {
-    font-weight: 500;
-    color: var(--gunmetal);
-}
-
-.hours-list .closed {
-    color: var(--cinnabar);
-}
-
-.hours-note {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background: #fef3c7;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    color: #92400e;
-}
+/* Hours Grid */
+.hours-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 600px) { .hours-grid { grid-template-columns: 1fr; } }
+.hours-section h4 { margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--gunmetal); }
+.hours-list { list-style: none; padding: 0; margin: 0; }
+.hours-list li { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; }
+.hours-list li:last-child { border-bottom: none; }
+.hours-list .day { color: #666; }
+.hours-list .time { font-weight: 500; color: var(--gunmetal); }
+.hours-list .closed { color: var(--cinnabar); }
+.hours-note { margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; font-size: 0.8rem; color: #92400e; }
 
 /* Training Progress */
-.progress-bar-container {
-    margin-bottom: 1rem;
-}
-
-.progress-label {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.35rem;
-    font-size: 0.85rem;
-}
-
-.progress-label .category {
-    font-weight: 500;
-    color: var(--gunmetal);
-}
-
-.progress-label .count {
-    color: #666;
-}
-
-.progress-bar {
-    height: 8px;
-    background: #e9ecef;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: var(--keppel);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
+.progress-bar-container { margin-bottom: 1rem; }
+.progress-label { display: flex; justify-content: space-between; margin-bottom: 0.35rem; font-size: 0.85rem; }
+.progress-label .category { font-weight: 500; color: var(--gunmetal); }
+.progress-label .count { color: #666; }
+.progress-bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--keppel); border-radius: 4px; transition: width 0.3s ease; }
 
 /* Loading State */
-.loading {
-    text-align: center;
-    padding: 2rem;
-    color: #999;
-}
-
+.loading { text-align: center; padding: 2rem; color: #999; }
 .loading::after {
-    content: '';
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #e9ecef;
-    border-top-color: var(--sunglow);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-left: 0.5rem;
-    vertical-align: middle;
+    content: ''; display: inline-block; width: 20px; height: 20px;
+    border: 2px solid #e9ecef; border-top-color: var(--sunglow);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin-left: 0.5rem; vertical-align: middle;
 }
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -571,6 +235,7 @@
     <div class="dash-card grid-col-6">
         <div class="dash-card-header">
             <h3>📊 Training Progress</h3>
+            <a href="{% url 'reservations:my_training_progress' %}" class="view-all">View all →</a>
         </div>
         <div class="dash-card-body" id="progressContainer">
             <div class="loading">Loading progress</div>
@@ -587,7 +252,6 @@
             <div class="certs-grid">
                 {% for cert in certifications %}
                 <div class="cert-card {% if cert.expires_at and cert.expires_at < today %}expired{% endif %}">
-                    <div class="cert-status {% if cert.expires_at and cert.expires_at < today %}expired{% endif %}"></div>
                     <div class="cert-name">{{ cert.name }}</div>
                     <div class="cert-meta">
                         Issued: {{ cert.issued_at|date:"M j, Y" }}<br>
@@ -614,36 +278,27 @@
         </div>
     </div>
 
-    <!-- Hatchery Hours -->
+    <!-- Hatchery Hours (Dynamic from API) -->
     <div class="dash-card grid-col-12">
         <div class="dash-card-header">
             <h3>🕐 Hatchery Hours</h3>
+            <a href="{% url 'about_hatchery' %}" class="view-all">View full schedule →</a>
         </div>
         <div class="dash-card-body">
             <div class="hours-grid">
                 <div class="hours-section">
                     <h4>Open Hours</h4>
-                    <ul class="hours-list">
-                        <li><span class="day">Monday</span><span class="time">12:00 PM – 10:00 PM</span></li>
-                        <li><span class="day">Tuesday</span><span class="time">12:00 PM – 10:00 PM</span></li>
-                        <li><span class="day">Wednesday</span><span class="time">12:00 PM – 10:00 PM</span></li>
-                        <li><span class="day">Thursday</span><span class="time">12:00 PM – 10:00 PM</span></li>
-                        <li><span class="day">Friday</span><span class="time">12:00 PM – 6:00 PM</span></li>
-                        <li><span class="day">Saturday</span><span class="time closed">CLOSED</span></li>
-                        <li><span class="day">Sunday</span><span class="time">12:00 PM – 8:00 PM</span></li>
+                    <ul class="hours-list" id="openHoursList">
+                        <li class="loading" style="border: none;">Loading...</li>
                     </ul>
-                    <div class="hours-note">
-                        ⚠️ Equipment trainings available 9:00 AM – 12:00 PM weekdays and Saturdays
+                    <div class="hours-note" id="trainingNote" style="display: none;">
+                        ⚠️ Equipment trainings available during training hours
                     </div>
                 </div>
                 <div class="hours-section">
                     <h4>Upcoming Closures</h4>
                     <ul class="hours-list" id="closuresList">
-                        <!-- Will be populated by JS or static -->
-                        <li><span class="day">Dec 9 onwards</span><span class="time closed">Closed for Semester</span></li>
-                        <li><span class="day">Jan 12–22</span><span class="time closed">Winter Break</span></li>
-                        <li><span class="day">Mar 1–8</span><span class="time closed">Spring Break</span></li>
-                        <li><span class="day">Apr 2–6</span><span class="time closed">Easter Break</span></li>
+                        <li class="loading" style="border: none;">Loading...</li>
                     </ul>
                     <p style="margin-top: 1rem; font-size: 0.8rem; color: #666;">
                         <em>Closed on all university holidays and home football game days.</em>
@@ -655,11 +310,14 @@
 </div>
 
 <script>
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 document.addEventListener('DOMContentLoaded', function() {
     loadUpcomingReservations();
     loadUpcomingTrainings();
     loadTrainingProgress();
     loadSocialStats();
+    loadHatcheryHours();
 });
 
 async function loadSocialStats() {
@@ -677,6 +335,58 @@ async function loadSocialStats() {
     }
 }
 
+async function loadHatcheryHours() {
+    const openHoursList = document.getElementById('openHoursList');
+    const closuresList = document.getElementById('closuresList');
+    
+    try {
+        const response = await fetch('/scheduling/api/public-hours/');
+        const data = await response.json();
+        
+        // Render open hours
+        if (data.operating_hours && Object.keys(data.operating_hours).length > 0) {
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const dayData = data.operating_hours[i] || data.operating_hours[String(i)] || {};
+                const isClosed = dayData.is_closed;
+                
+                let timeDisplay = '';
+                if (isClosed) {
+                    timeDisplay = '<span class="closed">CLOSED</span>';
+                } else if (dayData.open_hours_start && dayData.open_hours_end) {
+                    timeDisplay = `<span class="time">${formatTime(dayData.open_hours_start)} – ${formatTime(dayData.open_hours_end)}</span>`;
+                } else {
+                    timeDisplay = '<span class="time">Hours TBD</span>';
+                }
+                
+                html += `<li><span class="day">${DAYS[i]}</span>${timeDisplay}</li>`;
+            }
+            openHoursList.innerHTML = html;
+            document.getElementById('trainingNote').style.display = 'block';
+        } else {
+            openHoursList.innerHTML = '<li style="border: none; color: #666;">No schedule configured</li>';
+        }
+        
+        // Render closures
+        if (data.closures && data.closures.length > 0) {
+            let html = '';
+            data.closures.slice(0, 5).forEach(closure => {
+                const date = new Date(closure.date + 'T00:00:00');
+                const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                html += `<li><span class="day">${formatted}</span><span class="closed">${closure.reason}</span></li>`;
+            });
+            closuresList.innerHTML = html;
+        } else {
+            closuresList.innerHTML = '<li style="border: none; color: #666;">No upcoming closures</li>';
+        }
+        
+    } catch (err) {
+        console.error('Error loading hours:', err);
+        openHoursList.innerHTML = '<li style="border: none; color: #666;">Could not load hours</li>';
+        closuresList.innerHTML = '<li style="border: none; color: #666;">Could not load closures</li>';
+    }
+}
+
 async function loadUpcomingReservations() {
     const container = document.getElementById('reservationsList');
     
@@ -685,7 +395,7 @@ async function loadUpcomingReservations() {
         const data = await response.json();
         
         if (data.success && data.reservations.length > 0) {
-            const reservations = data.reservations.slice(0, 4); // Show max 4
+            const reservations = data.reservations.slice(0, 4);
             document.getElementById('statReservations').textContent = data.reservations.length;
             
             container.innerHTML = reservations.map(r => {
@@ -740,8 +450,7 @@ async function loadUpcomingTrainings() {
         const data = await response.json();
         
         if (data.success && data.bookings.length > 0) {
-            const bookings = data.bookings.slice(0, 4); // Show max 4
-            document.getElementById('statTrainings').textContent = data.bookings.length;
+            const bookings = data.bookings.slice(0, 4);
             
             container.innerHTML = bookings.map(b => {
                 const date = new Date(b.date);
@@ -771,7 +480,6 @@ async function loadUpcomingTrainings() {
                 `;
             }).join('');
         } else {
-            document.getElementById('statTrainings').textContent = '0';
             container.innerHTML = `
                 <li class="empty-state">
                     <div class="empty-state-icon">🎓</div>
@@ -802,7 +510,6 @@ async function loadTrainingProgress() {
         const recordsData = await recordsResponse.json();
         
         if (catData.categories && catData.categories.length > 0) {
-            // Count completed trainings per category
             const completedByCategory = {};
             
             // Count from bookings
@@ -827,7 +534,7 @@ async function loadTrainingProgress() {
             const categories = catData.categories.slice(0, 4);
             container.innerHTML = categories.map(cat => {
                 const completed = completedByCategory[cat.name] || 0;
-                const total = 3; // Assume 3 levels per category
+                const total = 3;
                 const percent = Math.min((completed / total) * 100, 100);
                 
                 return `

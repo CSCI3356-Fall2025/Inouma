@@ -4,16 +4,16 @@ Generate Test Users for The Hatchery
 
 Creates 50 test users with:
 - Unique emails (test1@gmail.com, test2@gmail.com, etc.)
-- Distributed across teams/categories
+- Distributed across teams/categories (pulled from database)
 - 1 team lead per category
 - 80% trainers with team assignments
 - 20% regular team members (no training capability)
 
 Usage:
-    python manage.py shell < generate_test_users.py
+    python manage.py shell < testing/generate_test_users.py
     
 Or in Django shell:
-    exec(open('generate_test_users.py').read())
+    exec(open('testing/generate_test_users.py').read())
 """
 
 import random
@@ -26,16 +26,6 @@ User = get_user_model()
 NUM_USERS = 50
 TRAINER_PERCENTAGE = 0.80  # 80% are trainers
 TEAM_LEAD_PER_CATEGORY = 1
-
-# Machine categories (teams)
-CATEGORIES = [
-    'laser',
-    '3d_printing', 
-    'woodworking',
-    'textiles',
-    'electronics',
-    'metalworking',
-]
 
 # First names for variety
 FIRST_NAMES = [
@@ -58,6 +48,144 @@ LAST_NAMES = [
 ]
 
 
+def get_categories_from_database():
+    """
+    Pull categories from the database.
+    Tries multiple sources: MachineCategory model, Machine model, or fallback.
+    Returns list of dicts: [{'name': 'Laser Cutting', 'slug': 'laser', 'icon': '⚡'}, ...]
+    """
+    categories = []
+    
+    # Try 1: MachineCategory model (if exists)
+    try:
+        from machines.models import MachineCategory
+        db_categories = MachineCategory.objects.filter(is_active=True).order_by('name')
+        
+        if db_categories.exists():
+            print("📦 Loading categories from MachineCategory model...")
+            for cat in db_categories:
+                categories.append({
+                    'id': cat.id,
+                    'name': cat.name,
+                    'slug': cat.slug if hasattr(cat, 'slug') else cat.name.lower().replace(' ', '_'),
+                    'icon': cat.icon if hasattr(cat, 'icon') else '🔧',
+                })
+            return categories
+    except (ImportError, Exception) as e:
+        print(f"   MachineCategory not available: {e}")
+    
+    # Try 2: Get distinct categories from Machine model
+    try:
+        from machines.models import Machine
+        
+        # Check if Machine has a category field
+        if hasattr(Machine, 'category'):
+            distinct_categories = Machine.objects.values_list('category', flat=True).distinct()
+            distinct_categories = [c for c in distinct_categories if c]  # Remove None/empty
+            
+            if distinct_categories:
+                print("📦 Loading categories from Machine.category field...")
+                
+                # Try to get CATEGORY_CHOICES if defined
+                category_choices = {}
+                if hasattr(Machine, 'CATEGORY_CHOICES'):
+                    category_choices = dict(Machine.CATEGORY_CHOICES)
+                
+                for cat_value in distinct_categories:
+                    # Get display name from choices or format the value
+                    display_name = category_choices.get(cat_value, cat_value.replace('_', ' ').title())
+                    
+                    # Assign icons based on category name
+                    icon = get_icon_for_category(cat_value)
+                    
+                    categories.append({
+                        'id': cat_value,
+                        'name': display_name,
+                        'slug': cat_value,
+                        'icon': icon,
+                    })
+                return categories
+        
+        # Try category as ForeignKey
+        if hasattr(Machine, 'category') and hasattr(Machine.category, 'field'):
+            field = Machine.category.field
+            if hasattr(field, 'related_model'):
+                CategoryModel = field.related_model
+                print(f"📦 Loading categories from {CategoryModel.__name__}...")
+                for cat in CategoryModel.objects.all():
+                    categories.append({
+                        'id': cat.id,
+                        'name': cat.name,
+                        'slug': getattr(cat, 'slug', cat.name.lower().replace(' ', '_')),
+                        'icon': getattr(cat, 'icon', get_icon_for_category(cat.name)),
+                    })
+                return categories
+                
+    except (ImportError, Exception) as e:
+        print(f"   Machine model not available: {e}")
+    
+    # Try 3: Check for Category model directly
+    try:
+        from machines.models import Category
+        db_categories = Category.objects.all().order_by('name')
+        
+        if db_categories.exists():
+            print("📦 Loading categories from Category model...")
+            for cat in db_categories:
+                categories.append({
+                    'id': cat.id,
+                    'name': cat.name,
+                    'slug': getattr(cat, 'slug', cat.name.lower().replace(' ', '_')),
+                    'icon': getattr(cat, 'icon', get_icon_for_category(cat.name)),
+                })
+            return categories
+    except (ImportError, Exception) as e:
+        print(f"   Category model not available: {e}")
+    
+    # Fallback: Use hardcoded categories that match common makerspace setups
+    print("⚠️  No categories found in database, using defaults...")
+    return [
+        {'id': 1, 'name': 'Laser Cutting', 'slug': 'laser', 'icon': '⚡'},
+        {'id': 2, 'name': '3D Printing', 'slug': '3d_printing', 'icon': '🖨️'},
+        {'id': 3, 'name': 'Woodworking', 'slug': 'woodworking', 'icon': '🪚'},
+        {'id': 4, 'name': 'Textiles', 'slug': 'textiles', 'icon': '🧵'},
+        {'id': 5, 'name': 'Electronics', 'slug': 'electronics', 'icon': '💡'},
+        {'id': 6, 'name': 'Metalworking', 'slug': 'metalworking', 'icon': '⚙️'},
+        {'id': 7, 'name': 'Vinyl Cutting', 'slug': 'vinyl', 'icon': '✂️'},
+    ]
+
+
+def get_icon_for_category(category_name):
+    """Get an appropriate emoji icon for a category based on its name"""
+    name_lower = category_name.lower()
+    
+    icon_map = {
+        'laser': '⚡',
+        'cutting': '⚡',
+        '3d': '🖨️',
+        'print': '🖨️',
+        'wood': '🪚',
+        'textile': '🧵',
+        'sew': '🧵',
+        'fabric': '🧵',
+        'electron': '💡',
+        'circuit': '💡',
+        'metal': '⚙️',
+        'weld': '⚙️',
+        'vinyl': '✂️',
+        'cnc': '🔩',
+        'mill': '🔩',
+        'water': '💧',
+        'plasma': '🔥',
+    }
+    
+    for keyword, icon in icon_map.items():
+        if keyword in name_lower:
+            return icon
+    
+    return '🔧'  # Default icon
+
+
 def generate_users():
     """Generate test users and team member profiles"""
     
@@ -65,10 +193,21 @@ def generate_users():
     print("GENERATING TEST USERS")
     print("=" * 60)
     
-    # Get or create active semester
+    # =========================================================================
+    # STEP 0: Get categories from database
+    # =========================================================================
+    categories = get_categories_from_database()
+    
+    print(f"\n📋 Found {len(categories)} categories:")
+    for cat in categories:
+        print(f"   {cat['icon']} {cat['name']} (slug: {cat['slug']})")
+    
+    # =========================================================================
+    # STEP 1: Get or create active semester
+    # =========================================================================
     semester = Semester.objects.filter(is_active=True).first()
     if not semester:
-        print("⚠️  No active semester found. Creating one...")
+        print("\n⚠️  No active semester found. Creating one...")
         from datetime import date, timedelta
         today = date.today()
         semester = Semester.objects.create(
@@ -80,41 +219,40 @@ def generate_users():
             is_active=True
         )
         print(f"   Created: {semester.name}")
+    else:
+        print(f"\n✅ Using active semester: {semester.name}")
     
-    # Calculate distribution
-    num_team_leads = len(CATEGORIES) * TEAM_LEAD_PER_CATEGORY  # 6 team leads
-    num_trainers = int((NUM_USERS - num_team_leads) * TRAINER_PERCENTAGE)  # ~35 trainers
-    num_members = NUM_USERS - num_team_leads - num_trainers  # ~9 regular members
+    # =========================================================================
+    # STEP 2: Calculate distribution
+    # =========================================================================
+    num_team_leads = len(categories) * TEAM_LEAD_PER_CATEGORY
+    num_trainers = int((NUM_USERS - num_team_leads) * TRAINER_PERCENTAGE)
+    num_members = NUM_USERS - num_team_leads - num_trainers
     
-    print(f"\nPlanned distribution:")
+    print(f"\n📊 Planned distribution:")
     print(f"   Team Leads: {num_team_leads} (1 per category)")
     print(f"   Trainers: {num_trainers} (~80% of remaining)")
     print(f"   Regular Members: {num_members} (~20% of remaining)")
     print(f"   Total: {NUM_USERS}")
     
-    # Clear existing test users (optional - comment out to keep existing)
+    # =========================================================================
+    # STEP 3: Clear existing test users
+    # =========================================================================
     print(f"\n🗑️  Clearing existing test users...")
     test_users = User.objects.filter(email__startswith='test', email__endswith='@gmail.com')
     
-    # Delete TeamMemberProfiles first (in case cascade doesn't work)
+    # Delete TeamMemberProfiles first
     deleted_profiles = TeamMemberProfile.objects.filter(user__in=test_users).delete()
     print(f"   Deleted {deleted_profiles[0]} team profiles")
     
-    # Now delete the users
+    # Delete the users
     deleted_users = test_users.delete()
     print(f"   Deleted {deleted_users[0]} users")
     
-    # Also clean up any orphaned TeamMemberProfiles (profiles without users)
+    # Clean up orphaned profiles
     orphaned = TeamMemberProfile.objects.filter(user__isnull=True).delete()
-    print(f"   Deleted {orphaned[0]} orphaned profiles")
-    
-    # Delete ALL TeamMemberProfiles for test emails that might still exist
-    # (the user might have been recreated with a new ID)
-    remaining_profiles = TeamMemberProfile.objects.filter(
-        user__email__startswith='test', 
-        user__email__endswith='@gmail.com'
-    ).delete()
-    print(f"   Deleted {remaining_profiles[0]} remaining test profiles")
+    if orphaned[0] > 0:
+        print(f"   Deleted {orphaned[0]} orphaned profiles")
     
     # Track created users
     created_users = []
@@ -125,11 +263,11 @@ def generate_users():
     random.shuffle(LAST_NAMES)
     
     # =========================================================================
-    # STEP 1: Create Team Leads (1 per category)
+    # STEP 4: Create Team Leads (1 per category)
     # =========================================================================
     print(f"\n👑 Creating Team Leads...")
     
-    for category in CATEGORIES:
+    for category in categories:
         email = f"test{user_index}@gmail.com"
         first_name = FIRST_NAMES[(user_index - 1) % len(FIRST_NAMES)]
         last_name = LAST_NAMES[(user_index - 1) % len(LAST_NAMES)]
@@ -139,20 +277,18 @@ def generate_users():
             password='testpass123',
             first_name=first_name,
             last_name=last_name,
-            role='Team Member'  # Required for frontend visibility
+            role='Team Member'
         )
-        # Set team lead and trainer flags
         user.is_team_lead = True
         user.is_trainer = True
-        user.team_assignment = category
+        user.team_assignment = category['name']  # Use the display name
         user.save()
         
-        # Use get_or_create in case a signal created the profile
         profile, created = TeamMemberProfile.objects.get_or_create(
             user=user,
             defaults={
                 'role': 'team_lead',
-                'team': category,
+                'team': category['name'],
                 'is_trainer': True,
                 'is_team_lead': True,
                 'max_weekly_hours': 15,
@@ -160,29 +296,31 @@ def generate_users():
             }
         )
         if not created:
-            # Update existing profile
             profile.role = 'team_lead'
-            profile.team = category
+            profile.team = category['name']
             profile.is_trainer = True
             profile.is_team_lead = True
             profile.max_weekly_hours = 15
-            profile.shift_preference = 'no_preference'
             profile.save()
         
-        print(f"   ✓ {email}: {first_name} {last_name} - Team Lead ({category})")
-        created_users.append({'user': user, 'profile': profile, 'role': 'team_lead'})
+        print(f"   ✓ {email}: {first_name} {last_name} - Team Lead ({category['icon']} {category['name']})")
+        created_users.append({
+            'user': user, 
+            'profile': profile, 
+            'role': 'team_lead',
+            'category': category
+        })
         user_index += 1
     
     # =========================================================================
-    # STEP 2: Create Trainers (distributed across categories)
+    # STEP 5: Create Trainers (distributed across categories)
     # =========================================================================
     print(f"\n🎓 Creating Trainers...")
     
-    trainers_per_category = num_trainers // len(CATEGORIES)
-    extra_trainers = num_trainers % len(CATEGORIES)
+    trainers_per_category = num_trainers // len(categories)
+    extra_trainers = num_trainers % len(categories)
     
-    for i, category in enumerate(CATEGORIES):
-        # Some categories get an extra trainer to use up the remainder
+    for i, category in enumerate(categories):
         count = trainers_per_category + (1 if i < extra_trainers else 0)
         
         for _ in range(count):
@@ -195,23 +333,20 @@ def generate_users():
                 password='testpass123',
                 first_name=first_name,
                 last_name=last_name,
-                role='Team Member'  # Required for frontend visibility
+                role='Team Member'
             )
-            # Set trainer flag
             user.is_trainer = True
-            user.team_assignment = category
+            user.team_assignment = category['name']
             user.save()
             
-            # Random hours between 5-20
             hours = random.choice([5, 8, 10, 12, 15, 20])
             pref = random.choice(['no_preference', 'few_long', 'many_short'])
             
-            # Use get_or_create in case a signal created the profile
             profile, created = TeamMemberProfile.objects.get_or_create(
                 user=user,
                 defaults={
                     'role': 'team_member',
-                    'team': category,
+                    'team': category['name'],
                     'is_trainer': True,
                     'max_weekly_hours': hours,
                     'shift_preference': pref
@@ -219,20 +354,25 @@ def generate_users():
             )
             if not created:
                 profile.role = 'team_member'
-                profile.team = category
+                profile.team = category['name']
                 profile.is_trainer = True
                 profile.max_weekly_hours = hours
                 profile.shift_preference = pref
                 profile.save()
             
-            print(f"   ✓ {email}: {first_name} {last_name} - Trainer ({category}, {hours}hrs/wk)")
-            created_users.append({'user': user, 'profile': profile, 'role': 'trainer'})
+            print(f"   ✓ {email}: {first_name} {last_name} - Trainer ({category['icon']} {category['name']}, {hours}hrs/wk)")
+            created_users.append({
+                'user': user, 
+                'profile': profile, 
+                'role': 'trainer',
+                'category': category
+            })
             user_index += 1
     
     # =========================================================================
-    # STEP 3: Create Regular Team Members (no training, floaters)
+    # STEP 6: Create Regular Team Members (floaters)
     # =========================================================================
-    print(f"\n👤 Creating Regular Team Members (non-trainers)...")
+    print(f"\n👤 Creating Regular Team Members (non-trainers/floaters)...")
     
     for _ in range(num_members):
         email = f"test{user_index}@gmail.com"
@@ -244,19 +384,17 @@ def generate_users():
             password='testpass123',
             first_name=first_name,
             last_name=last_name,
-            role='Team Member'  # Required for frontend visibility
+            role='Team Member'
         )
         
-        # Regular members work fewer hours typically
         hours = random.choice([5, 8, 10])
         pref = random.choice(['no_preference', 'few_long', 'many_short'])
         
-        # Use get_or_create in case a signal created the profile
         profile, created = TeamMemberProfile.objects.get_or_create(
             user=user,
             defaults={
                 'role': 'team_member',
-                'team': '',  # No team - they're floaters
+                'team': '',
                 'is_trainer': False,
                 'max_weekly_hours': hours,
                 'shift_preference': pref
@@ -270,8 +408,13 @@ def generate_users():
             profile.shift_preference = pref
             profile.save()
         
-        print(f"   ✓ {email}: {first_name} {last_name} - Member (floater, {hours}hrs/wk)")
-        created_users.append({'user': user, 'profile': profile, 'role': 'member'})
+        print(f"   ✓ {email}: {first_name} {last_name} - Floater ({hours}hrs/wk)")
+        created_users.append({
+            'user': user, 
+            'profile': profile, 
+            'role': 'member',
+            'category': None
+        })
         user_index += 1
     
     # =========================================================================
@@ -282,37 +425,47 @@ def generate_users():
     print("=" * 60)
     
     # Count by role
-    role_counts = {}
+    role_counts = {'team_lead': 0, 'trainer': 0, 'member': 0}
     for u in created_users:
-        role = u['role']
-        role_counts[role] = role_counts.get(role, 0) + 1
+        role_counts[u['role']] = role_counts.get(u['role'], 0) + 1
     
-    print(f"\nCreated {len(created_users)} users:")
-    for role, count in role_counts.items():
-        print(f"   {role}: {count}")
+    print(f"\n📊 Created {len(created_users)} users:")
+    print(f"   👑 Team Leads: {role_counts['team_lead']}")
+    print(f"   🎓 Trainers: {role_counts['trainer']}")
+    print(f"   👤 Floaters: {role_counts['member']}")
     
-    # Count by team
+    # Count by team/category
     team_counts = {}
     for u in created_users:
-        team = u['profile'].team or 'No Team (Floater)'
-        team_counts[team] = team_counts.get(team, 0) + 1
+        if u['category']:
+            key = f"{u['category']['icon']} {u['category']['name']}"
+        else:
+            key = '🔄 Floater (No Team)'
+        team_counts[key] = team_counts.get(key, 0) + 1
     
-    print(f"\nBy team:")
+    print(f"\n📋 By Category:")
     for team, count in sorted(team_counts.items()):
         print(f"   {team}: {count}")
     
     # Total hours capacity
     total_hours = sum(u['profile'].max_weekly_hours for u in created_users)
-    print(f"\nTotal weekly hours capacity: {total_hours} hours")
+    print(f"\n⏱️  Total weekly hours capacity: {total_hours} hours")
     
-    print(f"\n✅ Done! All users have password: testpass123")
-    print(f"   Login as test1@gmail.com to test team lead features")
-    print(f"   Login as test7@gmail.com to test trainer features")
-    print(f"   Login as test{user_index-1}@gmail.com to test member features")
+    print(f"\n" + "=" * 60)
+    print("✅ DONE!")
+    print("=" * 60)
+    print(f"\n   All users have password: testpass123")
+    print(f"\n   Example logins:")
+    print(f"   • test1@gmail.com - Team Lead")
+    print(f"   • test{len(categories) + 1}@gmail.com - Trainer")
+    print(f"   • test{user_index - 1}@gmail.com - Floater")
     
     return created_users
 
 
+# =========================================================================
+# RUN
+# =========================================================================
 if __name__ == '__main__':
     generate_users()
 else:
