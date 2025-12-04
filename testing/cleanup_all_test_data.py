@@ -56,12 +56,51 @@ def cleanup_all_test_data():
     print(f"   Deleted {certs_deleted[0]} certifications")
     
     # Team member profiles
-    profiles_deleted = TeamMemberProfile.objects.filter(user__in=test_users).delete()
-    print(f"   Deleted {profiles_deleted[0]} team member profiles")
+    try:
+        profiles_deleted = TeamMemberProfile.objects.filter(user__in=test_users).delete()
+        print(f"   Deleted {profiles_deleted[0]} team member profiles")
+    except Exception as e:
+        print(f"   ⚠️  Warning: Could not delete team member profiles: {e}")
+        profiles_deleted = (0, {})
     
-    # Delete users
-    users_deleted = test_users.delete()
-    print(f"   Deleted {users_deleted[0]} test users")
+    # Delete ModelWeekShift records if table exists (before deleting users to avoid cascade issues)
+    try:
+        from scheduling.models import ModelWeekShift
+        from django.db import connection
+        # Check if table exists
+        table_name = ModelWeekShift._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", [table_name])
+            if cursor.fetchone():
+                mws_deleted = ModelWeekShift.objects.filter(user__in=test_users).delete()
+                print(f"   Deleted {mws_deleted[0]} model week shifts")
+    except Exception as e:
+        # Table doesn't exist or other error - that's okay
+        pass
+    
+    # Delete users (handle case where ModelWeekShift table doesn't exist)
+    try:
+        users_deleted = test_users.delete()
+        print(f"   Deleted {users_deleted[0]} test users")
+    except Exception as e:
+        if 'modelweekshift' in str(e).lower():
+            print(f"   ⚠️  Warning: ModelWeekShift table doesn't exist (migration not run)")
+            print(f"   Deleting users individually to avoid cascade issues...")
+            # Try to delete users one by one, skipping cascade issues
+            deleted_count = 0
+            for user in test_users:
+                try:
+                    user.delete()
+                    deleted_count += 1
+                except:
+                    pass
+            users_deleted = (deleted_count, {})
+            print(f"   Deleted {deleted_count} test users")
+        else:
+            print(f"   ⚠️  Error deleting users: {e}")
+            print(f"   This might be due to missing database tables. Try running migrations:")
+            print(f"   python manage.py migrate")
+            users_deleted = (0, {})
     
     # 2. Delete training sessions (optional - comment out if you want to keep them)
     print("\n🗑️  Deleting training sessions...")
