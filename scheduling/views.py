@@ -1187,20 +1187,66 @@ def my_availability(request):
 def my_schedule(request):
     """Team member views their schedule"""
     active_semester = Semester.objects.filter(is_active=True).first()
-    
-    if not active_semester:
-        messages.error(request, 'No active semester found')
-        return redirect('home')
-    
-    # Get user's shifts
-    shifts = Shift.objects.filter(
-        user=request.user,
-        semester=active_semester
-    ).order_by('date', 'start_time')
-    
+    requested_semester_id = request.GET.get('semester')
+
+    # All semesters where this user has any shifts (newest first)
+    semesters_with_shifts = Semester.objects.filter(
+        id__in=Shift.objects.filter(user=request.user).values_list('semester_id', flat=True)
+    ).order_by('-start_date')
+
+    # Pick the semester to show: explicit query param -> active -> newest with shifts
+    selected_semester = None
+    if requested_semester_id:
+        selected_semester = Semester.objects.filter(id=requested_semester_id).first()
+    if not selected_semester:
+        selected_semester = active_semester
+
+    shifts = Shift.objects.none()
+    if selected_semester:
+        shifts = Shift.objects.filter(
+            user=request.user,
+            semester=selected_semester
+        ).order_by('date', 'start_time')
+
+    # Fallback: if no shifts in the selected/active semester, show the latest semester
+    if not shifts.exists() and semesters_with_shifts.exists():
+        fallback = semesters_with_shifts.first()
+        if fallback and (not selected_semester or fallback.id != selected_semester.id):
+            selected_semester = fallback
+            shifts = Shift.objects.filter(
+                user=request.user,
+                semester=selected_semester
+            ).order_by('date', 'start_time')
+
+    # Serialize shifts to JSON-safe payload for the template JS (avoids breakage from quotes)
+    shifts_payload = []
+    for shift in shifts:
+        location_label = None
+        if shift.location:
+            location_label = shift.location.name
+        elif shift.location_group:
+            location_label = shift.location_group.name
+        else:
+            location_label = "TBD"
+
+        shifts_payload.append({
+            'id': shift.id,
+            'date': shift.date.isoformat(),
+            'start_time': shift.start_time.strftime('%H:%M'),
+            'end_time': shift.end_time.strftime('%H:%M'),
+            'shift_type': shift.shift_type,
+            'shift_type_display': shift.get_shift_type_display(),
+            'status': shift.status,
+            'location': location_label,
+            'team_category': shift.team_category or ''
+        })
+
     context = {
-        'semester': active_semester,
-        'shifts': shifts
+        'semester': selected_semester,
+        'active_semester': active_semester,
+        'semesters_with_shifts': semesters_with_shifts,
+        'shifts': shifts,
+        'shifts_json': json.dumps(shifts_payload)
     }
     
     return render(request, 'scheduling/my_schedule.html', context)
