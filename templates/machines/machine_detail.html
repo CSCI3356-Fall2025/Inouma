@@ -398,17 +398,15 @@
             <!-- Training requirements -->
             <div class="training-requirements">
                 <h3>Training Requirements</h3>
-                {% with trainings=machine.required_trainings.all %}
-                    {% if trainings %}
-                        <div>
-                            {% for training in trainings %}
-                                <span class="training-badge">{{ training.name }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p style="color: #666; font-size: 0.9rem; margin: 0;">No training required</p>
-                    {% endif %}
-                {% endwith %}
+                {% if required_trainings %}
+                    <div>
+                        {% for training in required_trainings %}
+                            <span class="training-badge">{{ training.name }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: #666; font-size: 0.9rem; margin: 0;">No training required</p>
+                {% endif %}
             </div>
 
             <!-- Action -->
