@@ -39,11 +39,13 @@ def link_machines_to_trainings():
     
     for machine in machines:
         # Get machine category
+        # category is a CharField (string), category_fk is a ForeignKey
         category_name = None
-        if machine.category:
-            category_name = machine.category.name
-        elif hasattr(machine, 'machine_category'):
-            category_name = machine.machine_category
+        if machine.category_fk:
+            category_name = machine.category_fk.name
+        elif machine.category:
+            # category is already a string
+            category_name = machine.category
         
         if not category_name:
             continue
