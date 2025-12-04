@@ -139,17 +139,13 @@
 <body>
     <div class="landing-logo">
         <div class="logo">
-            <div class="logo-icon">H</div>
-            <div>
-                <h1>The Hatchery</h1>
-                <p>Boston College Makerspace</p>
-            </div>
+            <img src="{% static 'images/HatcheryLogo 2.png' %}" alt="The Hatchery Logo" class="logo-image" style="width:180px; height:auto; border-radius:8px;">
         </div>
     </div>
 
     <div class="welcome-box">
         <h1>Welcome to Inouma</h1>
-        <p>Innovate your Makerspace — Classrooms and Machines</p>
+        <p>Innovate your makerspace — manage machines, training and reservations</p>
         <a class="google-btn" href="{% url 'login' %}">
             <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
             Sign in with Google
