@@ -63,24 +63,33 @@ def generate_demo_users():
         last_name='User One',
         role='Team Member'
     )
-    # Regular user, not a trainer or team lead
-    user1.is_trainer = False
+    # Make them a trainer so they can lead training sessions
+    user1.is_trainer = True
     user1.is_team_lead = False
-    user1.team_assignment = ''
+    user1.team_assignment = '3D Printing'  # Match the profile team
     user1.save()
     
     # Create basic profile (not required but good for consistency)
     profile1, _ = TeamMemberProfile.objects.get_or_create(
         user=user1,
         defaults={
+            'semester': semester,
             'role': 'team_member',
-            'team': '',
-            'is_trainer': False,
-            'is_team_lead': False,
+            'team': '3D Printing',  # Assign to a team so they get shifts
             'max_weekly_hours': 10,
-            'shift_preference': 'no_preference'
+            'expected_weekly_hours': 8,
+            'shift_preference': 'no_preference',
+            'is_active': True  # Must be active to be included in scheduler
         }
     )
+    # Ensure is_active is True and is_trainer is True
+    profile1.is_active = True
+    profile1.is_trainer = True  # Make them a trainer
+    profile1.semester = semester
+    profile1.team = '3D Printing'  # Assign to a team
+    profile1.expected_weekly_hours = 8
+    profile1.max_weekly_hours = 10
+    profile1.save()
     
     print(f"   ✓ Created: test1@gmail.com")
     print(f"      Name: {user1.first_name} {user1.last_name}")
@@ -98,24 +107,33 @@ def generate_demo_users():
         last_name='User Two',
         role='Team Member'
     )
-    # Regular user, not a trainer or team lead
-    user2.is_trainer = False
+    # Make them a trainer so they can lead training sessions
+    user2.is_trainer = True
     user2.is_team_lead = False
-    user2.team_assignment = ''
+    user2.team_assignment = 'Laser'  # Match the profile team
     user2.save()
     
     # Create basic profile
     profile2, _ = TeamMemberProfile.objects.get_or_create(
         user=user2,
         defaults={
+            'semester': semester,
             'role': 'team_member',
-            'team': '',
-            'is_trainer': False,
-            'is_team_lead': False,
+            'team': 'Laser',  # Assign to a different team
             'max_weekly_hours': 10,
-            'shift_preference': 'no_preference'
+            'expected_weekly_hours': 8,
+            'shift_preference': 'no_preference',
+            'is_active': True  # Must be active to be included in scheduler
         }
     )
+    # Ensure is_active is True and is_trainer is True
+    profile2.is_active = True
+    profile2.is_trainer = True  # Make them a trainer
+    profile2.semester = semester
+    profile2.team = 'Laser'  # Assign to a different team
+    profile2.expected_weekly_hours = 8
+    profile2.max_weekly_hours = 10
+    profile2.save()
     
     print(f"   ✓ Created: test2@gmail.com")
     print(f"      Name: {user2.first_name} {user2.last_name}")

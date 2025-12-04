@@ -233,13 +233,18 @@ def generate_users():
     print(f"   Team Leads: {num_team_leads} (1 per category)")
     print(f"   Trainers: {num_trainers} (~80% of remaining)")
     print(f"   Regular Members: {num_members} (~20% of remaining)")
-    print(f"   Total: {NUM_USERS}")
+    print(f"   Total: {NUM_USERS} users (test3-test{2+NUM_USERS}@gmail.com)")
+    print(f"   Note: test1@gmail.com and test2@gmail.com are reserved for demo")
     
     # =========================================================================
-    # STEP 3: Clear existing test users
+    # STEP 3: Clear existing test users (EXCEPT test1 and test2)
     # =========================================================================
-    print(f"\n🗑️  Clearing existing test users...")
-    test_users = User.objects.filter(email__startswith='test', email__endswith='@gmail.com')
+    print(f"\n🗑️  Clearing existing test users (preserving test1@gmail.com and test2@gmail.com)...")
+    # Only delete test3@gmail.com and above
+    test_users = User.objects.filter(
+        email__startswith='test',
+        email__endswith='@gmail.com'
+    ).exclude(email__in=['test1@gmail.com', 'test2@gmail.com'])
     
     # Delete TeamMemberProfiles first
     deleted_profiles = TeamMemberProfile.objects.filter(user__in=test_users).delete()
@@ -256,7 +261,8 @@ def generate_users():
     
     # Track created users
     created_users = []
-    user_index = 1
+    # Start from test3@gmail.com (skip test1 and test2 for demo)
+    user_index = 3
     
     # Shuffle names for variety
     random.shuffle(FIRST_NAMES)
@@ -456,9 +462,10 @@ def generate_users():
     print("=" * 60)
     print(f"\n   All users have password: testpass123")
     print(f"\n   Example logins:")
-    print(f"   • test1@gmail.com - Team Lead")
-    print(f"   • test{len(categories) + 1}@gmail.com - Trainer")
-    print(f"   • test{user_index - 1}@gmail.com - Floater")
+    print(f"   • test3@gmail.com - Team Lead (first user)")
+    print(f"   • test{len(categories) + 3}@gmail.com - Trainer")
+    print(f"   • test{user_index - 1}@gmail.com - Last user")
+    print(f"\n   Note: test1@gmail.com and test2@gmail.com are reserved for demo")
     
     return created_users
 

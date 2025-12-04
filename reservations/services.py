@@ -383,65 +383,93 @@ class TrainingSessionService:
         """
         from .models import TrainingSession
         from machines.models import Training
-        from team.models import TeamMember
         
         if shift.shift_type != 'training':
             return []
         
-        # Get the team member's certified categories
-        try:
-            team_member = TeamMember.objects.get(user=shift.user)
-            certified_categories = list(team_member.categories.values_list('name', flat=True))
-        except TeamMember.DoesNotExist:
-            # Fall back to team_category from the shift itself
-            certified_categories = [shift.team_category] if shift.team_category else []
+        # Get category from shift's team_category (most reliable source)
+        # Try TeamMemberProfile.team as fallback, but shift.team_category is primary
+        category = shift.team_category
         
-        if not certified_categories:
+        # If shift doesn't have team_category, try to get it from user's profile
+        if not category:
+            try:
+                from scheduling.models import TeamMemberProfile
+                team_profile = TeamMemberProfile.objects.get(user=shift.user)
+                if team_profile.team:
+                    category = team_profile.team
+            except (TeamMemberProfile.DoesNotExist, ImportError, AttributeError):
+                # TeamMemberProfile might not exist for this user
+                pass
+        
+        # Also try User.team_assignment as another fallback
+        if not category and hasattr(shift.user, 'team_assignment') and shift.user.team_assignment:
+            category = shift.user.team_assignment
+        
+        if not category:
+            # No category found - can't create session
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Shift {shift.id}: No category found (user: {shift.user.email}, team_category: {shift.team_category})")
             return []
         
-        sessions_created = []
-        shift_start = datetime.combine(shift.date, shift.start_time)
-        shift_end = datetime.combine(shift.date, shift.end_time)
+        # Generate sessions for ALL levels (1, 2, 3) from the shift's category
+        # Normalize category name for matching (handle case variations)
+        category_normalized = category.strip()
         
-        # For each certified category, get the trainings and create sessions
-        for category in certified_categories:
+        # Try exact match first
+        trainings = Training.objects.filter(
+            category__iexact=category_normalized,
+            status='active'
+        ).order_by('level')
+        
+        # If no exact match, try case-insensitive contains
+        if not trainings.exists():
             trainings = Training.objects.filter(
-                category=category,
+                category__icontains=category_normalized,
                 status='active'
             ).order_by('level')
-            
-            for training in trainings:
-                # Calculate how many sessions fit in the shift
-                training_duration = timedelta(minutes=training.duration_minutes)
-                
-                current_start = shift_start
-                while current_start + training_duration <= shift_end:
-                    current_end = current_start + training_duration
-                    
-                    # Check if session already exists
-                    existing = TrainingSession.objects.filter(
-                        trainer=shift.user,
-                        training=training,
-                        date=shift.date,
-                        start_time=current_start.time()
-                    ).exists()
-                    
-                    if not existing:
-                        session = TrainingSession.objects.create(
-                            trainer=shift.user,
-                            training=training,
-                            date=shift.date,
-                            start_time=current_start.time(),
-                            end_time=current_end.time(),
-                            max_participants=training.max_participants,
-                            source_shift=shift,
-                            status='available'
-                        )
-                        sessions_created.append(session)
-                    
-                    current_start = current_end
         
-        return sessions_created
+        if not trainings.exists():
+            # Log warning if no training found
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Shift {shift.id}: No training found for category '{category}' (user: {shift.user.email})")
+            return []
+        
+        # Get location from shift (if available)
+        location = getattr(shift, 'location', None)
+        
+        # Create sessions for each level training in this category
+        created_sessions = []
+        
+        for training in trainings:
+            # Check if session already exists for this shift and training
+            existing = TrainingSession.objects.filter(
+                source_shift=shift,
+                training=training
+            ).exists()
+            
+            if existing:
+                continue  # Skip if already created
+            
+            # Create session for this training level
+            session = TrainingSession.objects.create(
+                trainer=shift.user,
+                training=training,
+                date=shift.date,
+                start_time=shift.start_time,
+                end_time=shift.end_time,
+                location=location,
+                max_participants=getattr(training, 'max_participants', None) or 4,
+                source_shift=shift,
+                status='available',
+                notes=f'Auto-generated from shift #{shift.id} (Level {training.level})'
+            )
+            
+            created_sessions.append(session)
+        
+        return created_sessions
     
     @classmethod
     def generate_sessions_for_semester(cls, semester):
@@ -476,7 +504,7 @@ class TrainingSessionService:
             ReservationValidationError if booking fails
         """
         from .models import TrainingBooking
-        from machines.models import UserTrainingRecord
+        from machines.models import UserTrainingRecord, Training
         
         # Check if user already completed this training
         already_completed = UserTrainingRecord.objects.filter(
@@ -490,6 +518,65 @@ class TrainingSessionService:
                 "You have already completed this training",
                 code='already_trained'
             )
+        
+        # Check prerequisites: User must have completed lower level trainings
+        training = session.training
+        
+        # For Level 2: Must have completed Level 1 in same category
+        if training.level == 2:
+            level_1_trainings = Training.objects.filter(
+                category=training.category,
+                level=1,
+                status='active'
+            )
+            completed_level_1 = UserTrainingRecord.objects.filter(
+                user=user,
+                training__in=level_1_trainings,
+                status='completed'
+            ).exists()
+            
+            if not completed_level_1:
+                raise ReservationValidationError(
+                    f"You must complete Level 1 {training.category} training before booking Level 2",
+                    code='prerequisite_not_met'
+                )
+        
+        # For Level 3: Must have completed Level 1 AND Level 2 in same category
+        elif training.level == 3:
+            level_1_trainings = Training.objects.filter(
+                category=training.category,
+                level=1,
+                status='active'
+            )
+            level_2_trainings = Training.objects.filter(
+                category=training.category,
+                level=2,
+                status='active'
+            )
+            
+            completed_level_1 = UserTrainingRecord.objects.filter(
+                user=user,
+                training__in=level_1_trainings,
+                status='completed'
+            ).exists()
+            
+            completed_level_2 = UserTrainingRecord.objects.filter(
+                user=user,
+                training__in=level_2_trainings,
+                status='completed'
+            ).exists()
+            
+            if not completed_level_1:
+                raise ReservationValidationError(
+                    f"You must complete Level 1 {training.category} training before booking Level 3",
+                    code='prerequisite_not_met'
+                )
+            
+            if not completed_level_2:
+                raise ReservationValidationError(
+                    f"You must complete Level 2 {training.category} training before booking Level 3",
+                    code='prerequisite_not_met'
+                )
         
         # Check if user already has a booking for this session
         existing_booking = TrainingBooking.objects.filter(
@@ -612,20 +699,73 @@ class TrainingSessionService:
     ):
         """
         Get available training sessions, optionally filtered.
+        Only returns sessions that are linked to actual shifts (source_shift) 
+        to ensure consistency with the staff schedule.
         """
         from .models import TrainingSession
         from machines.models import UserTrainingRecord
+        from scheduling.models import Shift
         
         if start_date is None:
             start_date = timezone.now().date()
         if end_date is None:
             end_date = start_date + timedelta(days=14)  # 2 weeks ahead
         
+        # Get sessions linked to actual Shift objects (not ModelWeekShift)
+        # First, try to get existing sessions linked to shifts
         sessions = TrainingSession.objects.filter(
             date__gte=start_date,
             date__lte=end_date,
-            status__in=['available', 'full']  # Include full for waitlist
-        ).select_related('training', 'trainer', 'location')
+            status__in=['available', 'full'],  # Include full for waitlist
+            source_shift__isnull=False  # Must be linked to a shift
+        ).select_related('training', 'trainer', 'location', 'source_shift')
+        
+        # Verify the linked shift still exists, is scheduled, and is a training shift
+        sessions = sessions.filter(
+            source_shift__status='scheduled',
+            source_shift__shift_type='training'
+        )
+        
+        # If no shift-linked sessions exist but shifts do, generate them on-the-fly
+        # This ensures the calendar shows sessions when shifts exist
+        if not sessions.exists():
+            from scheduling.models import Shift
+            # Check if there are actual Shift objects (not ModelWeekShift) for training
+            training_shifts = Shift.objects.filter(
+                date__gte=start_date,
+                date__lte=end_date,
+                shift_type='training',
+                status='scheduled'
+            )
+            
+            if training_shifts.exists():
+                # Generate sessions from existing shifts
+                # Only generate for shifts that don't already have sessions
+                for shift in training_shifts:
+                    # Check if session already exists for this shift
+                    existing_session = TrainingSession.objects.filter(
+                        source_shift=shift
+                    ).exists()
+                    
+                    if not existing_session:
+                        try:
+                            cls.generate_sessions_from_shift(shift)
+                        except Exception as e:
+                            # Log but don't fail - continue with other shifts
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Failed to generate session from shift {shift.id}: {e}")
+                
+                # Re-query sessions after generation
+                sessions = TrainingSession.objects.filter(
+                    date__gte=start_date,
+                    date__lte=end_date,
+                    status__in=['available', 'full'],
+                    source_shift__isnull=False
+                ).select_related('training', 'trainer', 'location', 'source_shift').filter(
+                    source_shift__status='scheduled',
+                    source_shift__shift_type='training'
+                )
         
         if category:
             sessions = sessions.filter(training__category=category)

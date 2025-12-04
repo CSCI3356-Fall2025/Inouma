@@ -107,26 +107,20 @@ def cleanup_all_test_data():
     sessions_deleted = TrainingSession.objects.all().delete()
     print(f"   Deleted {sessions_deleted[0]} training sessions")
     
-    # 3. Clear machine_type_names from trainings (optional)
-    print("\n🗑️  Clearing machine links from trainings...")
-    trainings = Training.objects.all()
-    cleared_count = 0
-    for training in trainings:
-        if training.machine_type_names:
-            training.machine_type_names = []
-            training.save()
-            cleared_count += 1
-    print(f"   Cleared machine links from {cleared_count} trainings")
+    # 3. Delete test machines
+    print("\n🗑️  Deleting test machines...")
+    machines_deleted = Machine.objects.all().delete()
+    print(f"   Deleted {machines_deleted[0]} machines")
     
-    # 4. Optional: Delete test machines (uncomment if you want to delete machines too)
-    # print("\n🗑️  Deleting test machines...")
-    # machines_deleted = Machine.objects.all().delete()
-    # print(f"   Deleted {machines_deleted[0]} machines")
+    # 5. Delete locations
+    print("\n🗑️  Deleting locations...")
+    location_deleted = Location.objects.all().delete()
+    print(f"   Deleted {location_deleted[0]} locations")
     
-    # 5. Optional: Delete location (uncomment if you want to delete location too)
-    # print("\n🗑️  Deleting demo location...")
-    # location_deleted = Location.objects.all().delete()
-    # print(f"   Deleted {location_deleted[0]} locations")
+    # 6. Delete training courses
+    print("\n🗑️  Deleting training courses...")
+    trainings_deleted = Training.objects.all().delete()
+    print(f"   Deleted {trainings_deleted[0]} training courses")
     
     print("\n" + "=" * 60)
     print("SUMMARY")
@@ -138,7 +132,9 @@ def cleanup_all_test_data():
     print(f"   - {records_deleted[0]} user training records")
     print(f"   - {certs_deleted[0]} certifications")
     print(f"   - {sessions_deleted[0]} training sessions")
-    print(f"   - Cleared machine links from {cleared_count} trainings")
+    print(f"   - {machines_deleted[0]} machines")
+    print(f"   - {location_deleted[0]} locations")
+    print(f"   - {trainings_deleted[0]} training courses")
     
     print("\n" + "=" * 60)
     print("✅ Cleanup complete! Ready to run setup from scratch.")
