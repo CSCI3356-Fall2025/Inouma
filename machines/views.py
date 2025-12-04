@@ -591,49 +591,6 @@ def machine_type_detail(request, machine_type):
 
 
 @login_required
-def machine_detail(request, machine_id):
-    """Display full machine details with floorplan and reservation capabilities - Level 4"""
-    from django.contrib.auth import get_user_model
-    from datetime import date
-    
-    User = get_user_model()
-    machine = get_object_or_404(Machine, id=machine_id)
-    
-    location = machine.location
-    has_floorplan = False
-    floorplan_url = None
-    
-    if location and hasattr(location, 'floorplan_image'):
-        has_floorplan = bool(location.floorplan_image)
-        floorplan_url = location.floorplan_image.url if has_floorplan else None
-    
-    other_machines = []
-    if location and hasattr(location, 'machines'):
-        other_machines = location.machines.exclude(id=machine_id).filter(
-            map_position_x__isnull=False,
-            map_position_y__isnull=False
-        )
-    
-    trainers = User.objects.filter(
-        is_staff=True, 
-        is_active=True
-    ).order_by('first_name', 'last_name')
-    
-    context = {
-        'machine': machine,
-        'location': location,
-        'has_floorplan': has_floorplan,
-        'floorplan_url': floorplan_url,
-        'other_machines': other_machines,
-        'trainers': trainers,
-        'today': date.today().isoformat(),
-        'reservation_api_url': f'/reservations/api/machines/{machine_id}/reserve/',
-        'availability_api_url': f'/reservations/api/machines/{machine_id}/availability/',
-    }
-    return render(request, 'machines/machine_detail.html', context)
-
-
-@login_required
 @require_http_methods(["POST"])
 def report_broken(request, machine_id):
     """Allow a user to report a machine as broken. Marks the machine status and redirects back."""
@@ -1357,6 +1314,8 @@ def machine_detail(request, machine_id):
     Student-facing machine detail page with reservation and floorplan.
     Provides availability / reservation API URLs for the JS in machine_detail.html.
     """
+    from machines.models import Training
+    
     machine = get_object_or_404(Machine, id=machine_id)
     location = machine.location
 
@@ -1374,12 +1333,21 @@ def machine_detail(request, machine_id):
             .filter(map_position_x__isnull=False, map_position_y__isnull=False)
         )
 
+    # Get required trainings for this machine (same logic as ReservationService.check_user_training)
+    # Check Training.machine_type_names to see if this machine requires training
+    all_trainings = Training.objects.filter(status='active')
+    required_trainings = [
+        t for t in all_trainings
+        if machine.machine_name in (t.machine_type_names or [])
+    ]
+
     context = {
         "machine": machine,
         "location": location,
         "has_floorplan": has_floorplan,
         "floorplan_url": floorplan_url,
         "other_machines": other_machines,
+        "required_trainings": required_trainings,  # Pass the correctly calculated trainings
         "today": date.today().isoformat(),
         # URLs consumed by machine_detail.html JS
         "reservationapiurl": f"/reservations/api/machines/{machine.id}/reserve/",

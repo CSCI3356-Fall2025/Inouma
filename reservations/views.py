@@ -233,14 +233,32 @@ def api_available_trainings(request):
         start_date_str = request.GET.get('start_date')
         end_date_str = request.GET.get('end_date')
 
-        # Parse dates
+        # Parse dates - handle multiple formats
         if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            try:
+                # Try ISO format first (YYYY-MM-DD)
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    # Try locale format (e.g., "Sun, Nov 30, 2025")
+                    start_date = datetime.strptime(start_date_str, '%a, %b %d, %Y').date()
+                except ValueError:
+                    # If all else fails, use today
+                    start_date = timezone.now().date()
         else:
             start_date = timezone.now().date()
 
         if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            try:
+                # Try ISO format first (YYYY-MM-DD)
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    # Try locale format (e.g., "Sun, Nov 30, 2025")
+                    end_date = datetime.strptime(end_date_str, '%a, %b %d, %Y').date()
+                except ValueError:
+                    # If all else fails, use start_date + 14 days
+                    end_date = start_date + timedelta(days=14)
         else:
             end_date = start_date + timedelta(days=14)
 
@@ -289,6 +307,7 @@ def api_available_trainings(request):
                     "id": user_booking.id,
                     "status": user_booking.status,
                     "waitlist_position": user_booking.waitlist_position,
+                    "confirmation_deadline": user_booking.confirmation_deadline.isoformat() if user_booking.confirmation_deadline else None,
                 } if user_booking else None,
             })
 

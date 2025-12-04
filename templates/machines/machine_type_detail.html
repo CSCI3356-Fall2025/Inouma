@@ -641,7 +641,7 @@
     <div class="tab-section active" id="machinesSection">
         <div class="machines-grid">
             {% for machine in machines %}
-            <div onclick="window.location.href='{% url 'machine_detail' machine.id %}'" class="machine-card {% if machine.status == 'broken' %}broken{% endif %}" data-machine-id="{{ machine.id }}">
+            <div class="machine-card clickable {% if machine.status == 'broken' %}broken{% endif %}" data-machine-id="{{ machine.id }}" data-machine-url="{% url 'machine_detail' machine.id %}">
                 <div class="machine-image">
                     {% if machine.image %}
                     <img src="{{ machine.image.url }}" alt="{{ machine.name }}">
@@ -719,6 +719,15 @@ let selectedSession = null;
 let trainingData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle machine card clicks
+    document.querySelectorAll('.machine-card.clickable').forEach(card => {
+        card.addEventListener('click', function() {
+            const url = this.getAttribute('data-machine-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
     // Load training requirements
     loadTrainingRequirements();
     
@@ -911,7 +920,14 @@ function getWeekStart(date) {
 }
 
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    if (!date) return '';
+    // Ensure we have a Date object
+    const d = date instanceof Date ? date : new Date(date);
+    // Return YYYY-MM-DD format
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function updateWeekRange() {
@@ -944,22 +960,36 @@ async function loadTrainingSessions() {
     const calendar = document.getElementById('trainingCalendar');
     calendar.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1 / -1; padding: 2rem;">Loading sessions...</p>';
     
+    console.log('Loading training sessions for machine:', { category: CATEGORY, startDate, endDate });
+    
     try {
         const response = await fetch(`/reservations/api/trainings/available/?category=${encodeURIComponent(CATEGORY)}&start_date=${startDate}&end_date=${endDate}`);
         const data = await response.json();
         
+        console.log('Training sessions API response:', { success: data.success, sessionCount: data.sessions?.length });
+        
         if (data.success) {
             // Filter to only sessions for this machine type's trainings
             allSessions = data.sessions.filter(s => {
-                // If we have training data, filter by training ID or name
+                // Filter by category - show all trainings for this machine category
+                const matchesCategory = s.category && s.category.toLowerCase() === CATEGORY.toLowerCase();
+                
+                // If we have specific training data, also match by training name
                 if (trainingData) {
-                    return s.training_name === trainingData.name || 
-                           s.category.toLowerCase() === CATEGORY.toLowerCase();
+                    return s.training_name === trainingData.name || matchesCategory;
                 }
-                return true;
+                return matchesCategory;
             });
+            
+            console.log('Filtered sessions for machine:', { 
+                totalSessions: data.sessions.length, 
+                filteredSessions: allSessions.length,
+                category: CATEGORY
+            });
+            
             renderCalendar();
         } else {
+            console.error('API error:', data.error);
             calendar.innerHTML = '<p style="text-align: center; color: #999; grid-column: 1 / -1; padding: 2rem;">Failed to load sessions</p>';
         }
     } catch (err) {
@@ -975,13 +1005,32 @@ function renderCalendar() {
     
     let html = '';
     
+    console.log('Rendering machine calendar:', {
+        allSessionsCount: allSessions.length,
+        weekStart: formatDate(currentWeekStart),
+        sampleDates: allSessions.slice(0, 5).map(s => s.date)
+    });
+    
     for (let i = 0; i < 7; i++) {
         const date = new Date(currentWeekStart);
         date.setDate(date.getDate() + i);
+        date.setHours(0, 0, 0, 0); // Normalize to midnight
         const dateStr = formatDate(date);
         const isToday = date.getTime() === today.getTime();
         
-        const daySessions = allSessions.filter(s => s.date === dateStr);
+        // Use Date object comparison (same as training browser)
+        const daySessions = allSessions.filter(s => {
+            if (!s.date) return false;
+            try {
+                const sessionDateStr = s.date.split('T')[0];
+                const sessionDate = new Date(sessionDateStr + 'T00:00:00');
+                sessionDate.setHours(0, 0, 0, 0);
+                return sessionDate.getTime() === date.getTime();
+            } catch (e) {
+                console.error('Error parsing session date:', s.date, e);
+                return false;
+            }
+        });
         
         html += `
             <div class="day-column">

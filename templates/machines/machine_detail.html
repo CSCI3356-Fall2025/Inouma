@@ -398,17 +398,15 @@
             <!-- Training requirements -->
             <div class="training-requirements">
                 <h3>Training Requirements</h3>
-                {% with trainings=machine.required_trainings.all %}
-                    {% if trainings %}
-                        <div>
-                            {% for training in trainings %}
-                                <span class="training-badge">{{ training.name }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p style="color: #666; font-size: 0.9rem; margin: 0;">No training required</p>
-                    {% endif %}
-                {% endwith %}
+                {% if required_trainings %}
+                    <div>
+                        {% for training in required_trainings %}
+                            <span class="training-badge">{{ training.name }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: #666; font-size: 0.9rem; margin: 0;">No training required</p>
+                {% endif %}
             </div>
 
             <!-- Action -->
@@ -425,14 +423,17 @@
             {% if has_floorplan and machine.map_position_x and machine.map_position_y %}
             <div class="floorplan-container">
                 <img src="{{ floorplan_url }}" alt="Floorplan">
-                <div class="machine-pin" style="left: {{ machine.map_position_x }}%; top: {{ machine.map_position_y }}%;">
+                <div class="machine-pin" 
+                     data-x="{{ machine.map_position_x|default:0 }}"
+                     data-y="{{ machine.map_position_y|default:0 }}">
                     <span class="pin-icon">📍</span>
                     <div class="pin-label">{{ machine.name }}</div>
                 </div>
                 {% for other in other_machines %}
-                    {% if other.map_position_x and other.map_position_y %}
+                    {% if other.map_position_x is not None and other.map_position_y is not None %}
                     <div class="machine-pin other"
-                         style="left: {{ other.map_position_x }}%; top: {{ other.map_position_y }}%;"
+                         data-x="{{ other.map_position_x }}"
+                         data-y="{{ other.map_position_y }}"
                          title="{{ other.name }}">
                         <span class="pin-icon">📍</span>
                     </div>
@@ -560,6 +561,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!dateInput.value) {
         dateInput.value = todayStr;
     }
+    
+    // Set positions for all machine pins using data attributes
+    document.querySelectorAll('.machine-pin').forEach(function(pin) {
+        const x = parseFloat(pin.getAttribute('data-x')) || 0;
+        const y = parseFloat(pin.getAttribute('data-y')) || 0;
+        pin.style.left = x.toFixed(2) + '%';
+        pin.style.top = y.toFixed(2) + '%';
+    });
 });
 
 function openReservationModal() {
