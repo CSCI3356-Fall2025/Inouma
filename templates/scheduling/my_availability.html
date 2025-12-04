@@ -145,6 +145,27 @@ button {
     font-size: 0.85rem;
 }
 
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-top: 0.35rem;
+}
+.status-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+.status-badge.approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+.status-badge.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .muted {
     color: #6b7280;
 }
@@ -384,6 +405,11 @@ async function savePreferences() {
                     {% endif %}
                 </div>
                 {% if entry.reason %}<span class="badge">{{ entry.reason }}</span>{% endif %}
+                <div>
+                    <span class="status-badge {{ entry.status|default:'pending' }}">
+                        {{ entry.status|default:'pending'|capfirst }}
+                    </span>
+                </div>
             </div>
             <form method="post">
                 {% csrf_token %}

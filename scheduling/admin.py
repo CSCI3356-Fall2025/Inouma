@@ -140,8 +140,8 @@ class TeamMemberProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Unavailability)
 class UnavailabilityAdmin(admin.ModelAdmin):
-    list_display = ('user', 'semester', 'day_of_week', 'start_time', 'end_time', 'reason')
-    list_filter = ('semester', 'day_of_week')
+    list_display = ('user', 'semester', 'day_of_week', 'start_time', 'end_time', 'status', 'reviewed_by', 'reviewed_at', 'reason')
+    list_filter = ('semester', 'day_of_week', 'status')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'reason')
     ordering = ('semester', 'user', 'day_of_week', 'start_time')
 
