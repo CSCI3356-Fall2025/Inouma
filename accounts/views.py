@@ -497,3 +497,13 @@ class TrainerAvailabilityView(APIView):
             "trainer_id": str(trainer_id),
             "slots": free_slots
         })
+    
+
+
+def about_hatchery(request):
+    """
+    Public page about The Hatchery makerspace.
+    Displays schedule info, contact details, and mission.
+    No authentication required.
+    """
+    return render(request, 'about_hatchery.html')

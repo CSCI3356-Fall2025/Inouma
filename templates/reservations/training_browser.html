@@ -223,16 +223,20 @@
 .level-badge.level-3 { background: #fee2e2; color: #dc2626; }
 
 /* List View */
+.calendar-view {
+    display: none;
+}
+
+.calendar-view.active {
+    display: grid;
+}
+
 .list-view {
     display: none;
 }
 
 .list-view.active {
     display: block;
-}
-
-.calendar-view.active {
-    display: grid;
 }
 
 .session-list-item {
@@ -503,19 +507,38 @@ let currentWeekStart = getWeekStart(new Date());
 let currentView = 'calendar';
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Ensure we start with the current week
+    const now = new Date();
+    currentWeekStart = getWeekStart(now);
+    console.log('Calendar initialized:', { 
+        today: now.toISOString().split('T')[0], 
+        weekStart: formatDate(currentWeekStart) 
+    });
+    updateWeekLabel();
     loadCategories();
     loadSessions();
 });
 
 function getWeekStart(date) {
     const d = new Date(date);
+    // Set to midnight to avoid timezone issues
+    d.setHours(0, 0, 0, 0);
     const day = d.getDay();
     const diff = d.getDate() - day;
-    return new Date(d.setDate(diff));
+    const weekStart = new Date(d);
+    weekStart.setDate(diff);
+    return weekStart;
 }
 
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    if (!date) return '';
+    // Ensure we have a Date object
+    const d = date instanceof Date ? date : new Date(date);
+    // Return YYYY-MM-DD format (handle timezone issues)
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 async function loadCategories() {
@@ -541,31 +564,44 @@ async function loadSessions() {
     const startDate = formatDate(currentWeekStart);
     const endDate = formatDate(new Date(currentWeekStart.getTime() + 13 * 24 * 60 * 60 * 1000));
 
-    let url = "{% url 'reservations:api_available_trainings' %}" + `?startdate=${encodeURIComponent(startDate)}&enddate=${encodeURIComponent(endDate)}`;
+    let url = "{% url 'reservations:api_available_trainings' %}" + `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
     if (category) url += `&category=${encodeURIComponent(category)}`;
+
+    console.log('Loading sessions:', { startDate, endDate, url });
 
     try {
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
+
+        console.log('API response:', { success: data.success, sessionCount: data.sessions?.length, error: data.error });
 
         if (data.success) {
             allSessions = data.sessions || [];
+            console.log(`Loaded ${allSessions.length} training sessions`);
 
             if (level) {
                 const lvl = parseInt(level, 10);
-                allSessions = allSessions.filter(s => s.traininglevel === lvl);
+                allSessions = allSessions.filter(s => s.training_level === lvl);
+                console.log(`After level filter (${lvl}): ${allSessions.length} sessions`);
             }
             if (availableOnly) {
-                allSessions = allSessions.filter(s => s.status === 'available' || s.userbooking);
+                allSessions = allSessions.filter(s => s.status === 'available' || s.user_booking);
+                console.log(`After available filter: ${allSessions.length} sessions`);
             }
 
             renderCurrentView();
         } else {
+            console.error('API error:', data.error);
             showToast(data.error || 'Failed to load sessions', 'error');
         }
     } catch (err) {
         console.error('Error loading sessions:', err);
-        showToast('Failed to load sessions', 'error');
+        showToast(`Failed to load sessions: ${err.message}`, 'error');
     }
 }
 
@@ -584,12 +620,45 @@ function renderCalendar() {
 
     let html = '';
 
+    console.log('Rendering calendar:', { 
+        allSessionsCount: allSessions.length,
+        weekStartDate: currentWeekStart,
+        weekStartISO: formatDate(currentWeekStart),
+        sampleSessionDates: allSessions.slice(0, 5).map(s => s.date)
+    });
+
     for (let i = 0; i < 7; i++) {
-        const date = new Date(currentWeekStart.getTime() + i * 24 * 60 * 60 * 1000);
+        const date = new Date(currentWeekStart);
+        date.setDate(currentWeekStart.getDate() + i);
+        date.setHours(0, 0, 0, 0); // Normalize to midnight
         const dateStr = formatDate(date);
         const isToday = dateStr === today;
 
-        const daySessions = allSessions.filter(s => s.date === dateStr);
+        // Use same date comparison method as renderList() for consistency
+        // Compare as Date objects to handle timezone issues
+        const daySessions = allSessions.filter(s => {
+            if (!s.date) return false;
+            try {
+                // Create date from session date string (handle both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss')
+                const sessionDateStr = s.date.split('T')[0];
+                const sessionDate = new Date(sessionDateStr + 'T00:00:00');
+                sessionDate.setHours(0, 0, 0, 0);
+                
+                // Compare dates (same day)
+                return sessionDate.getTime() === date.getTime();
+            } catch (e) {
+                console.error('Error parsing session date:', s.date, e);
+                return false;
+            }
+        });
+        
+        if (i === 0 || daySessions.length > 0) {
+            console.log(`Day ${i} (${dateStr}):`, { 
+                dateStr: dateStr,
+                dateTime: date.getTime(),
+                matchingSessions: daySessions.length
+            });
+        }
 
         html += `
             <div class="day-column">
@@ -608,17 +677,17 @@ function renderCalendar() {
 }
 
 function renderSessionCard(session) {
-    const hasBooking = !!session.userbooking;
-    const isWaitlisted = hasBooking && session.userbooking.status === 'waitlisted';
-    const isFull = session.isfull && !hasBooking;
+    const hasBooking = !!session.user_booking;
+    const isWaitlisted = hasBooking && session.user_booking.status === 'waitlisted';
+    const isFull = session.is_full && !hasBooking;
 
     let statusClass = 'available';
-    let statusText = `${session.availablespots} spot${session.availablespots !== 1 ? 's' : ''}`;
+    let statusText = `${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}`;
 
     if (hasBooking) {
         if (isWaitlisted) {
             statusClass = 'waitlisted';
-            statusText = `Waitlist #${session.userbooking.waitlistposition}`;
+            statusText = `Waitlist #${session.user_booking.waitlist_position}`;
         } else {
             statusClass = 'booked';
             statusText = 'Registered';
@@ -631,12 +700,12 @@ function renderSessionCard(session) {
     return `
         <div class="session-card ${hasBooking ? 'booked' : ''} ${isFull ? 'full' : ''}" 
              onclick="openSessionModal(${session.id})">
-            <div class="session-time">${formatTime(session.starttime)} - ${formatTime(session.endtime)}</div>
+            <div class="session-time">${formatTime(session.start_time)} - ${formatTime(session.end_time)}</div>
             <div class="session-name">
-                <span class="level-badge level-${session.traininglevel}">L${session.traininglevel}</span>
-                ${escapeHtml(session.trainingname)}
+                <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                ${escapeHtml(session.training_name)}
             </div>
-            <div class="session-trainer">with ${escapeHtml(session.trainername)}</div>
+            <div class="session-trainer">with ${escapeHtml(session.trainer_name)}</div>
             <span class="session-status ${statusClass}">${statusText}</span>
         </div>
     `;
@@ -664,26 +733,26 @@ function renderList() {
 
     weekSessions.sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return a.starttime.localeCompare(b.starttime);
+        return a.start_time.localeCompare(b.start_time);
     });
 
     container.innerHTML = weekSessions.map(session => {
         const date = new Date(session.date + 'T00:00:00');
-        const hasBooking = !!session.userbooking;
-        const isWaitlisted = hasBooking && session.userbooking.status === 'waitlisted';
-        const isFull = session.isfull && !hasBooking;
+        const hasBooking = !!session.user_booking;
+        const isWaitlisted = hasBooking && session.user_booking.status === 'waitlisted';
+        const isFull = session.is_full && !hasBooking;
 
         let statusHtml = '';
         if (hasBooking) {
             if (isWaitlisted) {
-                statusHtml = `<span class="session-status waitlisted">Waitlist #${session.userbooking.waitlistposition}</span>`;
+                statusHtml = `<span class="session-status waitlisted">Waitlist #${session.user_booking.waitlist_position}</span>`;
             } else {
                 statusHtml = `<span class="session-status booked">Registered</span>`;
             }
         } else if (isFull) {
             statusHtml = `<span class="session-status full">Full</span>`;
         } else {
-            statusHtml = `<span class="session-status available">${session.availablespots} spot${session.availablespots !== 1 ? 's' : ''}</span>`;
+            statusHtml = `<span class="session-status available">${session.available_spots} spot${session.available_spots !== 1 ? 's' : ''}</span>`;
         }
 
         return `
@@ -694,11 +763,11 @@ function renderList() {
                 </div>
                 <div>
                     <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                        <span class="level-badge level-${session.traininglevel}">L${session.traininglevel}</span>
-                        ${escapeHtml(session.trainingname)}
+                        <span class="level-badge level-${session.training_level}">L${session.training_level}</span>
+                        ${escapeHtml(session.training_name)}
                     </div>
                     <div style="font-size: 0.85rem; color: #666;">
-                        ${formatTime(session.starttime)} - ${formatTime(session.endtime)} • with ${escapeHtml(session.trainername)}
+                        ${formatTime(session.start_time)} - ${formatTime(session.end_time)} • with ${escapeHtml(session.trainer_name)}
                     </div>
                     <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
                         ${escapeHtml(session.category)} ${session.location ? '• ' + escapeHtml(session.location) : ''}
@@ -713,8 +782,15 @@ function renderList() {
 function setView(view) {
     currentView = view;
 
+    // Update button states
     document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
+    
+    // Toggle view visibility
+    document.getElementById('calendarView').classList.toggle('active', view === 'calendar');
+    document.getElementById('listView').classList.toggle('active', view === 'list');
+
+    renderCurrentView();
 
     document.getElementById('calendarView').classList.toggle('active', view === 'calendar');
     document.getElementById('listView').classList.toggle('active', view === 'list');
@@ -734,6 +810,7 @@ function nextWeek() {
 
 function goToThisWeek() {
     currentWeekStart = getWeekStart(new Date());
+    updateWeekLabel();
     loadSessions();
 }
 
@@ -749,25 +826,25 @@ function openSessionModal(sessionId) {
     if (!session) return;
 
     const date = new Date(session.date + 'T00:00:00');
-    const hasBooking = !!session.userbooking;
+    const hasBooking = !!session.user_booking;
 
     document.getElementById('modalTitle').innerHTML = `
-        <span class="level-badge level-${session.traininglevel}">Level ${session.traininglevel}</span>
-        ${escapeHtml(session.trainingname)}
+        <span class="level-badge level-${session.training_level}">Level ${session.training_level}</span>
+        ${escapeHtml(session.training_name)}
     `;
 
     let bodyHtml = `
         <div style="margin-bottom: 1rem;">
             <p style="color: #666; margin: 0;">
                 <strong>${WEEKDAYS_FULL[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}</strong><br>
-                ${formatTime(session.starttime)} - ${formatTime(session.endtime)} (${session.durationminutes} min)
+                ${formatTime(session.start_time)} - ${formatTime(session.end_time)} (${session.duration_minutes} min)
             </p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
                 <div style="font-size: 0.8rem; color: #888;">Trainer</div>
-                <div>${escapeHtml(session.trainername)}</div>
+                <div>${escapeHtml(session.trainer_name)}</div>
             </div>
             <div>
                 <div style="font-size: 0.8rem; color: #888;">Category</div>
@@ -780,24 +857,24 @@ function openSessionModal(sessionId) {
             </div>` : ''}
             <div>
                 <div style="font-size: 0.8rem; color: #888;">Capacity</div>
-                <div>${session.currentparticipants}/${session.maxparticipants} registered</div>
+                <div>${session.current_participants}/${session.max_participants} registered</div>
             </div>
         </div>
     `;
 
     if (hasBooking) {
-        const booking = session.userbooking;
+        const booking = session.user_booking;
         bodyHtml += `
             <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <strong>Your Booking</strong><br>
-                Status: ${booking.status === 'waitlisted' ? `Waitlisted (#${booking.waitlistposition})` : 'Registered'}
-                ${booking.confirmationdeadline ? `<br>Confirm by: ${new Date(booking.confirmationdeadline).toLocaleString()}` : ''}
+                Status: ${booking.status === 'waitlisted' ? `Waitlisted (#${booking.waitlist_position})` : 'Registered'}
+                ${booking.confirmation_deadline ? `<br>Confirm by: ${new Date(booking.confirmation_deadline).toLocaleString()}` : ''}
             </div>
         `;
-    } else if (session.waitlistcount > 0 && session.isfull) {
+    } else if (session.waitlist_count > 0 && session.is_full) {
         bodyHtml += `
             <div style="background: #fef3c7; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem;">
-                ⚠️ Session is full. ${session.waitlistcount} on waitlist. You'll be added to the waitlist.
+                ⚠️ Session is full. ${session.waitlist_count} on waitlist. You'll be added to the waitlist.
             </div>
         `;
     }
@@ -807,13 +884,13 @@ function openSessionModal(sessionId) {
     let footerHtml = '<button class="btn btn-secondary" onclick="closeSessionModal()">Close</button>';
 
     if (hasBooking) {
-        const booking = session.userbooking;
+        const booking = session.user_booking;
         if (booking.status === 'notified') {
             footerHtml += `<button class="btn btn-primary" onclick="confirmWaitlist(${booking.id})">Confirm Spot</button>`;
         }
         footerHtml += `<button class="btn btn-danger" onclick="cancelBooking(${booking.id})">Cancel Booking</button>`;
     } else {
-        footerHtml += `<button class="btn btn-primary" onclick="bookSession(${session.id})">${session.isfull ? 'Join Waitlist' : 'Register'}</button>`;
+        footerHtml += `<button class="btn btn-primary" onclick="bookSession(${session.id})">${session.is_full ? 'Join Waitlist' : 'Register'}</button>`;
     }
 
     document.getElementById('modalFooter').innerHTML = footerHtml;
@@ -899,6 +976,7 @@ async function confirmWaitlist(bookingId) {
 }
 
 function formatTime(timeStr) {
+    if (!timeStr) return '';
     const [hours, minutes] = timeStr.split(':');
     const h = parseInt(hours, 10);
     const ampm = h >= 12 ? 'PM' : 'AM';

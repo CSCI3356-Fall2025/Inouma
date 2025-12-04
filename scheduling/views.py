@@ -1,11 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
+from django.views.decorators.http import require_GET, require_POST
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.views.decorators.http import require_POST
-from django.utils.dateparse import parse_date
-from datetime import datetime, timedelta, time as dt_time
+from .models import Semester, DailyOperatingHours, ShiftRequirement, LocationGroup, Shift, TeamMemberProfile, Unavailability
+from locations.models import Location
+from datetime import date, time, timedelta, datetime
+from datetime import time as dt_time
 import json
+from django.utils import timezone
 
 from .models import (
     Semester, DailyOperatingHours, ShiftRequirement, LocationGroup,
@@ -110,144 +113,246 @@ def configure_semester(request):
     return render(request, 'scheduling/configure_semester.html', context)
 
 
+# ============================================================================
+# SEMESTER CONFIG API - Get Config
+# ============================================================================
+
 @login_required
-@user_passes_test(is_staff_user)
+@require_GET
 def api_get_semester_config(request, semester_id):
-    """Get semester configuration for editing"""
-    semester = get_object_or_404(Semester, id=semester_id)
+    """
+    Get semester configuration including operating hours, requirements, and holidays.
     
-    # Get operating hours
-    operating_hours = {}
-    for oh in DailyOperatingHours.objects.filter(semester=semester):
-        operating_hours[oh.day_of_week] = {
-            'id': oh.id,
-            'is_closed': oh.is_closed,
-            'training_disabled': oh.training_disabled,
-            'open_hours_start': oh.open_hours_start.strftime('%H:%M') if oh.open_hours_start else None,
-            'open_hours_end': oh.open_hours_end.strftime('%H:%M') if oh.open_hours_end else None,
-            'training_start': oh.training_start.strftime('%H:%M') if oh.training_start else None,
-            'training_end': oh.training_end.strftime('%H:%M') if oh.training_end else None,
-        }
-    
-    # Get shift requirements
-    shift_requirements = []
-    for req in ShiftRequirement.objects.filter(semester=semester).select_related('location', 'location_group'):
-        shift_requirements.append({
-            'id': req.id,
-            'day_of_week': req.day_of_week,
-            'time_start': req.time_start.strftime('%H:%M'),
-            'time_end': req.time_end.strftime('%H:%M'),
-            'location_id': req.location_id,
-            'location_name': req.location.name if req.location else None,
-            'location_group_id': req.location_group_id,
-            'location_group_name': req.location_group.name if req.location_group else None,
-            'hosts_required': req.hosts_required,
-            'floaters_required': req.floaters_required,
+    Used by: configure_semester.html
+    """
+    try:
+        semester = Semester.objects.get(pk=semester_id)
+        
+        # Get operating hours
+        operating_hours = {}
+        for dh in DailyOperatingHours.objects.filter(semester=semester):
+            operating_hours[dh.day_of_week] = {
+                'is_closed': dh.is_closed,
+                'training_disabled': dh.training_disabled,
+                'open_hours_start': dh.open_hours_start.strftime('%H:%M') if dh.open_hours_start else '09:00',
+                'open_hours_end': dh.open_hours_end.strftime('%H:%M') if dh.open_hours_end else '17:00',
+                'training_start': dh.training_start.strftime('%H:%M') if dh.training_start else '09:00',
+                'training_end': dh.training_end.strftime('%H:%M') if dh.training_end else '17:00',
+            }
+        
+        # Get shift requirements
+        shift_requirements = []
+        for req in ShiftRequirement.objects.filter(semester=semester):
+            shift_requirements.append({
+                'id': req.id,
+                'day_of_week': req.day_of_week,
+                'time_start': req.time_start.strftime('%H:%M'),
+                'time_end': req.time_end.strftime('%H:%M'),
+                'location_id': req.location_id,
+                'location_name': req.location.name if req.location else None,
+                'location_group_id': req.location_group_id,
+                'location_group_name': req.location_group.name if req.location_group else None,
+                'hosts_required': req.hosts_required,
+                'floaters_required': req.floaters_required,
+            })
+        
+        # Get holidays - handle both old and new format
+        raw_holidays = semester.holidays or []
+        holidays = []
+        for h in raw_holidays:
+            if isinstance(h, str):
+                # Convert old format to new format
+                holidays.append({'date': h, 'reason': 'Holiday'})
+            else:
+                holidays.append(h)
+        
+        return JsonResponse({
+            'semester': {
+                'id': semester.id,
+                'name': semester.name,
+                'start_date': semester.start_date.isoformat() if semester.start_date else None,
+                'end_date': semester.end_date.isoformat() if semester.end_date else None,
+            },
+            'operating_hours': operating_hours,
+            'shift_requirements': shift_requirements,
+            'holidays': holidays,
         })
-    
-    # Get holidays
-    holidays = semester.holidays if semester.holidays else []
-    
-    return JsonResponse({
-        'semester': {
-            'id': semester.id,
-            'name': semester.name,
-            'start_date': semester.start_date.isoformat(),
-            'end_date': semester.end_date.isoformat(),
-        },
-        'operating_hours': operating_hours,
-        'shift_requirements': shift_requirements,
-        'holidays': holidays,
-    })
+        
+    except Semester.DoesNotExist:
+        return JsonResponse({'error': 'Semester not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
+
+
+# ============================================================================
+# SEMESTER CONFIG API - Save Config
+# ============================================================================
 
 @login_required
-@user_passes_test(is_staff_user)
 @require_POST
 def api_save_semester_config(request):
-    """Save semester configuration"""
+    """
+    Save semester configuration including operating hours, requirements, and holidays.
+    
+    Used by: configure_semester.html
+    
+    Expected POST body:
+    {
+        "semester_id": 1,
+        "operating_hours": {
+            "0": {"is_closed": false, "open_hours_start": "09:00", ...},
+            ...
+        },
+        "shift_requirements": [...],
+        "holidays": [
+            {"date": "2025-12-25", "reason": "Christmas Day"},
+            ...
+        ]
+    }
+    """
     try:
         data = json.loads(request.body)
         semester_id = data.get('semester_id')
         
-        semester = get_object_or_404(Semester, id=semester_id)
+        if not semester_id:
+            return JsonResponse({'error': 'semester_id is required'}, status=400)
         
-        # Save operating hours
-        operating_hours_data = data.get('operating_hours', {})
-        for day_str, day_data in operating_hours_data.items():
-            day_of_week = int(day_str)
+        semester = Semester.objects.get(pk=semester_id)
+        
+        # -----------------------------------------------------------------
+        # Save Operating Hours
+        # -----------------------------------------------------------------
+        operating_hours = data.get('operating_hours', {})
+        
+        for day_of_week, hours in operating_hours.items():
+            day_int = int(day_of_week)
             
-            oh, created = DailyOperatingHours.objects.update_or_create(
+            dh, created = DailyOperatingHours.objects.get_or_create(
                 semester=semester,
-                day_of_week=day_of_week,
-                defaults={
-                    'is_closed': day_data.get('is_closed', False),
-                    'training_disabled': day_data.get('training_disabled', False),
-                    'open_hours_start': day_data.get('open_hours_start') or None,
-                    'open_hours_end': day_data.get('open_hours_end') or None,
-                    'training_start': day_data.get('training_start') or None,
-                    'training_end': day_data.get('training_end') or None,
-                }
+                day_of_week=day_int
             )
+            
+            dh.is_closed = hours.get('is_closed', False)
+            dh.training_disabled = hours.get('training_disabled', False)
+            
+            # Parse times
+            open_start = hours.get('open_hours_start')
+            open_end = hours.get('open_hours_end')
+            train_start = hours.get('training_start')
+            train_end = hours.get('training_end')
+            
+            dh.open_hours_start = parse_time(open_start)
+            dh.open_hours_end = parse_time(open_end)
+            dh.training_start = parse_time(train_start)
+            dh.training_end = parse_time(train_end)
+            
+            dh.save()
         
-        # Save shift requirements
-        shift_requirements_data = data.get('shift_requirements', [])
+        # -----------------------------------------------------------------
+        # Save Shift Requirements
+        # -----------------------------------------------------------------
+        shift_requirements = data.get('shift_requirements', [])
         
         # Get existing requirement IDs
-        existing_ids = set(ShiftRequirement.objects.filter(semester=semester).values_list('id', flat=True))
-        updated_ids = set()
+        existing_ids = set(
+            ShiftRequirement.objects.filter(semester=semester).values_list('id', flat=True)
+        )
+        submitted_ids = set()
         
-        for req_data in shift_requirements_data:
-            req_id = req_data.get('id')
-            is_new = req_data.get('isNew', False) or not isinstance(req_id, int) or req_id > 1000000000
+        for req in shift_requirements:
+            req_id = req.get('id')
+            is_new = req.get('isNew', False)
             
-            location = None
-            location_group = None
-            if req_data.get('location_id'):
-                location = Location.objects.filter(id=req_data['location_id']).first()
-            if req_data.get('location_group_id'):
-                location_group = LocationGroup.objects.filter(id=req_data['location_group_id']).first()
-            
-            if is_new:
+            if is_new or not req_id:
                 # Create new requirement
-                ShiftRequirement.objects.create(
-                    semester=semester,
-                    day_of_week=req_data['day_of_week'],
-                    time_start=req_data['time_start'],
-                    time_end=req_data['time_end'],
-                    location=location,
-                    location_group=location_group,
-                    hosts_required=req_data.get('hosts_required', 0),
-                    floaters_required=req_data.get('floaters_required', 0),
-                )
+                sr = ShiftRequirement(semester=semester)
             else:
                 # Update existing
-                ShiftRequirement.objects.filter(id=req_id).update(
-                    day_of_week=req_data['day_of_week'],
-                    time_start=req_data['time_start'],
-                    time_end=req_data['time_end'],
-                    location=location,
-                    location_group=location_group,
-                    hosts_required=req_data.get('hosts_required', 0),
-                    floaters_required=req_data.get('floaters_required', 0),
-                )
-                updated_ids.add(req_id)
+                try:
+                    sr = ShiftRequirement.objects.get(pk=req_id, semester=semester)
+                    submitted_ids.add(req_id)
+                except ShiftRequirement.DoesNotExist:
+                    sr = ShiftRequirement(semester=semester)
+            
+            sr.day_of_week = req.get('day_of_week', 0)
+            sr.time_start = parse_time(req.get('time_start', '09:00'))
+            sr.time_end = parse_time(req.get('time_end', '17:00'))
+            sr.hosts_required = req.get('hosts_required', 0)
+            sr.floaters_required = req.get('floaters_required', 0)
+            
+            # Set location or location_group
+            location_id = req.get('location_id')
+            location_group_id = req.get('location_group_id')
+            
+            sr.location = None
+            sr.location_group = None
+            
+            if location_id:
+                try:
+                    sr.location = Location.objects.get(pk=location_id)
+                except Location.DoesNotExist:
+                    pass
+            elif location_group_id:
+                try:
+                    sr.location_group = LocationGroup.objects.get(pk=location_group_id)
+                except LocationGroup.DoesNotExist:
+                    pass
+            
+            sr.save()
+            if sr.id:
+                submitted_ids.add(sr.id)
         
-        # Delete removed requirements
-        ids_to_delete = existing_ids - updated_ids
-        ShiftRequirement.objects.filter(id__in=ids_to_delete).delete()
+        # Delete requirements that were removed
+        ids_to_delete = existing_ids - submitted_ids
+        ShiftRequirement.objects.filter(id__in=ids_to_delete, semester=semester).delete()
         
-        # Save holidays
+        # -----------------------------------------------------------------
+        # Save Holidays (NEW FORMAT with reason)
+        # -----------------------------------------------------------------
         holidays = data.get('holidays', [])
-        semester.holidays = holidays
+        
+        # Normalize holidays to new format
+        normalized_holidays = []
+        for h in holidays:
+            if isinstance(h, str):
+                # Old format - convert
+                normalized_holidays.append({'date': h, 'reason': 'Holiday'})
+            elif isinstance(h, dict):
+                # New format - keep as is but ensure both fields exist
+                normalized_holidays.append({
+                    'date': h.get('date', ''),
+                    'reason': h.get('reason', 'Closed')
+                })
+        
+        # Sort by date
+        normalized_holidays.sort(key=lambda x: x.get('date', ''))
+        
+        # Save to semester
+        semester.holidays = normalized_holidays
         semester.save()
         
         return JsonResponse({'success': True})
         
+    except Semester.DoesNotExist:
+        return JsonResponse({'error': 'Semester not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def parse_time(time_str):
+    """Parse time string (HH:MM) to time object"""
+    if not time_str:
+        return None
+    try:
+        parts = time_str.split(':')
+        return time(int(parts[0]), int(parts[1]))
+    except (ValueError, IndexError):
+        return None
+    
+
 
 
 @login_required
@@ -548,46 +653,56 @@ def api_get_shifts(request):
     semester_id = request.GET.get('semester_id')
     week_start = request.GET.get('week_start')
     
-    filters = {}
+    if not semester_id:
+        return JsonResponse({'shifts': []})
     
-    if semester_id:
-        filters['semester_id'] = semester_id
+    # Build base filter
+    filters = {'semester_id': semester_id}
     
+    # If specific week requested, filter by that week
     if week_start:
-        week_date = parse_date(week_start)
-        week_end = week_date + timedelta(days=7)
-        filters['date__gte'] = week_date
-        filters['date__lt'] = week_end
+        try:
+            # Parse the week_start date string
+            week_date = date.fromisoformat(week_start)
+            week_end = week_date + timedelta(days=7)
+            filters['date__gte'] = week_date
+            filters['date__lt'] = week_end
+        except (ValueError, TypeError) as e:
+            print(f"Error parsing week_start: {e}")
     
-    # Get shifts grouped by day of week for model week
-    if semester_id and not week_start:
-        # Get one week's worth of shifts to show the model
-        semester = Semester.objects.get(id=semester_id)
-        
-        # Find first week with shifts
-        first_shift = Shift.objects.filter(semester_id=semester_id).order_by('date').first()
-        
-        if first_shift:
-            # Get that week's shifts
-            week_start_date = first_shift.date - timedelta(days=first_shift.date.weekday())
-            week_end_date = week_start_date + timedelta(days=7)
-            
-            filters['date__gte'] = week_start_date
-            filters['date__lt'] = week_end_date
-    
+    # Get shifts
     shifts = Shift.objects.filter(**filters).select_related(
         'user', 'location', 'location_group'
     ).order_by('date', 'start_time')
+    
+    # If no week filter and we have shifts, optionally limit to first week
+    # COMMENTED OUT to show ALL shifts by default
+    # if not week_start and shifts.exists():
+    #     first_shift = shifts.first()
+    #     week_start_date = first_shift.date - timedelta(days=first_shift.date.weekday())
+    #     week_end_date = week_start_date + timedelta(days=7)
+    #     shifts = shifts.filter(date__gte=week_start_date, date__lt=week_end_date)
     
     data = []
     for shift in shifts:
         # Get location info
         location_info = None
-        if shift.shift_type == 'open_hours':
-            if shift.location:
-                location_info = shift.location.name
-            elif shift.location_group:
-                location_info = shift.location_group.name
+        if shift.location:
+            location_info = shift.location.name
+        elif shift.location_group:
+            location_info = shift.location_group.name
+        
+        # Calculate duration safely
+        try:
+            duration = shift.duration_hours()
+        except Exception:
+            # Manual calculation fallback
+            try:
+                start_dt = datetime.combine(shift.date, shift.start_time)
+                end_dt = datetime.combine(shift.date, shift.end_time)
+                duration = (end_dt - start_dt).total_seconds() / 3600
+            except Exception:
+                duration = 0
         
         data.append({
             'id': shift.id,
@@ -598,13 +713,14 @@ def api_get_shifts(request):
             'user_id': shift.user.id,
             'shift_type': shift.shift_type,
             'shift_type_display': shift.get_shift_type_display(),
-            'team': shift.team_category,
+            'team': shift.team_category or '',
             'location': location_info,
             'status': shift.status,
-            'duration_hours': shift.duration_hours()
+            'duration_hours': round(duration, 2) if duration else 0
         })
     
     return JsonResponse({'shifts': data})
+
 
 
 @login_required
@@ -645,9 +761,11 @@ def api_get_team_members(request):
                 slots = []
                 for slot in day_slots:
                     slots.append({
+                        'id': slot.id,
                         'start': slot.start_time.strftime('%H:%M') if slot.start_time else '09:00',
                         'end': slot.end_time.strftime('%H:%M') if slot.end_time else '17:00',
-                        'reason': slot.reason or ''
+                        'reason': slot.reason or '',
+                        'status': slot.status,
                     })
                 unavailability[i] = slots
         
@@ -691,6 +809,7 @@ def api_get_team_members(request):
         })
     
     return JsonResponse({'members': data})
+
 
 
 @login_required
@@ -759,7 +878,10 @@ def api_save_team_member(request):
                             day_of_week=day_of_week,
                             start_time=slot['start'],
                             end_time=slot['end'],
-                            reason=slot.get('reason', '')
+                            reason=slot.get('reason', ''),
+                            status='approved',
+                            reviewed_by=request.user,
+                            reviewed_at=timezone.now()
                         )
         
         return JsonResponse({'success': True})
@@ -768,6 +890,156 @@ def api_save_team_member(request):
         import traceback
         print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_GET
+def api_pending_unavailability(request):
+    """List pending unavailability requests for staff review"""
+    semester_id = request.GET.get('semester_id')
+    qs = Unavailability.objects.select_related('user', 'semester').filter(status='pending')
+    if semester_id:
+        qs = qs.filter(semester_id=semester_id)
+    
+    items = []
+    for item in qs:
+        items.append({
+            'id': item.id,
+            'user': item.user.get_full_name() or item.user.email,
+            'user_id': item.user_id,
+            'semester': item.semester.name if item.semester else None,
+            'semester_id': item.semester_id,
+            'day_of_week': item.day_of_week,
+            'day_label': item.get_day_of_week_display(),
+            'start': item.start_time.strftime('%H:%M') if item.start_time else None,
+            'end': item.end_time.strftime('%H:%M') if item.end_time else None,
+            'reason': item.reason,
+        })
+    
+    return JsonResponse({'requests': items})
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_approve_unavailability(request):
+    """Approve a pending unavailability entry"""
+    try:
+        data = json.loads(request.body)
+        entry_id = data.get('id')
+        notes = data.get('notes', '')
+        
+        if not entry_id:
+            return JsonResponse({'success': False, 'error': 'id is required'}, status=400)
+        
+        entry = get_object_or_404(Unavailability, id=entry_id)
+        entry.status = 'approved'
+        entry.reviewed_by = request.user
+        entry.reviewed_at = timezone.now()
+        entry.admin_notes = notes
+        entry.save()
+        
+        return JsonResponse({'success': True, 'status': entry.status})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_reject_unavailability(request):
+    """Reject a pending unavailability entry"""
+    try:
+        data = json.loads(request.body)
+        entry_id = data.get('id')
+        notes = data.get('notes', '')
+        
+        if not entry_id:
+            return JsonResponse({'success': False, 'error': 'id is required'}, status=400)
+        
+        entry = get_object_or_404(Unavailability, id=entry_id)
+        entry.status = 'rejected'
+        entry.reviewed_by = request.user
+        entry.reviewed_at = timezone.now()
+        entry.admin_notes = notes
+        entry.save()
+        
+        return JsonResponse({'success': True, 'status': entry.status})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@user_passes_test(is_staff_user)
+@require_POST
+def api_approve_all_unavailability(request):
+    """Approve all pending unavailability entries (optionally scoped to a semester)"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        semester_id = data.get('semester_id')
+        
+        pending = Unavailability.objects.filter(status='pending')
+        if semester_id:
+            pending = pending.filter(semester_id=semester_id)
+        
+        count = pending.update(
+            status='approved',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+        
+        return JsonResponse({'success': True, 'approved_count': count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+
+@login_required
+@user_passes_test(is_staff_user)
+def api_debug_shifts(request):
+    """Debug endpoint to check shift data"""
+    semester_id = request.GET.get('semester_id')
+    
+    result = {
+        'semester_id': semester_id,
+        'all_semesters': [],
+        'shift_counts': {},
+        'sample_shifts': []
+    }
+    
+    # List all semesters with their shift counts
+    for sem in Semester.objects.all().order_by('-start_date'):
+        count = Shift.objects.filter(semester=sem).count()
+        result['all_semesters'].append({
+            'id': sem.id,
+            'name': sem.name,
+            'is_active': sem.is_active,
+            'shifts': count
+        })
+    
+    # If semester specified, get details
+    if semester_id:
+        shifts = Shift.objects.filter(semester_id=semester_id)
+        result['shift_counts'] = {
+            'total': shifts.count(),
+            'open_hours': shifts.filter(shift_type='open_hours').count(),
+            'training': shifts.filter(shift_type='training').count(),
+            'floater': shifts.filter(shift_type='floater').count(),
+        }
+        
+        # Sample shifts
+        for s in shifts[:5]:
+            result['sample_shifts'].append({
+                'id': s.id,
+                'date': str(s.date),
+                'user': s.user.email,
+                'type': s.shift_type
+            })
+    
+    return JsonResponse(result, json_dumps_params={'indent': 2})
+
+
 
 
 @login_required
@@ -870,6 +1142,9 @@ def my_availability(request):
                         start_time=start,
                         end_time=end,
                         is_unavailable=True,
+                        status='pending',
+                        reviewed_by=None,
+                        reviewed_at=None,
                         reason=reason,
                     )
                     created_count += 1
@@ -1530,5 +1805,173 @@ def api_save_my_preferences(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# ============================================================================
+# PUBLIC API - No Authentication Required
+# ============================================================================
+
+@require_GET
+def api_public_hours(request):
+    """
+    Public API endpoint - no authentication required.
+    Returns the active semester's operating hours and upcoming closures.
+    
+    Used by: userDashboard.html
+    
+    Response format:
+    {
+        "semester": {
+            "name": "Spring 2026",
+            "start_date": "2026-01-12",
+            "end_date": "2026-05-15"
+        },
+        "operating_hours": {
+            "0": {
+                "is_closed": false,
+                "open_hours_start": "09:00",
+                "open_hours_end": "21:00",
+                "training_start": "09:00",
+                "training_end": "17:00",
+                "training_disabled": false
+            },
+            ...
+        },
+        "closures": [
+            {"date": "2026-01-20", "reason": "MLK Day"},
+            {"date": "2026-03-09", "reason": "Spring Break"}
+        ]
+    }
+    """
+    try:
+        # Get active semester
+        semester = Semester.objects.filter(is_active=True).first()
+        
+        if not semester:
+            return JsonResponse({
+                'error': 'No active semester',
+                'semester': None,
+                'operating_hours': {},
+                'closures': []
+            })
+        
+        # Build operating hours dict from DailyOperatingHours model
+        operating_hours = {}
+        daily_hours = DailyOperatingHours.objects.filter(semester=semester)
+        
+        for dh in daily_hours:
+            operating_hours[str(dh.day_of_week)] = {
+                'is_closed': dh.is_closed,
+                'open_hours_start': dh.open_hours_start.strftime('%H:%M') if dh.open_hours_start else None,
+                'open_hours_end': dh.open_hours_end.strftime('%H:%M') if dh.open_hours_end else None,
+                'training_start': dh.training_start.strftime('%H:%M') if dh.training_start else None,
+                'training_end': dh.training_end.strftime('%H:%M') if dh.training_end else None,
+                'training_disabled': dh.training_disabled
+            }
+        
+        # Get closures from semester.holidays JSON field
+        # Handle both old format (array of strings) and new format (array of objects)
+        raw_holidays = semester.holidays or []
+        closures = []
+        
+        today = date.today()
+        
+        for h in raw_holidays:
+            if isinstance(h, str):
+                # Old format - just a date string
+                closure_date = h
+                reason = 'Closed'
+            else:
+                # New format - object with date and reason
+                closure_date = h.get('date', '')
+                reason = h.get('reason', 'Closed')
+            
+            # Only include upcoming closures (today or future)
+            try:
+                closure_date_obj = date.fromisoformat(closure_date)
+                if closure_date_obj >= today:
+                    closures.append({
+                        'date': closure_date,
+                        'reason': reason
+                    })
+            except (ValueError, TypeError):
+                continue
+        
+        # Sort closures by date
+        closures.sort(key=lambda x: x['date'])
+        
+        return JsonResponse({
+            'semester': {
+                'name': semester.name,
+                'start_date': semester.start_date.isoformat() if semester.start_date else None,
+                'end_date': semester.end_date.isoformat() if semester.end_date else None
+            },
+            'operating_hours': operating_hours,
+            'closures': closures
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'semester': None,
+            'operating_hours': {},
+            'closures': []
+        }, status=500)
+    
+
+
+@login_required
+def api_get_model_week(request):
+    """
+    Get model week (Week 0) shifts for display.
+    This is the template week that repeats throughout the semester.
+    """
+    from .models import ModelWeekShift
+    
+    semester_id = request.GET.get('semester_id')
+    
+    if not semester_id:
+        return JsonResponse({'shifts': [], 'error': 'No semester specified'})
+    
+    # Get model week shifts
+    shifts = ModelWeekShift.objects.filter(
+        semester_id=semester_id
+    ).select_related('user', 'location', 'location_group').order_by('day_of_week', 'start_time')
+    
+    data = []
+    for shift in shifts:
+        # Get location info
+        location_info = None
+        if shift.location:
+            location_info = shift.location.name
+        elif shift.location_group:
+            location_info = shift.location_group.name
+        
+        # Calculate duration
+        try:
+            duration = shift.duration_hours()
+        except Exception:
+            duration = 0
+        
+        data.append({
+            'id': shift.id,
+            'day_of_week': shift.day_of_week,
+            'start': shift.start_time.strftime('%H:%M'),
+            'end': shift.end_time.strftime('%H:%M'),
+            'user': shift.user.get_full_name() or shift.user.email,
+            'user_id': shift.user.id,
+            'shift_type': shift.shift_type,
+            'shift_type_display': shift.get_shift_type_display(),
+            'team': shift.team_category or '',
+            'location': location_info,
+            'duration_hours': round(duration, 2) if duration else 0
+        })
+    
+    return JsonResponse({
+        'shifts': data,
+        'count': len(data),
+        'semester_id': semester_id
+    })
+
 
 

@@ -1,0 +1,838 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}About The Hatchery{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'user_dashboard' %}" class="breadcrumb-item">Dashboard</a>
+<span class="breadcrumb-separator">></span>
+<span class="breadcrumb-item active">About The Hatchery</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+:root {
+    --gunmetal: #293242;
+    --sunglow: #fcc931;
+    --timberwolf: #cfcfce;
+    --bc-maroon: #8a2432;
+    --keppel: #00b59c;
+}
+
+/* Page Layout */
+.about-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Hero Section */
+.about-hero {
+    background: linear-gradient(135deg, var(--bc-maroon) 0%, #5c1821 100%);
+    border-radius: 16px;
+    padding: 2.5rem;
+    color: white;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.about-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+
+.about-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: 20%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+}
+
+.about-hero h1 {
+    font-size: 2.25rem;
+    margin: 0 0 0.5rem;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+}
+
+.about-hero p {
+    font-size: 1.1rem;
+    margin: 0;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+}
+
+.semester-badge {
+    display: inline-block;
+    background: var(--sunglow);
+    color: var(--gunmetal);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Section styling */
+.section {
+    margin-bottom: 2.5rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--sunglow) 0%, #e5b62c 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0;
+}
+
+/* Card styling */
+.card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+/* Schedule Section */
+.schedule-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.schedule-tabs {
+    display: flex;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.schedule-tab {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    border: none;
+    background: transparent;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.schedule-tab:hover {
+    color: var(--gunmetal);
+    background: #f3f4f6;
+}
+
+.schedule-tab.active {
+    color: var(--bc-maroon);
+    background: white;
+}
+
+.schedule-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--bc-maroon);
+}
+
+.schedule-tab-icon {
+    margin-right: 0.5rem;
+}
+
+.schedule-content {
+    padding: 1.5rem;
+}
+
+.schedule-view {
+    display: none;
+}
+
+.schedule-view.active {
+    display: block;
+}
+
+/* Weekly Hours */
+.weekly-hours {
+    max-width: 400px;
+}
+
+.hours-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.hours-row:last-child {
+    border-bottom: none;
+}
+
+.hours-day {
+    color: var(--gunmetal);
+    font-weight: 500;
+}
+
+.hours-time {
+    color: var(--gunmetal);
+    font-weight: 400;
+    text-align: right;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.95rem;
+}
+
+.hours-time.closed {
+    color: #999;
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.schedule-note {
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: #fef9e7;
+    border-left: 4px solid var(--sunglow);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.schedule-note strong {
+    color: var(--gunmetal);
+}
+
+/* Special Dates */
+.closures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.closure-card {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.closure-card.semester-end {
+    background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
+    border-color: #fed7aa;
+}
+
+.closure-info {
+    flex: 1;
+}
+
+.closure-dates {
+    font-weight: 600;
+    color: var(--gunmetal);
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.closure-reason {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.closure-badge {
+    padding: 0.3rem 0.6rem;
+    background: #dc2626;
+    color: white;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.closure-badge.semester {
+    background: linear-gradient(135deg, #dc2626, #ea580c);
+}
+
+.closures-footer {
+    margin-top: 1.25rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.closures-footer-icon {
+    font-size: 1rem;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.info-card-icon {
+    width: 36px;
+    height: 36px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.info-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gunmetal);
+    margin: 0;
+}
+
+.info-card p {
+    margin: 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.info-card a {
+    color: var(--bc-maroon);
+    text-decoration: none;
+}
+
+.info-card a:hover {
+    text-decoration: underline;
+}
+
+/* Contact cards */
+.contact-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.contact-person {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.contact-person .name {
+    font-weight: 600;
+    color: var(--gunmetal);
+    font-size: 0.95rem;
+}
+
+.contact-person .email {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* Social link */
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg,rgb(211, 155, 249),rgb(255, 129, 129),rgb(249, 200, 132));
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.social-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(131, 58, 180, 0.35);
+}
+
+/* Equipment Grid */
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.equipment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--gunmetal);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.equipment-item:hover {
+    background: white;
+    border-color: var(--sunglow);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.equipment-icon {
+    font-size: 1.2rem;
+}
+
+/* Map */
+.map-container {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.map-container iframe {
+    display: block;
+}
+
+/* Mission Section */
+.mission-card {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 2rem;
+}
+
+.mission-card p {
+    color: #4b5563;
+    line-height: 1.8;
+    font-size: 1.05rem;
+    margin: 0;
+    max-width: 700px;
+}
+
+/* Empty state */
+.empty-closures {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+.empty-closures-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="about-page">
+    
+    <!-- Hero Section -->
+    <div class="about-hero">
+        <div class="semester-badge" id="semesterBadge">Loading...</div>
+        <h1>The Hatchery</h1>
+        <p>Boston College's student makerspace for design, fabrication, and creative exploration.</p>
+    </div>
+    
+    <!-- Schedule Section -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-icon">🕐</div>
+            <h2 class="section-title">Hours & Schedule</h2>
+        </div>
+        
+        <div class="card schedule-card">
+            <!-- Tabs -->
+            <div class="schedule-tabs">
+                <button class="schedule-tab active" onclick="showSchedule('open')" id="tabOpen">
+                    <span class="schedule-tab-icon">🟢</span>Open Hours
+                </button>
+                <button class="schedule-tab" onclick="showSchedule('training')" id="tabTraining">
+                    <span class="schedule-tab-icon">🎓</span>Training Hours
+                </button>
+                <button class="schedule-tab" onclick="showSchedule('closures')" id="tabClosures">
+                    <span class="schedule-tab-icon">📅</span>Special Dates
+                </button>
+            </div>
+            
+            <div class="schedule-content">
+                <!-- Open Hours View -->
+                <div class="schedule-view active" id="viewOpen">
+                    <div class="weekly-hours" id="openHoursList">
+                        <div class="hours-row"><span class="hours-day">Loading...</span><span class="hours-time">—</span></div>
+                    </div>
+                    <div class="schedule-note">
+                        <strong>📍 Open Hours:</strong> The space is open for reservations and walk-in use. Outside of these times, the space is closed for public use.
+                    </div>
+                </div>
+                
+                <!-- Training Hours View -->
+                <div class="schedule-view" id="viewTraining">
+                    <div class="weekly-hours" id="trainingHoursList">
+                        <div class="hours-row"><span class="hours-day">Loading...</span><span class="hours-time">—</span></div>
+                    </div>
+                    <div class="schedule-note">
+                        <strong>🎓 Training Hours:</strong> Training sessions are bookable via this platform during all training hours, even when the space is closed for public use.
+                    </div>
+                </div>
+                
+                <!-- Closures View -->
+                <div class="schedule-view" id="viewClosures">
+                    <div class="closures-grid" id="closuresList">
+                        <div class="empty-closures">
+                            <div class="empty-closures-icon">📅</div>
+                            <p>No upcoming closures scheduled</p>
+                        </div>
+                    </div>
+                    <div class="closures-footer">
+                        <span class="closures-footer-icon">ℹ️</span>
+                        The space is also closed on all university holidays and home football game days.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Location & Contact -->
+    <div class="section">
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <div class="info-card-icon">📍</div>
+                    <h3>Location</h3>
+                </div>
+                <p>
+                    245 Beacon Street<br>
+                    2nd & 3rd Floor<br>
+                    Chestnut Hill, MA 02467
+                </p>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-card-header">
+                    <div class="info-card-icon">✉️</div>
+                    <h3>Contact Us</h3>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-person">
+                        <div class="name">Lucas Ewing</div>
+                        <div class="email"><a href="mailto:ewinglu@bc.edu">ewinglu@bc.edu</a></div>
+                    </div>
+                    <div class="contact-person">
+                        <div class="name">Brian Reeves</div>
+                        <div class="email"><a href="mailto:reevesb@bc.edu">reevesb@bc.edu</a></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-card-header">
+                    <div class="info-card-icon">📸</div>
+                    <h3>Follow Us</h3>
+                </div>
+                <a href="https://instagram.com/bc_hatchery" target="_blank" class="social-link">
+                    @bc_hatchery
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-icon">🗺️</div>
+            <h2 class="section-title">Find Us</h2>
+        </div>
+        <div class="map-container">
+            <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2949.5!2d-71.1686!3d42.3351!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e379f0a1b!2s245%20Beacon%20St%2C%20Chestnut%20Hill%2C%20MA%2002467!5e0!3m2!1sen!2sus!4v1" 
+                width="100%" 
+                height="300" 
+                style="border:0;" 
+                allowfullscreen="" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+        </div>
+    </div>
+    
+    <!-- Equipment -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-icon">🛠️</div>
+            <h2 class="section-title">Equipment Available</h2>
+        </div>
+        <div class="equipment-grid">
+            <div class="equipment-item"><span class="equipment-icon">🔴</span> Laser Cutters</div>
+            <div class="equipment-item"><span class="equipment-icon">🖨️</span> 3D Printers</div>
+            <div class="equipment-item"><span class="equipment-icon">🪚</span> Woodshop</div>
+            <div class="equipment-item"><span class="equipment-icon">🧵</span> Sewing & Textiles</div>
+            <div class="equipment-item"><span class="equipment-icon">⚙️</span> Metalworking</div>
+            <div class="equipment-item"><span class="equipment-icon">💡</span> Electronics Lab</div>
+            <div class="equipment-item"><span class="equipment-icon">🎨</span> Vinyl Cutting</div>
+        </div>
+    </div>
+    
+    <!-- Mission -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-icon">💡</div>
+            <h2 class="section-title">Why Make?</h2>
+        </div>
+        <div class="mission-card">
+            <p>
+                The Hatchery exists to empower students to turn ideas into reality. Whether you're prototyping 
+                for a class project, exploring a personal passion, or launching a startup, our space provides 
+                the tools, training, and community to help you create. All BC students can access our equipment 
+                after completing the required safety trainings.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+let scheduleData = null;
+
+// Load schedule data
+function loadScheduleData() {
+    fetch('/scheduling/api/public-hours/')
+        .then(res => res.json())
+        .then(data => {
+            scheduleData = data;
+            
+            // Update semester badge
+            if (data.semester && data.semester.name) {
+                document.getElementById('semesterBadge').textContent = data.semester.name;
+            } else {
+                document.getElementById('semesterBadge').textContent = 'Current Semester';
+            }
+            
+            renderOpenHours();
+            renderTrainingHours();
+            renderClosures();
+        })
+        .catch(err => {
+            console.error('Error loading schedule:', err);
+            document.getElementById('semesterBadge').textContent = 'Schedule Unavailable';
+        });
+}
+
+function showSchedule(type) {
+    // Update tabs
+    document.querySelectorAll('.schedule-tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById('tab' + capitalize(type)).classList.add('active');
+    
+    // Update views
+    document.querySelectorAll('.schedule-view').forEach(view => view.classList.remove('active'));
+    document.getElementById('view' + capitalize(type)).classList.add('active');
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function renderOpenHours() {
+    if (!scheduleData) return;
+    
+    const container = document.getElementById('openHoursList');
+    let html = '';
+    
+    DAYS.forEach((day, index) => {
+        const dayData = scheduleData.operating_hours[index] || {};
+        
+        let timeDisplay;
+        if (dayData.is_closed) {
+            timeDisplay = '<span class="hours-time closed">CLOSED</span>';
+        } else {
+            const start = formatTime(dayData.open_hours_start || '09:00');
+            const end = formatTime(dayData.open_hours_end || '17:00');
+            timeDisplay = `<span class="hours-time">${start} - ${end}</span>`;
+        }
+        
+        html += `
+            <div class="hours-row">
+                <span class="hours-day">${day}</span>
+                ${timeDisplay}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderTrainingHours() {
+    if (!scheduleData) return;
+    
+    const container = document.getElementById('trainingHoursList');
+    let html = '';
+    
+    DAYS.forEach((day, index) => {
+        const dayData = scheduleData.operating_hours[index] || {};
+        
+        let timeDisplay;
+        if (dayData.training_disabled) {
+            timeDisplay = '<span class="hours-time closed">NO TRAINING</span>';
+        } else {
+            const start = formatTime(dayData.training_start || '09:00');
+            const end = formatTime(dayData.training_end || '17:00');
+            timeDisplay = `<span class="hours-time">${start} - ${end}</span>`;
+        }
+        
+        html += `
+            <div class="hours-row">
+                <span class="hours-day">${day}</span>
+                ${timeDisplay}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderClosures() {
+    if (!scheduleData || !scheduleData.closures || scheduleData.closures.length === 0) {
+        document.getElementById('closuresList').innerHTML = `
+            <div class="empty-closures" style="grid-column: 1/-1;">
+                <div class="empty-closures-icon">🎉</div>
+                <p>No upcoming closures scheduled</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const closures = scheduleData.closures;
+    
+    // Group consecutive dates with same reason
+    const groups = [];
+    let currentGroup = null;
+    
+    closures.forEach(closure => {
+        const closureObj = typeof closure === 'string' 
+            ? { date: closure, reason: 'Closed' }
+            : closure;
+        
+        if (currentGroup && currentGroup.reason === closureObj.reason && isConsecutive(currentGroup.endDate, closureObj.date)) {
+            currentGroup.endDate = closureObj.date;
+        } else {
+            if (currentGroup) groups.push(currentGroup);
+            currentGroup = {
+                startDate: closureObj.date,
+                endDate: closureObj.date,
+                reason: closureObj.reason || 'Closed'
+            };
+        }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    
+    const container = document.getElementById('closuresList');
+    let html = '';
+    
+    groups.forEach(group => {
+        const startFormatted = formatDateDisplay(group.startDate);
+        const endFormatted = formatDateDisplay(group.endDate);
+        
+        let dateRange = startFormatted;
+        if (group.startDate !== group.endDate) {
+            dateRange = `${startFormatted} – ${endFormatted}`;
+        }
+        
+        const isSemesterEnd = group.reason.toLowerCase().includes('semester') || group.reason.toLowerCase().includes('break');
+        const badgeClass = isSemesterEnd ? 'semester' : '';
+        const cardClass = isSemesterEnd ? 'semester-end' : '';
+        
+        html += `
+            <div class="closure-card ${cardClass}">
+                <div class="closure-info">
+                    <div class="closure-dates">${dateRange}</div>
+                    <div class="closure-reason">${group.reason}</div>
+                </div>
+                <div class="closure-badge ${badgeClass}">Closed</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function isConsecutive(date1, date2) {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+    return diff === 1;
+}
+
+function formatTime(time24) {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes}${ampm}`;
+}
+
+function formatDateDisplay(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', loadScheduleData);
+</script>
+{% endblock %}

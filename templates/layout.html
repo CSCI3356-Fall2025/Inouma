@@ -2,11 +2,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}The Hatchery - BC Makerspace{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-  {% block extra_head %}{% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The Hatchery - BC Makerspace{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        /* View Toggle Styles */
+        .view-toggle-navbar {
+            margin: 0.75rem 1rem;
+            padding: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        
+        .view-toggle-label-navbar {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 0.4rem;
+            padding: 0 0.25rem;
+        }
+        
+        .view-toggle-buttons-navbar {
+            display: flex;
+            gap: 0.25rem;
+        }
+        
+        .view-toggle-btn-navbar {
+            flex: 1;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .view-toggle-btn-navbar:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .view-toggle-btn-navbar.active {
+            background: var(--sunglow, #fcc931);
+            color: var(--gunmetal, #293242);
+        }
+        
+        .nav-section-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.5);
+            padding: 1rem 1rem 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Hidden class for view switching */
+        .view-hidden {
+            display: none !important;
+        }
+        
+        /* Spacer to push bottom nav down */
+        .nav-spacer {
+            flex: 1;
+        }
+        
+        /* Bottom nav section */
+        .nav-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <!-- Left Sidebar Navigation -->
@@ -17,133 +90,185 @@
             </div>
         </div>
         
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" style="display: flex; flex-direction: column; flex: 1;">
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <!-- ========== STAFF VIEW TOGGLE ========== -->
+                    <div class="view-toggle-navbar" style="margin-bottom: 8px;">
+                        <div class="view-toggle-label-navbar">View As</div>
+                        <div class="view-toggle-buttons-navbar">
+                            <button class="view-toggle-btn-navbar active" data-view="staff" onclick="switchView('staff')">Staff</button>
+                            <button class="view-toggle-btn-navbar" data-view="team" onclick="switchView('team')">Team</button>
+                            <button class="view-toggle-btn-navbar" data-view="user" onclick="switchView('user')">User</button>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <!-- Machines - visible to all -->
             <a href="{% url 'machine_directory' %}" 
                class="nav-link {% if request.resolver_match.url_name == 'machine_directory' %}active{% endif %}">
                 <span class="nav-icon">🔧</span>
-                <span>Machine Directory</span>
+                <span>Machines</span>
             </a>
             
             {% if user.is_authenticated %}
-                <a href="{% url 'user_dashboard' %}"
-                   class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
-                    <span class="nav-icon">👤</span>
-                    <span>User Dashboard</span>
-                </a>
-
-                {% if user.is_trainer or user.is_team_lead or user.is_staff %}
-                <a href="{% url 'trainer_dashboard' %}"
-                   class="nav-link {% if request.resolver_match.url_name == 'trainer_dashboard' %}active{% endif %}">
-                    <span class="nav-icon">🎓</span>
-                    <span>Trainer Dashboard</span>
-                </a>
-                {% endif %}
-                
-                {% if not user.is_staff %}
-                    <!-- Regular User: Reservations Section -->
-                    <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Reservations</div>
+                {% if user.is_staff %}
+                    <!-- Staff View Links -->
+                    <div class="nav-group" data-view-group="staff">
+                        <a href="{% url 'staff_dashboard' %}" 
+                           class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Staff Dashboard</span>
+                        </a>
+                    </div>
                     
-                    <a href="{% url 'reservations:my_reservations' %}"
-                       class="nav-link {% if request.resolver_match.url_name == 'my_reservations' %}active{% endif %}">
-                        <span class="nav-icon">📅</span>
-                        <span>My Reservations</span>
+                    <!-- Team View Links (for staff viewing as team) -->
+                    <div class="nav-group view-hidden" data-view-group="team">
+                        <a href="{% url 'team:team_dashboard' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'team_dashboard' %}active{% endif %}">
+                            <span class="nav-icon">👥</span>
+                            <span>Team Dashboard</span>
+                        </a>
+                        <a href="{% url 'user_dashboard' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+                            <span class="nav-icon">👤</span>
+                            <span>User Dashboard</span>
+                        </a>
+                    </div>
+                    
+                    <!-- User View Links (for staff viewing as user) -->
+                    <div class="nav-group view-hidden" data-view-group="user">
+                        <a href="{% url 'user_dashboard' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+                            <span class="nav-icon">👤</span>
+                            <span>User Dashboard</span>
+                        </a>
+                    </div>
+                    
+                {% elif user.role == 'Team Member' or user.is_trainer or user.is_team_lead %}
+                    <!-- ========== TEAM MEMBER VIEW ========== -->
+                    <a href="{% url 'team:team_dashboard' %}"
+                       class="nav-link {% if request.resolver_match.url_name == 'team_dashboard' %}active{% endif %}">
+                        <span class="nav-icon">👥</span>
+                        <span>Team Dashboard</span>
+                    </a>
+                    <a href="{% url 'user_dashboard' %}"
+                       class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+                        <span class="nav-icon">👤</span>
+                        <span>User Dashboard</span>
                     </a>
                     
-                    <a href="{% url 'reservations:training_browser' %}"
-                       class="nav-link {% if request.resolver_match.url_name == 'training_browser' %}active{% endif %}">
-                        <span class="nav-icon">🎓</span>
-                        <span>Training Sessions</span>
-                    </a>
-                    
-                    <a href="{% url 'reservations:my_training_progress' %}"
-                       class="nav-link {% if request.resolver_match.url_name == 'my_training_progress' %}active{% endif %}">
-                        <span class="nav-icon">📊</span>
-                        <span>My Progress</span>
-                    </a>
-                {% endif %}
-                
-                {% if user.team_member_profile %}
-                    <!-- Team Member: My Training Sessions -->
-                    <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Team</div>
-                    
-                    <a href="{% url 'reservations:team_my_training_sessions' %}"
-                       class="nav-link {% if request.resolver_match.url_name == 'team_my_training_sessions' %}active{% endif %}">
-                        <span class="nav-icon">🎓</span>
-                        <span>My Trainer Sessions</span>
+                {% else %}
+                    <!-- ========== REGULAR USER VIEW ========== -->
+                    <a href="{% url 'user_dashboard' %}"
+                       class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+                        <span class="nav-icon">👤</span>
+                        <span>User Dashboard</span>
                     </a>
                 {% endif %}
             {% endif %}
             
-            {% if user.is_staff %}
-                <!-- Staff Section -->
-                <div class="nav-section-label" style="padding-top: 2rem; padding-left: 1rem; color: #fcc931;">Staff</div>
-                
-                <a href="{% url 'staff_dashboard' %}" 
-                   class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
-                    <span class="nav-icon">⚙️</span>
-                    <span>Staff Dashboard</span>
+            <!-- Spacer to push bottom items down -->
+            <div class="nav-spacer"></div>
+            
+            <!-- Bottom Navigation - Visible to ALL users -->
+            <div class="nav-bottom">
+                <a href="{% url 'about_hatchery' %}" 
+                   class="nav-link {% if request.resolver_match.url_name == 'about_hatchery' %}active{% endif %}">
+                    <span class="nav-icon">ℹ️</span>
+                    <span>About The Hatchery</span>
                 </a>
-            {% endif %}
+            </div>
         </nav>
 
-    <div class="sidebar-footer">
-      {% if user.is_authenticated %}
-        <div class="user-info">
-          <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
-          <div class="user-role">{% if user.is_superuser %}Admin{% elif user.is_staff %}Staff{% else %}User{% endif %}</div>
+        <div class="sidebar-footer">
+            {% if user.is_authenticated %}
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.email }}</div>
+                    <div class="user-role">
+                        {% if user.is_superuser %}Admin
+                        {% elif user.is_staff %}Staff
+                        {% elif user.role == 'Team Member' %}Team Member
+                        {% else %}User{% endif %}
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
+                    <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="login-btn">Login</a>
+            {% endif %}
         </div>
-        <div class="user-actions">
-          <a href="{% url 'profile_detail' %}" class="user-action-link">Profile</a>
-          <a href="{% url 'logout' %}" class="user-action-link">Logout</a>
-        </div>
-      {% else %}
-        <a href="{% url 'login' %}" class="login-btn">Login</a>
-      {% endif %}
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="breadcrumb">
+                {% block breadcrumb %}
+                {% endblock %}
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}
+            <!-- Page-specific content goes here -->
+            {% endblock %}
+        </main>
+
+        <footer class="footer">
+            <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
+        </footer>
     </div>
-  </aside>
-
-
-  <!-- Main Content Area -->
-  <div class="main-wrapper">
-    <header class="top-header">
-      <div class="breadcrumb">
-        {% block breadcrumb %}
-        {% endblock %}
-      </div>
-    </header>
-
-
-    <main class="main-content">
-      {% if messages %}
-      <div class="messages">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-          {{ message }}
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-
-      {% block content %}
-      <!-- Page-specific content goes here -->
-      {% endblock %}
-    </main>
-
-
-    <footer class="footer">
-      <p>&copy; {% now "Y" %} The Hatchery - Boston College Makerspace</p>
-    </footer>
-  </div>
-
 
     <!-- Base JavaScript -->
-    {# Removed prototype main.js so real per-page scripts can use Django APIs #}
-    {# <script src="{% static 'js/main.js' %}"></script> #}
-  
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    <!-- View Toggle Script (for staff) -->
+    {% if user.is_staff %}
+    <script>
+    function switchView(view) {
+        // Update button states
+        document.querySelectorAll('.view-toggle-btn-navbar').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+        
+        // Show/hide nav groups
+        document.querySelectorAll('.nav-group').forEach(group => {
+            const groupView = group.dataset.viewGroup;
+            if (groupView === view) {
+                group.classList.remove('view-hidden');
+            } else {
+                group.classList.add('view-hidden');
+            }
+        });
+        
+        // Save preference
+        localStorage.setItem('staffViewMode', view);
+    }
+    
+    // Restore saved view on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedView = localStorage.getItem('staffViewMode') || 'staff';
+        switchView(savedView);
+    });
+    </script>
+    {% endif %}
+    
     {% block extra_scripts %}
     <!-- For page-specific JS -->
     {% endblock %}
 </body>
 </html>
-

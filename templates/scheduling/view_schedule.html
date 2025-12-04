@@ -674,7 +674,7 @@
     <!-- Semester Selector -->
     <div style="margin-top: 1.5rem; max-width: 400px;">
         <label for="semesterSelect" style="font-weight: 600; color: var(--gunmetal);">Semester</label>
-        <select id="semesterSelect" class="form-control" onchange="loadSchedule()">
+        <select id="semesterSelect" class="form-control" onchange="loadModelWeek()">
             <option value="">-- Choose Semester --</option>
             {% for semester in semesters %}
             <option value="{{ semester.id }}" {% if semester.is_active %}selected{% endif %}>
@@ -996,10 +996,23 @@ function parseDateString(dateStr) {
     return new Date(year, month - 1, day); // Month is 0-indexed
 }
 
-// Get day index (0=Monday, 6=Sunday) from a date string
-function getDayIndex(dateStr) {
-    const d = parseDateString(dateStr);
-    return d.getDay() === 0 ? 6 : d.getDay() - 1;
+// Get day index (0=Monday, 6=Sunday) from a date string or shift object
+function getDayIndex(shift) {
+    // If shift has day_of_week directly (model week), use it
+    if (typeof shift === 'object' && shift.day_of_week !== undefined) {
+        return shift.day_of_week;
+    }
+    // If it's a date string, parse it
+    if (typeof shift === 'string') {
+        const d = parseDateString(shift);
+        return d.getDay() === 0 ? 6 : d.getDay() - 1;
+    }
+    // If it's an object with a date property
+    if (typeof shift === 'object' && shift.date) {
+        const d = parseDateString(shift.date);
+        return d.getDay() === 0 ? 6 : d.getDay() - 1;
+    }
+    return 0;
 }
 
 function populateTeamFilterChips() {
@@ -1012,23 +1025,50 @@ function populateTeamFilterChips() {
     container.innerHTML = html;
 }
 
-function loadSchedule() {
+// Load model week (Week 0) for selected semester
+function loadModelWeek() {
     const semesterId = document.getElementById('semesterSelect').value;
-    if (!semesterId) { showEmptyState(); return; }
     
-    fetch(`/scheduling/api/shifts/?semester_id=${semesterId}`)
-        .then(res => res.json())
+    if (!semesterId) { 
+        showEmptyState(); 
+        return; 
+    }
+    
+    console.log('Loading model week for semester:', semesterId);
+    
+    fetch(`/scheduling/api/model-week/?semester_id=${semesterId}`)
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
+            console.log('Model week shifts loaded:', data.shifts ? data.shifts.length : 0);
+            
             if (data.shifts && data.shifts.length > 0) {
-                allShifts = data.shifts.map(s => ({...s, user_id: parseInt(s.user_id)}));
+                allShifts = data.shifts.map(s => ({
+                    ...s, 
+                    user_id: parseInt(s.user_id)
+                }));
+                
                 const userMap = new Map();
-                allShifts.forEach(s => { if (!userMap.has(s.user_id)) userMap.set(s.user_id, s.user); });
+                allShifts.forEach(s => { 
+                    if (!userMap.has(s.user_id)) userMap.set(s.user_id, s.user); 
+                });
                 allUsers = Array.from(userMap, ([id, name]) => ({id, name}));
+                
+                console.log('Processed shifts:', allShifts.length, 'users:', allUsers.length);
+                
                 showSchedule();
                 applyFilters();
-            } else { showEmptyState(); }
+            } else { 
+                console.warn('No model week shifts found');
+                showEmptyState(); 
+            }
         })
-        .catch(() => showEmptyState());
+        .catch(err => {
+            console.error('Error loading model week:', err);
+            showEmptyState();
+        });
 }
 
 function showEmptyState() {
@@ -1057,7 +1097,7 @@ function applyFilters() {
     
     filteredShifts = allShifts.filter(shift => {
         if (!activeTypeFilters.has(shift.shift_type)) return false;
-        const dayIndex = getDayIndex(shift.date);
+        const dayIndex = getDayIndex(shift);  // Pass whole shift object
         if (!activeDayFilters.has(dayIndex)) return false;
         if (activeTeamFilters.size > 0 && shift.shift_type === 'training' && !activeTeamFilters.has(shift.team)) return false;
         if (activeUserFilters.size > 0 && !activeUserFilters.has(shift.user_id)) return false;
@@ -1231,7 +1271,7 @@ function renderCalendar() {
     // Group shifts by day
     const shiftsByDay = [[],[],[],[],[],[],[]];
     filteredShifts.forEach(s => { 
-        shiftsByDay[getDayIndex(s.date)].push(s); 
+        shiftsByDay[getDayIndex(s)].push(s); 
     });
     
     // Time labels
@@ -1315,7 +1355,7 @@ function renderListView() {
     if (!filteredShifts.length) { content.innerHTML = '<p style="padding:2rem;text-align:center;color:#666;">No shifts to display</p>'; return; }
     
     const shiftsByDay = [[],[],[],[],[],[],[]];
-    filteredShifts.forEach(s => { shiftsByDay[getDayIndex(s.date)].push(s); });
+    filteredShifts.forEach(s => { shiftsByDay[getDayIndex(s)].push(s); });
     
     const icons = {open_hours: '🟢', training: '🔵', floater: '🟠'};
     const labels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floaters'};
@@ -1363,7 +1403,7 @@ function renderBlockView() {
     
     const shiftsByDay = [[],[],[],[],[],[],[]];
     filteredShifts.forEach(s => { 
-        shiftsByDay[getDayIndex(s.date)].push(s); 
+        shiftsByDay[getDayIndex(s)].push(s); 
     });
     
     const blocks = [];
@@ -1427,9 +1467,19 @@ function viewShiftDetails(shiftId) {
     const email = shift.user.includes('@') ? shift.user : '';
     const typeClass = shift.shift_type.replace('_', '-');
     const typeLabels = {open_hours: 'Open Hours', training: 'Training', floater: 'Floater'};
-    const date = new Date(shift.date);
-    const dayName = DAYS[(date.getDay() + 6) % 7];
-    const dateFmt = date.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+    
+    // Handle both model week (day_of_week) and regular shifts (date)
+    let dayName;
+    let dateFmt = 'Model Week (repeats weekly)';
+    if (shift.day_of_week !== undefined) {
+        dayName = DAYS[shift.day_of_week];
+    } else if (shift.date) {
+        const date = new Date(shift.date);
+        dayName = DAYS[(date.getDay() + 6) % 7];
+        dateFmt = date.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+    } else {
+        dayName = 'Unknown';
+    }
     
     let html = `<div class="detail-row"><div class="detail-label">Name</div><div class="detail-value"><strong>${name}</strong></div></div>`;
     if (email) html += `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${email}</div></div>`;
@@ -1437,10 +1487,9 @@ function viewShiftDetails(shiftId) {
     if (shift.team) html += `<div class="detail-row"><div class="detail-label">Team</div><div class="detail-value">${getCategoryDisplay(shift.team)}</div></div>`;
     if (shift.location) html += `<div class="detail-row"><div class="detail-label">Location</div><div class="detail-value">${shift.location}</div></div>`;
     html += `<div class="detail-row"><div class="detail-label">Day</div><div class="detail-value">${dayName}</div></div>`;
-    html += `<div class="detail-row"><div class="detail-label">Date</div><div class="detail-value">${dateFmt}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Schedule</div><div class="detail-value">${dateFmt}</div></div>`;
     html += `<div class="detail-row"><div class="detail-label">Time</div><div class="detail-value">${shift.start} – ${shift.end}</div></div>`;
     html += `<div class="detail-row"><div class="detail-label">Duration</div><div class="detail-value">${(shift.duration_hours || 0).toFixed(1)} hours</div></div>`;
-    if (shift.status) html += `<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge ${shift.status}">${shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}</span></div></div>`;
     
     document.getElementById('modalTitle').textContent = `${name}'s Shift`;
     document.getElementById('modalBody').innerHTML = html;
@@ -1462,11 +1511,11 @@ function exportSchedule(format) {
 }
 
 function exportCSV() {
-    const headers = ['Day','Date','Start Time','End Time','Duration (hrs)','Shift Type','Team Member','Email','Team/Category','Location','Status'];
+    const headers = ['Day','Start Time','End Time','Duration (hrs)','Shift Type','Team Member','Email','Team/Category','Location'];
     const rows = filteredShifts.map(s => {
-        const dayIndex = getDayIndex(s.date);
+        const dayIndex = getDayIndex(s);
         const name = s.user.includes('@') ? s.user.split('@')[0] : s.user;
-        return [DAYS[dayIndex], s.date, s.start, s.end, (s.duration_hours||0).toFixed(1), s.shift_type.replace('_',' '), name, s.user.includes('@') ? s.user : '', s.team||'', s.location||'', s.status||'scheduled'].map(v => `"${v}"`).join(',');
+        return [DAYS[dayIndex], s.start, s.end, (s.duration_hours||0).toFixed(1), s.shift_type.replace('_',' '), name, s.user.includes('@') ? s.user : '', s.team||'', s.location||''].map(v => `"${v}"`).join(',');
     });
     const blob = new Blob([[headers.join(','), ...rows].join('\n')], {type: 'text/csv;charset=utf-8;'});
     const link = document.createElement('a');
@@ -1534,9 +1583,27 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeShift
 
 // Init
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('=== DOMContentLoaded START ===');
+    
+    // Set up view toggle buttons
+    document.getElementById('btnBlockView').addEventListener('click', function() {
+        switchView('blocks');
+    });
+    document.getElementById('btnListView').addEventListener('click', function() {
+        switchView('list');
+    });
+    
     await loadCategories();
     const select = document.getElementById('semesterSelect');
-    if (select?.value) loadSchedule();
+    console.log('Semester select value:', select?.value);
+    if (select?.value) {
+        console.log('Calling loadModelWeek...');
+        loadModelWeek();
+    } else {
+        console.log('No semester selected');
+    }
 });
 </script>
 {% endblock %}
+
+

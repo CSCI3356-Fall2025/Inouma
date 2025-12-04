@@ -1,983 +1,715 @@
 """
-Recurring Weekly Auto-Scheduler for The Hatchery - FIXED
-=========================================================
+The Hatchery Weekly Auto-Scheduler
+==================================
 
-Creates ONE model week schedule that repeats throughout the semester.
+Creates a model week of shifts and replicates across the semester.
 
-Priority Order:
-1. Open Hours Hosting (highest priority) 
-2. Training Hours (team-specific, limited by machine count)
-3. Floater Shifts (lowest priority)
+Three shift types (priority order):
+1. Open Hours - Staff specific locations during public hours
+2. Floaters - Roaming support staff
+3. Training - Trainers conduct sessions (fills remaining hours)
 
-MACHINE-AWARE TRAINING LIMITS:
-- Pulls actual machine counts from the database by machine_name (type)
-- At least 70% of machines must remain available for users
-- Maximum 30% of machines can be used for trainings per hour
-- Example: 10 Prusa printers → max 3 trainers per hour
-- Example: 1 Stratasys → max 1 trainer per hour (can't have 0.3 trainers!)
-
-FIXES:
-- Prevents double-booking: same person cannot be in two places at same time
-- Removes aggressive hour-filling that created too many shifts
-- Properly distributes hours across ALL days of the week
-- Clear logging for debugging
+Key invariant: hours_remaining is ALWAYS decremented when a shift is created.
+This prevents over-scheduling.
 """
 
-from datetime import datetime, timedelta, time, date as dt_date
+from datetime import datetime, timedelta, time, date
 from collections import defaultdict
 from django.db.models import Count
-import math
 
 from .models import (
-    Semester, DailyOperatingHours, ShiftRequirement, 
+    Semester, DailyOperatingHours, ShiftRequirement,
     TeamMemberProfile, Unavailability, Shift
 )
 
 
 class WeeklyScheduler:
-    """Creates a recurring weekly schedule - FIXED VERSION with machine-aware limits"""
+    """
+    Weekly auto-scheduler that respects hour limits and prevents double-booking.
+    """
     
     DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
-    # Training capacity: max 30% of machines can be used for training per hour
-    TRAINING_CAPACITY_PERCENT = 0.30
-    
     def __init__(self, semester):
         self.semester = semester
-        self.team_members = []
-        self.unavailability_map = {}  # {user_id: [(day, start, end), ...]}
-        self.machine_counts = {}  # Category-level counts (legacy)
-        self.machine_type_counts = {}  # {machine_name: count} - actual machine counts
-        self.machine_type_to_category = {}  # {machine_name: category}
-        self.category_machine_types = {}  # {category: [machine_names]}
-        self.max_trainers_per_type = {}  # {machine_name: max_trainers_per_hour}
-        self.weekly_shifts = []  # Shifts for the model week
-        self.hours_used = {}  # Track hours used in model week
-        self.training_slot_usage = {}  # {(day, start_time, machine_type): count}
-        self.conflicts = []
         
+        # Data loaded from DB
+        self.team_members = []
+        self.unavailability = {}      # {user_id: [(day, start, end), ...]}
+        self.machine_counts = {}      # {category: count}
+        
+        # Core tracking structures
+        self.hours_remaining = {}     # {user_id: float} - DECREMENTED on each shift
+        self.person_shifts = {}       # {user_id: [shift_dict, ...]}
+        self.slot_occupancy = {}      # {(day, hour): set(user_ids)}
+        self.training_usage = {}      # {(day, hour, category): int}
+        
+        # Output
+        self.weekly_shifts = []       # Model week template
+        self.conflicts = []           # Unfilled requirements
+    
     def run(self):
-        """Main entry point"""
+        """Main entry point."""
         print(f"\n{'='*60}")
-        print(f"🚀 WEEKLY SCHEDULER for {self.semester.name}")
+        print(f"WEEKLY SCHEDULER for {self.semester.name}")
         print(f"{'='*60}\n")
         
-        # Load data
+        # Phase 0: Load data
         if not self._load_data():
-            return {
-                'success': False,
-                'shifts_created': 0,
-                'conflicts': self.conflicts,
-                'message': 'Failed to load data'
-            }
+            return self._error_result("Failed to load data")
         
-        # Clear existing shifts first
-        self._clear_existing_shifts()
+        # Print expected math
+        total_hours = sum(self.hours_remaining.values())
+        print(f"Expected weekly hours: {total_hours}")
+        print(f"Expected weekly shifts (avg 2hr): ~{int(total_hours / 2)}\n")
         
-        # Schedule one model week
-        # STRATEGY: 
-        # 1. Schedule ALL required shifts (open hours + floaters) for ALL days first
-        # 2. Then distribute training EVENLY across all days, cycling through days
-        #    to ensure everyone gets hours spread throughout the week
-        print("📅 Building Model Week:\n")
+        # Phase 1: Schedule required shifts
+        print("Phase 1: Scheduling required shifts (open hours + floaters)...")
+        required_filled, required_total = self._schedule_required_shifts()
+        print(f"  Filled {required_filled}/{required_total} required slots\n")
         
-        # Phase 1: Schedule ALL open hours and floaters first (across all days)
-        print("   Phase 1: Scheduling required shifts (open hours + floaters)...\n")
-        for day in range(7):  # 0=Mon, 6=Sun
-            day_name = self.DAY_NAMES[day]
-            self._schedule_required_shifts(day, day_name)
+        # Phase 2: Schedule training shifts
+        print("Phase 2: Scheduling training shifts...")
+        training_count = self._schedule_training_shifts()
+        print(f"  Created {training_count} training shifts\n")
         
-        # Phase 2: Fill remaining hours with training - DISTRIBUTED EVENLY
-        print("\n   Phase 2: Distributing training across all days...\n")
-        total_training = self._distribute_training_evenly()
-        print(f"\n   Total training shifts scheduled: {total_training}")
+        # Validate
+        errors = self._validate()
+        if errors:
+            print("VALIDATION ERRORS:")
+            for e in errors:
+                print(f"  - {e}")
         
-        # Print summary
-        self._print_model_week_summary()
+        # Summary
+        self._print_summary()
         
-        # Validate for double-bookings
-        self._validate_no_double_bookings()
+        # Save model week (Week 0) first
+        model_week_saved = self._save_model_week()
         
-        # Replicate across semester
+        # Replicate and save full semester
         all_shifts = self._replicate_to_semester()
-        
-        # Save
-        saved_count = self._save_to_database(all_shifts)
+        saved = self._save_to_database(all_shifts)
         
         return {
-            'success': len(self.conflicts) == 0,
-            'shifts_created': saved_count,
+            'success': len(self.conflicts) == 0 and len(errors) == 0,
+            'shifts_created': saved,
+            'weekly_shifts': len(self.weekly_shifts),
+            'model_week_shifts': model_week_saved,
             'conflicts': self.conflicts,
-            'message': self._summary_message(len(self.weekly_shifts), saved_count)
+            'message': f"Created {len(self.weekly_shifts)} weekly shifts, {saved} total across semester"
         }
     
+    # =========================================================================
+    # PHASE 0: LOAD DATA
+    # =========================================================================
+    
     def _load_data(self):
-        """Load all necessary data"""
-        print("📊 Loading data...")
+        """Load all required data from database."""
+        print("Loading data...")
         
-        # Team members (only active ones)
+        # Load team members
         self.team_members = list(
-            TeamMemberProfile.objects.select_related('user')
-            .filter(is_active=True)
+            TeamMemberProfile.objects.filter(is_active=True).select_related('user')
         )
         
         if not self.team_members:
-            self.conflicts.append({
-                'type': 'no_team_members',
-                'day': None,
-                'time': None,
-                'location': None
-            })
-            print("   ❌ No active team members found!")
+            print("  ERROR: No active team members")
             return False
         
-        print(f"   ✓ {len(self.team_members)} active team members")
+        # Initialize hours remaining
+        for tm in self.team_members:
+            hours = tm.get_expected_hours(self.semester)
+            self.hours_remaining[tm.user_id] = float(hours)
+            self.person_shifts[tm.user_id] = []
         
-        # Initialize hours tracking
-        self.hours_used = {tm.user_id: 0.0 for tm in self.team_members}
+        print(f"  {len(self.team_members)} team members")
+        print(f"  {sum(self.hours_remaining.values())} total weekly hours")
         
-        # Unavailabilities - stored as list of (day, start, end) tuples per user
-        unavailabilities = Unavailability.objects.filter(semester=self.semester)
-        self.unavailability_map = defaultdict(list)
-        for unav in unavailabilities:
-            self.unavailability_map[unav.user_id].append(
-                (unav.day_of_week, unav.start_time, unav.end_time)
-            )
-        print(f"   ✓ Loaded unavailability data")
+        # Load unavailability
+        for u in Unavailability.objects.filter(semester=self.semester):
+            if u.user_id not in self.unavailability:
+                self.unavailability[u.user_id] = []
+            self.unavailability[u.user_id].append((u.day_of_week, u.start_time, u.end_time))
         
-        # Load machine counts from database (for training slot limits)
-        self._load_machine_counts()
+        print(f"  {len(self.unavailability)} members with unavailability")
+        
+        # Load machine counts
+        try:
+            from machines.models import Machine
+            counts = Machine.objects.filter(is_active=True).values('category').annotate(count=Count('id'))
+            for item in counts:
+                if item['category']:
+                    self.machine_counts[item['category']] = item['count']
+        except Exception:
+            pass
+        
+        # Ensure all trainer categories have a count
+        for tm in self.team_members:
+            if tm.is_trainer and tm.team and tm.team not in self.machine_counts:
+                self.machine_counts[tm.team] = 2
+        
+        print(f"  {len(self.machine_counts)} equipment categories")
+        
+        # Clear existing scheduled shifts
+        deleted, _ = Shift.objects.filter(semester=self.semester, status='scheduled').delete()
+        if deleted:
+            print(f"  Cleared {deleted} existing shifts")
         
         print()
         return True
     
-    def _load_machine_counts(self):
-        """
-        Load machine counts from the database.
-        
-        Tracks:
-        - machine_type_counts: {machine_name: count} e.g., {'Ultimaker S5': 5, 'Prusa MK3S+': 8}
-        - machine_type_to_category: {machine_name: category}
-        - category_machine_types: {category: [machine_names]}
-        - max_trainers_per_type: {machine_name: max_trainers} based on 30% rule
-        - machine_counts: {category: total_count} (legacy, for backwards compatibility)
-        """
-        try:
-            from machines.models import Machine
-            
-            # Get all machines, excluding those under maintenance if field exists
-            machines_qs = Machine.objects.all()
-            
-            # Try to filter by maintenance status if field exists
-            try:
-                machines_qs = machines_qs.exclude(status='maintenance')
-            except:
-                pass  # Field doesn't exist, use all machines
-            
-            # Count by machine_name (machine type)
-            type_counts = machines_qs.values('machine_name', 'category').annotate(
-                count=Count('id')
-            )
-            
-            self.machine_type_counts = {}
-            self.machine_type_to_category = {}
-            self.category_machine_types = defaultdict(list)
-            self.max_trainers_per_type = {}
-            
-            print(f"\n   📦 Machine inventory (for training limits):")
-            print(f"   {'─'*50}")
-            
-            for item in type_counts:
-                machine_type = item['machine_name']
-                category = item['category']
-                count = item['count']
-                
-                if not machine_type:
-                    continue
-                
-                self.machine_type_counts[machine_type] = count
-                self.machine_type_to_category[machine_type] = category
-                self.category_machine_types[category].append(machine_type)
-                
-                # Calculate max trainers: 30% of machines, minimum 1, rounded down
-                # If only 1-3 machines, allow 1 trainer
-                # If 4-6 machines, allow 1 trainer (30% of 4 = 1.2)
-                # If 7-9 machines, allow 2 trainers
-                # If 10+ machines, allow 3+ trainers
-                max_trainers = max(1, math.floor(count * self.TRAINING_CAPACITY_PERCENT))
-                self.max_trainers_per_type[machine_type] = max_trainers
-                
-                available_for_users = count - max_trainers
-                pct_available = (available_for_users / count) * 100 if count > 0 else 0
-                
-                print(f"      {machine_type}: {count} machines → max {max_trainers} trainer(s)/hour ({pct_available:.0f}% for users)")
-            
-            # Build legacy category counts
-            self.machine_counts = {}
-            for category, types in self.category_machine_types.items():
-                self.machine_counts[category] = sum(self.machine_type_counts.get(t, 0) for t in types)
-            
-            print(f"   {'─'*50}")
-            print(f"   Category totals: {self.machine_counts}")
-            
-            # Add categories from team members that don't have machines yet
-            trainer_teams = set(tm.team for tm in self.team_members if tm.is_trainer and tm.team)
-            
-            def normalize_category(cat):
-                if not cat:
-                    return ''
-                return cat.lower().replace(' ', '_').replace('-', '_')
-            
-            normalized_machine_cats = set(normalize_category(c) for c in self.machine_counts.keys())
-            
-            for team in trainer_teams:
-                norm_team = normalize_category(team)
-                if norm_team not in normalized_machine_cats:
-                    # Add this category with default of 2 training slots
-                    self.machine_counts[team] = 2
-                    # Add a pseudo machine type for this category
-                    pseudo_type = f"{team}_generic"
-                    self.machine_type_counts[pseudo_type] = 2
-                    self.machine_type_to_category[pseudo_type] = team
-                    self.category_machine_types[team].append(pseudo_type)
-                    self.max_trainers_per_type[pseudo_type] = 1
-                    print(f"   + Added category '{team}' with default 2 slots (no machines in DB)")
-            
-            if not self.machine_counts:
-                print(f"   ⚠️ No training categories - training will be skipped")
-                
-        except Exception as e:
-            import traceback
-            print(f"   ⚠️ Could not load machines: {e}")
-            traceback.print_exc()
-            self.machine_counts = {}
-            self.machine_type_counts = {}
-            self.max_trainers_per_type = {}
-    
-    def _clear_existing_shifts(self):
-        """Clear existing shifts for this semester"""
-        deleted, _ = Shift.objects.filter(
-            semester=self.semester,
-            status='scheduled'
-        ).delete()
-        
-        if deleted:
-            print(f"🗑️ Cleared {deleted} existing shifts\n")
-    
-    def _schedule_required_shifts(self, day_of_week, day_name):
-        """Schedule only open hours and floaters for a day (required shifts)"""
-        
-        # Get operating hours for this day
-        try:
-            op_hours = DailyOperatingHours.objects.get(
-                semester=self.semester,
-                day_of_week=day_of_week
-            )
-        except DailyOperatingHours.DoesNotExist:
-            print(f"   {day_name}: No operating hours defined")
-            return
-        
-        if op_hours.is_closed:
-            print(f"   {day_name}: CLOSED")
-            return
-        
-        # Schedule Open Hours
-        open_count = self._schedule_open_hours(day_of_week, op_hours)
-        
-        # Schedule Floaters
-        floater_count = self._schedule_floaters(day_of_week)
-        
-        print(f"   {day_name}: {open_count} open hours, {floater_count} floaters")
-        
-        # Show conflicts if any for this day
-        day_conflicts = [c for c in self.conflicts if c.get('day') == day_name]
-        if day_conflicts:
-            print(f"      ⚠️ GAPS: {len(day_conflicts)}")
-            for c in day_conflicts[:3]:
-                print(f"         - {c['time']} @ {c['location']}")
-    
-    def _schedule_training_for_day(self, day_of_week, day_name):
-        """DEPRECATED - use _distribute_training_evenly instead"""
-        pass
-    
-    def _distribute_training_evenly(self):
-        """
-        Distribute training shifts evenly across ALL days and ALL time slots.
-        
-        Strategy:
-        - 60% of training in MORNING hours (9am-12pm, before open hours)
-        - 40% of training during rest of day
-        - SPREAD EVENLY across time slots (not piling into 9am)
-        - RESPECT MACHINE LIMITS: Max 30% of machines per type can be used for training
-        - Max out everyone's hours within machine constraints
-        """
-        total_shifts = 0
-        
-        # Build list of all training slots for the week
-        morning_slots = []  # Before open hours start
-        afternoon_slots = []  # During/after open hours
-        
-        for day in range(7):
-            try:
-                op_hours = DailyOperatingHours.objects.get(
-                    semester=self.semester,
-                    day_of_week=day
-                )
-            except DailyOperatingHours.DoesNotExist:
-                continue
-            
-            if op_hours.is_closed:
-                continue
-            
-            if op_hours.training_disabled or not op_hours.training_start or not op_hours.training_end:
-                continue
-            
-            slots = self._generate_hourly_slots(op_hours.training_start, op_hours.training_end)
-            open_start = op_hours.open_hours_start
-            
-            for start, end in slots:
-                if open_start and start < open_start:
-                    morning_slots.append((day, start, end))
-                else:
-                    afternoon_slots.append((day, start, end))
-        
-        print(f"   Morning training slots (9am-12pm): {len(morning_slots)}")
-        print(f"   Afternoon/evening training slots: {len(afternoon_slots)}")
-        
-        # Track counts
-        training_by_day = {d: 0 for d in range(7)}
-        morning_count = 0
-        afternoon_count = 0
-        
-        # Track slot usage for even distribution across TIME SLOTS
-        slot_usage = {}
-        for day, start, end in morning_slots + afternoon_slots:
-            slot_usage[(day, start)] = 0
-        
-        # Track training slot usage by category/machine type
-        # Key: (day, start_time, category) -> count of trainers scheduled
-        self.training_slot_usage = defaultdict(int)
-        
-        # Calculate total training needed
-        total_training_hours_needed = 0
-        trainer_categories = defaultdict(list)  # {category: [team_members]}
-        
-        for tm in self.team_members:
-            if tm.is_trainer and tm.team:
-                expected = tm.get_expected_hours(self.semester)
-                used = self.hours_used.get(tm.user_id, 0)
-                remaining = expected - used
-                if remaining > 0:
-                    total_training_hours_needed += remaining
-                    trainer_categories[tm.team].append(tm)
-        
-        print(f"   Total training hours to fill: {total_training_hours_needed}")
-        target_morning = int(total_training_hours_needed * 0.6)
-        print(f"   Target distribution: {target_morning} morning (60%), {total_training_hours_needed - target_morning} afternoon (40%)")
-        
-        # Show trainer distribution by category
-        print(f"\n   Trainers by category:")
-        for cat, trainers in trainer_categories.items():
-            max_per_slot = self._get_max_trainers_for_category(cat)
-            print(f"      {cat}: {len(trainers)} trainers, max {max_per_slot}/hour (based on machine count)")
-        
-        def get_trainers_in_slot(day, start_time, category):
-            """Count how many trainers of this category are already scheduled in this slot."""
-            return self.training_slot_usage[(day, start_time, category)]
-        
-        def can_add_trainer_to_slot(day, start_time, category):
-            """Check if we can add another trainer for this category in this slot."""
-            current_count = get_trainers_in_slot(day, start_time, category)
-            max_allowed = self._get_max_trainers_for_category(category)
-            return current_count < max_allowed
-        
-        def find_best_slot(slots_list, tm):
-            """Find the LEAST USED slot that this person can work AND has machine capacity."""
-            category = tm.team
-            
-            person_shifts_by_day = {d: 0 for d in range(7)}
-            for shift in self.weekly_shifts:
-                if shift['user_id'] == tm.user_id:
-                    person_shifts_by_day[shift['day_of_week']] += 1
-            
-            candidates = []
-            for day, start, end in slots_list:
-                # Check personal availability
-                if not self._is_available(tm.user_id, day, start, end):
-                    continue
-                
-                # Check if person has hours remaining
-                duration = self._duration_hours(start, end)
-                if self.hours_used.get(tm.user_id, 0) + duration > tm.get_expected_hours(self.semester):
-                    continue
-                
-                # CHECK MACHINE CAPACITY - key new constraint!
-                if not can_add_trainer_to_slot(day, start, category):
-                    continue
-                
-                usage = slot_usage.get((day, start), 0)
-                day_count = person_shifts_by_day[day]
-                category_usage = get_trainers_in_slot(day, start, category)
-                
-                # Sort priority: category slot usage, then overall slot usage, then day spread, then time
-                candidates.append((day, start, end, category_usage, usage, day_count))
-            
-            if not candidates:
-                return None
-            
-            # Sort by: category usage (fill evenly across category slots), overall usage, day spread, time
-            candidates.sort(key=lambda x: (x[3], x[4], x[5], x[1], x[0]))
-            return candidates[0][:3]
-        
-        def assign_shift(tm, slots_list, is_morning):
-            nonlocal morning_count, afternoon_count, total_shifts
-            
-            result = find_best_slot(slots_list, tm)
-            if not result:
-                return False
-            
-            day, start, end = result
-            duration = self._duration_hours(start, end)
-            category = tm.team
-            
-            self.weekly_shifts.append({
-                'user_id': tm.user_id,
-                'day_of_week': day,
-                'start_time': start,
-                'end_time': end,
-                'shift_type': 'training',
-                'location': None,
-                'location_group': None,
-                'team_category': category
-            })
-            
-            self.hours_used[tm.user_id] += duration
-            training_by_day[day] += 1
-            slot_usage[(day, start)] = slot_usage.get((day, start), 0) + 1
-            
-            # Track category-specific slot usage
-            self.training_slot_usage[(day, start, category)] += 1
-            
-            total_shifts += 1
-            
-            if is_morning:
-                morning_count += 1
-            else:
-                afternoon_count += 1
-            return True
-        
-        # Main loop
-        max_iterations = 2000
-        blocked_by_machine_limit = 0
-        
-        for iteration in range(max_iterations):
-            people = [(tm, tm.get_expected_hours(self.semester) - self.hours_used.get(tm.user_id, 0))
-                      for tm in self.team_members 
-                      if tm.is_trainer and tm.get_expected_hours(self.semester) - self.hours_used.get(tm.user_id, 0) >= 1]
-            
-            if not people:
-                print("   All trainers at max hours!")
-                break
-            
-            people.sort(key=lambda x: -x[1])  # Most remaining first
-            made_progress = False
-            
-            for tm, remaining in people:
-                total_so_far = morning_count + afternoon_count
-                use_morning = (total_so_far == 0) or (morning_count / total_so_far < 0.6)
-                
-                if use_morning:
-                    if assign_shift(tm, morning_slots, True) or assign_shift(tm, afternoon_slots, False):
-                        made_progress = True
-                else:
-                    if assign_shift(tm, afternoon_slots, False) or assign_shift(tm, morning_slots, True):
-                        made_progress = True
-            
-            if not made_progress:
-                remaining_hrs = sum(r for _, r in people)
-                if remaining_hrs > 0:
-                    # Check why we couldn't make progress
-                    for tm, rem in people:
-                        category = tm.team
-                        slots_checked = 0
-                        machine_blocked = 0
-                        for day, start, end in morning_slots + afternoon_slots:
-                            if self._is_available(tm.user_id, day, start, end):
-                                slots_checked += 1
-                                if not can_add_trainer_to_slot(day, start, category):
-                                    machine_blocked += 1
-                        if machine_blocked > 0 and machine_blocked == slots_checked:
-                            blocked_by_machine_limit += 1
-                    
-                    print(f"   ⚠️ {len(people)} people have {remaining_hrs:.1f} hours remaining but no slots available.")
-                    if blocked_by_machine_limit > 0:
-                        print(f"      ({blocked_by_machine_limit} blocked by machine capacity limits)")
-                break
-        
-        # SECOND PASS: Try to max out remaining hours by relaxing the 60/40 constraint
-        # This ensures everyone gets their full hours even if distribution isn't perfect
-        print(f"\n   Second pass: Maxing out remaining hours...")
-        second_pass_count = 0
-        
-        for _ in range(500):  # Extra iterations
-            people = [(tm, tm.get_expected_hours(self.semester) - self.hours_used.get(tm.user_id, 0))
-                      for tm in self.team_members 
-                      if tm.is_trainer and tm.get_expected_hours(self.semester) - self.hours_used.get(tm.user_id, 0) >= 1]
-            
-            if not people:
-                break
-            
-            people.sort(key=lambda x: -x[1])  # Most remaining first
-            made_progress = False
-            
-            for tm, remaining in people:
-                # Try ANY available slot (ignore 60/40 split)
-                if assign_shift(tm, morning_slots, True):
-                    made_progress = True
-                    second_pass_count += 1
-                elif assign_shift(tm, afternoon_slots, False):
-                    made_progress = True
-                    second_pass_count += 1
-            
-            if not made_progress:
-                break
-        
-        if second_pass_count > 0:
-            print(f"   ✓ Second pass added {second_pass_count} more shifts")
-        
-        # Final check - report anyone still under hours
-        under_hours = []
-        for tm in self.team_members:
-            if tm.is_trainer:
-                expected = tm.get_expected_hours(self.semester)
-                used = self.hours_used.get(tm.user_id, 0)
-                if used < expected - 0.5:  # More than 0.5 hours short
-                    under_hours.append((tm, expected, used))
-        
-        if under_hours:
-            print(f"\n   ⚠️ {len(under_hours)} trainers still under target hours:")
-            for tm, expected, used in under_hours[:5]:
-                print(f"      {tm.user.get_full_name()}: {used:.1f}/{expected:.1f} hrs")
-            if len(under_hours) > 5:
-                print(f"      ... and {len(under_hours) - 5} more")
-        
-        # Reports
-        print(f"\n   Training distribution by day:")
-        for day in range(7):
-            if training_by_day[day] > 0:
-                print(f"      {self.DAY_NAMES[day]}: {training_by_day[day]} training shifts")
-        
-        print(f"\n   Training per time slot:")
-        slot_by_time = {}
-        for (day, start), count in slot_usage.items():
-            t = start.strftime('%H:%M')
-            slot_by_time[t] = slot_by_time.get(t, 0) + count
-        for t in sorted(slot_by_time.keys()):
-            if slot_by_time[t] > 0:
-                print(f"      {t}: {slot_by_time[t]} trainings")
-        
-        total_training = morning_count + afternoon_count + second_pass_count
-        if total_training > 0:
-            pct = (morning_count / total_training) * 100 if total_training else 0
-            print(f"\n   Morning vs Afternoon: {morning_count} ({pct:.0f}%) / {afternoon_count + second_pass_count} ({100-pct:.0f}%)")
-        
-        return total_shifts + second_pass_count
-    
-    def _schedule_day(self, day_of_week, day_name):
-        """DEPRECATED - kept for reference. Use _schedule_required_shifts and _schedule_training_for_day instead."""
-        pass
-    
     # =========================================================================
-    # PRIORITY 1: OPEN HOURS
+    # PHASE 1: REQUIRED SHIFTS (OPEN HOURS + FLOATERS)
     # =========================================================================
     
-    def _schedule_open_hours(self, day_of_week, op_hours):
-        """Schedule open hours hosting for this day"""
-        shifts_created = 0
+    def _schedule_required_shifts(self):
+        """
+        Schedule all required open hours and floater shifts.
+        
+        For each requirement, we need to ensure `hosts_required` people cover
+        every hour in the time block. We fill one "lane" at a time.
+        """
+        total_slots = 0
+        filled_slots = 0
         
         requirements = ShiftRequirement.objects.filter(
-            semester=self.semester,
-            day_of_week=day_of_week,
-            hosts_required__gt=0
-        ).select_related('location', 'location_group').order_by('time_start')
-        
-        # Debug: Show what requirements were found
-        req_count = requirements.count()
-        if req_count == 0:
-            print(f"      ⚠️ No open hours requirements found for day {day_of_week}!")
-            return 0
-        
-        # Group by time slot for logging
-        time_slots = {}
-        for req in requirements:
-            key = f"{req.time_start.strftime('%H:%M')}-{req.time_end.strftime('%H:%M')}"
-            if key not in time_slots:
-                time_slots[key] = 0
-            time_slots[key] += req.hosts_required
-        
-        print(f"      Requirements found: {time_slots}")
+            semester=self.semester
+        ).select_related('location', 'location_group').order_by('day_of_week', 'time_start')
         
         for req in requirements:
-            for host_slot in range(req.hosts_required):
-                assigned = self._assign_shift(
-                    day_of_week=day_of_week,
-                    start_time=req.time_start,
-                    end_time=req.time_end,
+            day = req.day_of_week
+            block_start = req.time_start
+            block_end = req.time_end
+            block_hours = int(self._hours_between(block_start, block_end))
+            
+            # Process hosts
+            for lane in range(req.hosts_required):
+                total_slots += block_hours
+                hours_filled = self._fill_lane(
+                    day=day,
+                    block_start=block_start,
+                    block_end=block_end,
                     shift_type='open_hours',
                     location=req.location,
                     location_group=req.location_group
                 )
+                filled_slots += hours_filled
                 
-                if assigned:
-                    shifts_created += 1
-                else:
-                    loc_name = (req.location.name if req.location 
-                               else req.location_group.name if req.location_group 
-                               else "Unknown")
+                if hours_filled < block_hours:
+                    unfilled = block_hours - hours_filled
                     self.conflicts.append({
-                        'type': 'open_hours_gap',
-                        'day': self.DAY_NAMES[day_of_week],
-                        'time': f"{req.time_start.strftime('%H:%M')}-{req.time_end.strftime('%H:%M')}",
-                        'location': loc_name
+                        'type': 'unfilled_host',
+                        'day': self.DAY_NAMES[day],
+                        'time': f"{block_start}-{block_end}",
+                        'location': str(req.location or req.location_group or 'Unknown'),
+                        'hours_missing': unfilled
+                    })
+            
+            # Process floaters
+            for lane in range(req.floaters_required):
+                total_slots += block_hours
+                hours_filled = self._fill_lane(
+                    day=day,
+                    block_start=block_start,
+                    block_end=block_end,
+                    shift_type='floater',
+                    location=None,
+                    location_group=None
+                )
+                filled_slots += hours_filled
+                
+                if hours_filled < block_hours:
+                    unfilled = block_hours - hours_filled
+                    self.conflicts.append({
+                        'type': 'unfilled_floater',
+                        'day': self.DAY_NAMES[day],
+                        'time': f"{block_start}-{block_end}",
+                        'location': 'N/A',
+                        'hours_missing': unfilled
                     })
         
-        return shifts_created
+        return filled_slots, total_slots
     
-    # =========================================================================
-    # PRIORITY 2: TRAINING
-    # =========================================================================
+    def _fill_lane(self, day, block_start, block_end, shift_type, location, location_group):
+        """
+        Fill one "lane" of a time block with shifts.
+        
+        A lane represents one person's coverage. If we need 2 hosts from 9-13,
+        we call this twice - once for each lane.
+        
+        Returns the number of hours successfully filled.
+        """
+        hours_filled = 0
+        current_time = block_start
+        
+        while current_time < block_end:
+            remaining_hours = self._hours_between(current_time, block_end)
+            
+            if remaining_hours < 1:
+                break
+            
+            # Find someone to cover starting at current_time
+            person, duration = self._find_person_for_required(
+                day=day,
+                start=current_time,
+                max_duration=remaining_hours
+            )
+            
+            if person is None:
+                # No one available for this hour, skip it and try next hour
+                current_time = self._add_hours(current_time, 1)
+                continue
+            
+            # Create the shift
+            shift_end = self._add_hours(current_time, duration)
+            self._create_shift(
+                user_id=person.user_id,
+                day=day,
+                start=current_time,
+                end=shift_end,
+                shift_type=shift_type,
+                location=location,
+                location_group=location_group,
+                team_category=None
+            )
+            
+            hours_filled += duration
+            current_time = shift_end  # Move to end of this shift
+        
+        return hours_filled
     
-    def _schedule_training(self, day_of_week, op_hours):
-        """Schedule training hours for this day"""
-        shifts_created = 0
+    def _find_person_for_required(self, day, start, max_duration):
+        """
+        Find best person for a required shift slot (open hours or floater).
         
-        # Generate hourly slots
-        slots = self._generate_hourly_slots(op_hours.training_start, op_hours.training_end)
+        PRIORITY ORDER:
+        1. Non-trainers first (they can ONLY do open hours/floater)
+        2. Then trainers (who can also do training shifts)
         
-        # Create a normalized category mapping for matching
-        def normalize_category(cat):
-            if not cat:
-                return ''
-            return cat.lower().replace(' ', '_').replace('-', '_')
+        Within each group, prefer those with most hours remaining.
         
-        for start_time, end_time in slots:
-            # For each machine category
-            for category, machine_count in self.machine_counts.items():
-                norm_category = normalize_category(category)
-                
-                # Get trainers for this category (match normalized team names)
-                category_trainers = [
-                    tm for tm in self.team_members 
-                    if tm.is_trainer and normalize_category(tm.team) == norm_category
-                ]
-                
-                if not category_trainers:
+        Preference rules for duration:
+        - few_long: prefer 4hr, fallback 3hr
+        - many_short: prefer 2hr, fallback 1hr
+        - no_preference: prefer 4hr, 3hr, 2hr, 1hr (longest that fits)
+        
+        Returns (TeamMemberProfile, duration) or (None, 0)
+        """
+        non_trainer_candidates = []
+        trainer_candidates = []
+        
+        for tm in self.team_members:
+            remaining_hours = self.hours_remaining.get(tm.user_id, 0)
+            
+            if remaining_hours < 1:
+                continue
+            
+            # Determine preferred durations
+            pref = tm.shift_preference or 'no_preference'
+            if pref == 'few_long':
+                preferred_durations = [4, 3]
+            elif pref == 'many_short':
+                preferred_durations = [2, 1]
+            else:
+                preferred_durations = [4, 3, 2, 1]
+            
+            # Find best fitting duration for this person
+            for duration in preferred_durations:
+                if duration > max_duration:
+                    continue
+                if duration > remaining_hours:
                     continue
                 
-                # Find available trainers for this slot
-                available = []
-                for tm in category_trainers:
-                    if self._is_available(tm.user_id, day_of_week, start_time, end_time):
-                        available.append(tm)
+                end_time = self._add_hours(start, duration)
                 
-                if not available:
+                if self._is_available(tm.user_id, day, start, end_time):
+                    # Separate into trainer vs non-trainer buckets
+                    if tm.is_trainer:
+                        trainer_candidates.append((tm, duration, remaining_hours))
+                    else:
+                        non_trainer_candidates.append((tm, duration, remaining_hours))
+                    break  # Found best duration for this person
+        
+        # Sort each group by most hours remaining (fair distribution within group)
+        non_trainer_candidates.sort(key=lambda x: -x[2])
+        trainer_candidates.sort(key=lambda x: -x[2])
+        
+        # Prioritize non-trainers - they can ONLY do these shifts
+        if non_trainer_candidates:
+            return non_trainer_candidates[0][0], non_trainer_candidates[0][1]
+        
+        # Fall back to trainers
+        if trainer_candidates:
+            return trainer_candidates[0][0], trainer_candidates[0][1]
+        
+        return None, 0
+    
+    # =========================================================================
+    # PHASE 2: TRAINING SHIFTS
+    # =========================================================================
+    
+    def _schedule_training_shifts(self):
+        """
+        Fill remaining hours with training shifts for trainers.
+        """
+        training_count = 0
+        
+        # Get training windows per day
+        training_windows = {}
+        for day in range(7):
+            try:
+                op = DailyOperatingHours.objects.get(semester=self.semester, day_of_week=day)
+                if not op.is_closed and not op.training_disabled and op.training_start and op.training_end:
+                    training_windows[day] = (op.training_start.hour, op.training_end.hour)
+            except DailyOperatingHours.DoesNotExist:
+                continue
+        
+        if not training_windows:
+            print("  No training windows configured")
+            return 0
+        
+        # Keep scheduling until no progress
+        max_iterations = 500
+        
+        for iteration in range(max_iterations):
+            # Get trainers who need hours, sorted by most remaining first
+            trainers = [
+                tm for tm in self.team_members
+                if tm.is_trainer and tm.team and self.hours_remaining.get(tm.user_id, 0) >= 1
+            ]
+            
+            if not trainers:
+                break
+            
+            # Sort by most hours remaining
+            trainers.sort(key=lambda tm: -self.hours_remaining.get(tm.user_id, 0))
+            
+            made_progress = False
+            
+            for tm in trainers:
+                remaining = self.hours_remaining.get(tm.user_id, 0)
+                if remaining < 1:
                     continue
                 
-                # Sort by hours used (least first for fair distribution)
-                available.sort(key=lambda tm: self.hours_used[tm.user_id])
+                # Preferred durations: 2hr default, 1hr fallback
+                durations = [2, 1] if remaining >= 2 else [1]
                 
-                # Assign up to machine_count trainers (limited by actual availability)
-                trainers_to_assign = min(len(available), machine_count)
+                slot = self._find_training_slot(tm, training_windows, durations)
                 
-                for i in range(trainers_to_assign):
-                    tm = available[i]
+                if slot:
+                    day, start_time, duration = slot
+                    end_time = self._add_hours(start_time, duration)
                     
-                    # Double-check availability (may have changed after previous assignment)
-                    if not self._is_available(tm.user_id, day_of_week, start_time, end_time):
+                    self._create_shift(
+                        user_id=tm.user_id,
+                        day=day,
+                        start=start_time,
+                        end=end_time,
+                        shift_type='training',
+                        location=None,
+                        location_group=None,
+                        team_category=tm.team
+                    )
+                    
+                    # Record training usage for capacity tracking
+                    for h in range(start_time.hour, end_time.hour):
+                        key = (day, h, tm.team)
+                        self.training_usage[key] = self.training_usage.get(key, 0) + 1
+                    
+                    training_count += 1
+                    made_progress = True
+                    break  # Re-sort trainers after each assignment
+            
+            if not made_progress:
+                break
+        
+        return training_count
+    
+    def _find_training_slot(self, tm, windows, durations):
+        """
+        Find best training slot for a trainer.
+        """
+        category = tm.team
+        max_trainers = self._get_max_trainers(category)
+        
+        # Count existing shifts per day for this person
+        shifts_per_day = defaultdict(int)
+        for shift in self.person_shifts.get(tm.user_id, []):
+            shifts_per_day[shift['day_of_week']] += 1
+        
+        best_slot = None
+        best_score = float('inf')
+        
+        for day, (window_start, window_end) in windows.items():
+            for duration in durations:
+                for start_hour in range(window_start, window_end - duration + 1):
+                    start_time = time(hour=start_hour)
+                    end_time = time(hour=start_hour + duration)
+                    
+                    # Check personal availability
+                    if not self._is_available(tm.user_id, day, start_time, end_time):
                         continue
                     
-                    duration = self._duration_hours(start_time, end_time)
+                    # Check machine capacity
+                    if not self._can_add_training(day, start_hour, duration, category, max_trainers):
+                        continue
                     
-                    self.weekly_shifts.append({
-                        'user_id': tm.user_id,
-                        'day_of_week': day_of_week,
-                        'start_time': start_time,
-                        'end_time': end_time,
-                        'shift_type': 'training',
-                        'location': None,
-                        'location_group': None,
-                        'team_category': category
-                    })
+                    # Score: prefer days with fewer shifts, then earlier times
+                    score = shifts_per_day[day] * 100 + start_hour
                     
-                    self.hours_used[tm.user_id] += duration
-                    shifts_created += 1
+                    if score < best_score:
+                        best_score = score
+                        best_slot = (day, start_time, duration)
         
-        return shifts_created
+        return best_slot
+    
+    def _get_max_trainers(self, category):
+        """Max 30% of machines can be used for training per hour."""
+        machine_count = self.machine_counts.get(category, 2)
+        return max(1, int(machine_count * 0.3))
+    
+    def _can_add_training(self, day, start_hour, duration, category, max_trainers):
+        """Check if adding a trainer would exceed 30% capacity."""
+        for h in range(start_hour, start_hour + duration):
+            current = self.training_usage.get((day, h, category), 0)
+            if current >= max_trainers:
+                return False
+        return True
     
     # =========================================================================
-    # PRIORITY 3: FLOATERS
+    # CORE HELPERS
     # =========================================================================
     
-    def _schedule_floaters(self, day_of_week):
-        """Schedule floater shifts for this day"""
-        shifts_created = 0
+    def _is_available(self, user_id, day, start_time, end_time):
+        """
+        Check if user is available for a proposed shift.
         
-        requirements = ShiftRequirement.objects.filter(
-            semester=self.semester,
-            day_of_week=day_of_week,
-            floaters_required__gt=0
-        )
+        Checks:
+        1. Not marked unavailable
+        2. Not already scheduled (no double-booking)
+        """
+        # Check unavailability entries
+        for (u_day, u_start, u_end) in self.unavailability.get(user_id, []):
+            if u_day == day:
+                # Overlap check
+                if start_time < u_end and end_time > u_start:
+                    return False
         
-        for req in requirements:
-            for floater_slot in range(req.floaters_required):
-                assigned = self._assign_shift(
-                    day_of_week=day_of_week,
-                    start_time=req.time_start,
-                    end_time=req.time_end,
-                    shift_type='floater'
-                )
+        # Check existing shifts (prevent double-booking)
+        for existing_shift in self.person_shifts.get(user_id, []):
+            if existing_shift['day_of_week'] == day:
+                existing_start = existing_shift['start_time']
+                existing_end = existing_shift['end_time']
                 
-                if assigned:
-                    shifts_created += 1
-                else:
-                    self.conflicts.append({
-                        'type': 'floater_gap',
-                        'day': self.DAY_NAMES[day_of_week],
-                        'time': f"{req.time_start.strftime('%H:%M')}-{req.time_end.strftime('%H:%M')}",
-                        'location': 'General'
-                    })
+                # Overlap check
+                if start_time < existing_end and end_time > existing_start:
+                    return False
         
-        return shifts_created
+        return True
     
-    # =========================================================================
-    # CORE ASSIGNMENT LOGIC
-    # =========================================================================
-    
-    def _assign_shift(self, day_of_week, start_time, end_time, shift_type,
-                      location=None, location_group=None, team_category=None):
+    def _create_shift(self, user_id, day, start, end, shift_type, location=None, location_group=None, team_category=None):
         """
-        Assign the best available person to a shift.
-        Returns True if assigned, False if no one available.
+        Create a shift and update ALL tracking structures.
         
-        THIS IS THE CRITICAL FUNCTION - it must prevent double-booking!
+        This is the ONLY place shifts are created.
         """
+        duration = self._hours_between(start, end)
         
-        duration = self._duration_hours(start_time, end_time)
-        
-        # Find all available team members
-        available = []
-        for tm in self.team_members:
-            if self._is_available(tm.user_id, day_of_week, start_time, end_time):
-                available.append(tm)
-        
-        if not available:
-            return False
-        
-        # Sort by hours used (fair distribution - least hours first)
-        available.sort(key=lambda tm: self.hours_used[tm.user_id])
-        
-        # Assign to the person with least hours
-        person = available[0]
-        
-        # Create the shift
-        self.weekly_shifts.append({
-            'user_id': person.user_id,
-            'day_of_week': day_of_week,
-            'start_time': start_time,
-            'end_time': end_time,
+        shift = {
+            'user_id': user_id,
+            'day_of_week': day,
+            'start_time': start,
+            'end_time': end,
             'shift_type': shift_type,
             'location': location,
             'location_group': location_group,
             'team_category': team_category
-        })
+        }
         
-        self.hours_used[person.user_id] += duration
-        return True
+        # Add to model week
+        self.weekly_shifts.append(shift)
+        
+        # Track per person
+        self.person_shifts[user_id].append(shift)
+        
+        # CRITICAL: Deduct hours
+        self.hours_remaining[user_id] -= duration
+        
+        # Mark slot occupancy
+        for hour in range(start.hour, end.hour):
+            key = (day, hour)
+            if key not in self.slot_occupancy:
+                self.slot_occupancy[key] = set()
+            self.slot_occupancy[key].add(user_id)
     
-    def _is_available(self, user_id, day_of_week, start_time, end_time):
-        """
-        Check if a user is available for a time slot.
-        
-        CRITICAL: This checks:
-        1. Weekly hours limit
-        2. Unavailability entries
-        3. Already assigned shifts (PREVENTS DOUBLE-BOOKING!)
-        """
-        
-        # Check 1: Weekly hours limit
-        duration = self._duration_hours(start_time, end_time)
-        team_member = next((tm for tm in self.team_members if tm.user_id == user_id), None)
-        
-        if not team_member:
-            return False
-        
-        expected_hours = team_member.get_expected_hours(self.semester)
-        if self.hours_used.get(user_id, 0) + duration > expected_hours:
-            return False
-        
-        # Check 2: Unavailability
-        for (unav_day, unav_start, unav_end) in self.unavailability_map.get(user_id, []):
-            if unav_day == day_of_week:
-                if self._times_overlap(start_time, end_time, unav_start, unav_end):
-                    return False
-        
-        # Check 3: Already assigned shifts (CRITICAL - prevents double-booking)
-        for shift in self.weekly_shifts:
-            if shift['user_id'] == user_id and shift['day_of_week'] == day_of_week:
-                if self._times_overlap(start_time, end_time, 
-                                      shift['start_time'], shift['end_time']):
-                    return False
-        
-        return True
+    def _hours_between(self, start, end):
+        """Calculate hours between two time objects."""
+        start_dt = datetime.combine(date.today(), start)
+        end_dt = datetime.combine(date.today(), end)
+        return (end_dt - start_dt).total_seconds() / 3600
     
-    def _get_max_trainers_for_category(self, category):
-        """
-        Get the maximum number of trainers allowed per hour for a category.
-        
-        Based on the 30% rule: max 30% of machines can be used for training.
-        This ensures at least 70% of machines remain available for users.
-        
-        Args:
-            category: The team/category name (e.g., '3D Printing', 'Laser')
-        
-        Returns:
-            int: Maximum trainers allowed per hour for this category
-        """
-        # Normalize category name for matching
-        def normalize(cat):
-            if not cat:
-                return ''
-            return cat.lower().replace(' ', '_').replace('-', '_')
-        
-        norm_category = normalize(category)
-        
-        # First, try to find matching machine types in this category
-        total_machines = 0
-        matched_types = []
-        
-        for machine_type, cat in self.machine_type_to_category.items():
-            if normalize(cat) == norm_category:
-                matched_types.append(machine_type)
-                total_machines += self.machine_type_counts.get(machine_type, 0)
-        
-        if total_machines > 0:
-            # Calculate based on total machines in category
-            max_trainers = max(1, math.floor(total_machines * self.TRAINING_CAPACITY_PERCENT))
-            return max_trainers
-        
-        # Fallback: check legacy machine_counts
-        for cat, count in self.machine_counts.items():
-            if normalize(cat) == norm_category:
-                return max(1, math.floor(count * self.TRAINING_CAPACITY_PERCENT))
-        
-        # Default: allow 1 trainer if category not found
-        return 1
+    def _add_hours(self, t, hours):
+        """Add hours to a time object, return new time."""
+        dt = datetime.combine(date.today(), t) + timedelta(hours=int(hours))
+        return dt.time()
     
     # =========================================================================
     # VALIDATION
     # =========================================================================
     
-    def _validate_no_double_bookings(self):
-        """Verify no one is double-booked"""
-        print("\n🔍 Validating for double-bookings...")
+    def _validate(self):
+        """Validate the schedule before saving."""
+        errors = []
         
-        # Group shifts by user and day
-        user_day_shifts = defaultdict(list)
-        for shift in self.weekly_shifts:
-            key = (shift['user_id'], shift['day_of_week'])
-            user_day_shifts[key].append(shift)
+        # Check no one exceeded their hours
+        for tm in self.team_members:
+            expected = float(tm.get_expected_hours(self.semester))
+            remaining = self.hours_remaining.get(tm.user_id, 0)
+            used = expected - remaining
+            
+            if used > expected + 0.1:
+                errors.append(f"{tm.user.get_full_name()} over-scheduled: {used:.1f}/{expected:.1f} hrs")
         
-        double_bookings = 0
-        for (user_id, day), shifts in user_day_shifts.items():
-            # Check each pair
-            for i, s1 in enumerate(shifts):
-                for s2 in shifts[i+1:]:
-                    if self._times_overlap(s1['start_time'], s1['end_time'],
-                                          s2['start_time'], s2['end_time']):
-                        double_bookings += 1
-                        user = next((tm for tm in self.team_members if tm.user_id == user_id), None)
-                        user_name = user.user.get_full_name() if user else f"User {user_id}"
-                        
-                        print(f"   ❌ DOUBLE-BOOKING: {user_name} on {self.DAY_NAMES[day]}")
-                        print(f"      Shift 1: {s1['shift_type']} {s1['start_time']}-{s1['end_time']}")
-                        print(f"      Shift 2: {s2['shift_type']} {s2['start_time']}-{s2['end_time']}")
-                        
-                        self.conflicts.append({
-                            'type': 'double_booking',
-                            'day': self.DAY_NAMES[day],
-                            'time': f"{s1['start_time']}-{s1['end_time']} vs {s2['start_time']}-{s2['end_time']}",
-                            'location': user_name
-                        })
+        # Check no double-bookings
+        for user_id, shifts in self.person_shifts.items():
+            by_day = defaultdict(list)
+            for s in shifts:
+                by_day[s['day_of_week']].append(s)
+            
+            for day, day_shifts in by_day.items():
+                for i, s1 in enumerate(day_shifts):
+                    for s2 in day_shifts[i+1:]:
+                        if s1['start_time'] < s2['end_time'] and s1['end_time'] > s2['start_time']:
+                            tm = next((t for t in self.team_members if t.user_id == user_id), None)
+                            name = tm.user.get_full_name() if tm else f"User {user_id}"
+                            errors.append(f"Double-booking: {name} on {self.DAY_NAMES[day]}")
         
-        if double_bookings == 0:
-            print("   ✓ No double-bookings found")
-        else:
-            print(f"   ❌ Found {double_bookings} double-bookings!")
+        return errors
     
-    def _print_model_week_summary(self):
-        """Print summary of model week"""
-        print(f"\n📊 Model Week Summary:")
-        print(f"   Total shifts: {len(self.weekly_shifts)}")
+    # =========================================================================
+    # SUMMARY
+    # =========================================================================
+    
+    def _print_summary(self):
+        """Print schedule summary."""
+        print(f"\n{'='*60}")
+        print("MODEL WEEK SUMMARY")
+        print(f"{'='*60}")
         
-        # Count by type
-        type_counts = defaultdict(int)
-        for shift in self.weekly_shifts:
-            type_counts[shift['shift_type']] += 1
+        print(f"\nTotal shifts: {len(self.weekly_shifts)}")
         
-        for shift_type, count in sorted(type_counts.items()):
-            print(f"   {shift_type}: {count}")
+        # By type
+        by_type = defaultdict(int)
+        for s in self.weekly_shifts:
+            by_type[s['shift_type']] += 1
+        
+        for shift_type in ['open_hours', 'floater', 'training']:
+            print(f"  {shift_type}: {by_type[shift_type]}")
+        
+        # By day
+        print("\nShifts by day:")
+        by_day = defaultdict(int)
+        for s in self.weekly_shifts:
+            by_day[s['day_of_week']] += 1
+        
+        for day in range(7):
+            if by_day[day] > 0:
+                print(f"  {self.DAY_NAMES[day]}: {by_day[day]}")
         
         # Hours per person
-        print(f"\n   Hours per person:")
-        for tm in sorted(self.team_members, key=lambda t: self.hours_used.get(t.user_id, 0), reverse=True):
-            used = self.hours_used.get(tm.user_id, 0)
-            expected = tm.get_expected_hours(self.semester)
+        print("\nHours per person:")
+        scheduled_people = []
+        for tm in self.team_members:
+            expected = float(tm.get_expected_hours(self.semester))
+            remaining = self.hours_remaining.get(tm.user_id, 0)
+            used = expected - remaining
+            
             if used > 0:
-                status = "✓" if used <= expected else "⚠️ OVER"
-                print(f"      {tm.user.get_full_name()[:25]:25} {used:5.1f} / {expected:5.1f} hrs {status}")
+                pct = (used / expected * 100) if expected > 0 else 0
+                status = "✓" if pct >= 80 else "⚠" if pct >= 50 else "✗"
+                scheduled_people.append((tm.user.get_full_name(), used, expected, pct, status))
         
-        # Machine capacity usage report
-        if self.training_slot_usage:
-            print(f"\n   🔧 Machine Capacity Usage (Training):")
-            
-            # Group by category
-            category_max_usage = defaultdict(int)
-            category_slot_count = defaultdict(int)
-            
-            for (day, start_time, category), count in self.training_slot_usage.items():
-                max_allowed = self._get_max_trainers_for_category(category)
-                category_max_usage[category] = max(category_max_usage[category], count)
-                category_slot_count[category] += 1
-            
-            for category in sorted(category_max_usage.keys()):
-                max_used = category_max_usage[category]
-                max_allowed = self._get_max_trainers_for_category(category)
-                total_machines = self.machine_counts.get(category, 0)
-                slots_used = category_slot_count[category]
-                
-                status = "✓" if max_used <= max_allowed else "⚠️ OVER"
-                print(f"      {category:20} Peak: {max_used}/{max_allowed} trainers/hr ({total_machines} machines) {status}")
+        scheduled_people.sort(key=lambda x: x[0])
+        for name, used, expected, pct, status in scheduled_people:
+            print(f"  {name[:30]:30} {used:5.1f}/{expected:5.1f} hrs ({pct:3.0f}%) {status}")
+        
+        # Totals
+        total_expected = sum(float(tm.get_expected_hours(self.semester)) for tm in self.team_members)
+        total_used = sum(
+            float(tm.get_expected_hours(self.semester)) - self.hours_remaining.get(tm.user_id, 0)
+            for tm in self.team_members
+        )
+        
+        print(f"\nTotal: {total_used:.1f}/{total_expected:.1f} hours ({total_used/total_expected*100:.1f}%)")
+        
+        # Conflicts
+        if self.conflicts:
+            print(f"\nWARNING: {len(self.conflicts)} unfilled slots:")
+            for c in self.conflicts[:10]:
+                print(f"  {c['type']}: {c['day']} {c.get('time', '')} @ {c.get('location', 'N/A')}")
+            if len(self.conflicts) > 10:
+                print(f"  ... and {len(self.conflicts) - 10} more")
     
     # =========================================================================
-    # REPLICATION
+    # REPLICATE & SAVE
     # =========================================================================
+    
+    def _save_model_week(self):
+        """Save the model week (Week 0) to ModelWeekShift table."""
+        from .models import ModelWeekShift
+        
+        print(f"\nSaving model week (Week 0)...")
+        
+        # Clear existing model week for this semester
+        deleted, _ = ModelWeekShift.objects.filter(semester=self.semester).delete()
+        if deleted:
+            print(f"  Cleared {deleted} existing model week shifts")
+        
+        # Create ModelWeekShift objects
+        model_week_objects = [
+            ModelWeekShift(
+                semester=self.semester,
+                user_id=s['user_id'],
+                day_of_week=s['day_of_week'],
+                start_time=s['start_time'],
+                end_time=s['end_time'],
+                shift_type=s['shift_type'],
+                location=s.get('location'),
+                location_group=s.get('location_group'),
+                team_category=s.get('team_category') or ''
+            )
+            for s in self.weekly_shifts
+        ]
+        
+        ModelWeekShift.objects.bulk_create(model_week_objects, batch_size=500)
+        print(f"  Saved {len(model_week_objects)} model week shifts")
+        
+        return len(model_week_objects)
     
     def _replicate_to_semester(self):
-        """Replicate the model week across all semester weeks"""
-        print(f"\n🔄 Replicating across semester...")
+        """Copy model week across all weeks in semester."""
+        print(f"\nReplicating across semester...")
         
         all_shifts = []
-        current = self.semester.start_date
         
         # Find first Monday
+        current = self.semester.start_date
         while current.weekday() != 0:
             current += timedelta(days=1)
         
-        week_count = 0
+        # Get holidays
+        holidays = set()
+        if self.semester.holidays:
+            for h in self.semester.holidays:
+                if isinstance(h, str):
+                    holidays.add(h)
+                elif isinstance(h, dict):
+                    holidays.add(h.get('date', ''))
+        
+        weeks = 0
         while current <= self.semester.end_date:
-            week_count += 1
+            weeks += 1
             
-            # For each day in this week
             for day_offset in range(7):
                 shift_date = current + timedelta(days=day_offset)
                 
@@ -985,95 +717,51 @@ class WeeklyScheduler:
                     continue
                 if shift_date > self.semester.end_date:
                     continue
-                
-                # Skip holidays
-                if shift_date.isoformat() in (self.semester.holidays or []):
+                if shift_date.isoformat() in holidays:
                     continue
                 
                 day_of_week = shift_date.weekday()
                 
-                # Copy shifts for this day
-                for shift_template in self.weekly_shifts:
-                    if shift_template['day_of_week'] == day_of_week:
-                        all_shifts.append({
-                            **shift_template,
-                            'date': shift_date
-                        })
+                for template in self.weekly_shifts:
+                    if template['day_of_week'] == day_of_week:
+                        all_shifts.append({**template, 'date': shift_date})
             
             current += timedelta(days=7)
         
-        print(f"   ✓ Created {len(all_shifts)} shifts across {week_count} weeks")
+        print(f"  {len(all_shifts)} total shifts across {weeks} weeks")
         return all_shifts
     
     def _save_to_database(self, all_shifts):
-        """Save shifts to database using bulk_create for efficiency"""
-        print(f"\n💾 Saving to database...")
+        """Bulk create all shifts."""
+        print(f"\nSaving to database...")
         
-        shifts_to_create = []
-        for shift_data in all_shifts:
-            shift = Shift(
+        shift_objects = [
+            Shift(
                 semester=self.semester,
-                user_id=shift_data['user_id'],
-                date=shift_data['date'],
-                start_time=shift_data['start_time'],
-                end_time=shift_data['end_time'],
-                shift_type=shift_data['shift_type'],
-                location=shift_data.get('location'),
-                location_group=shift_data.get('location_group'),
-                team_category=shift_data.get('team_category') or '',
+                user_id=s['user_id'],
+                date=s['date'],
+                start_time=s['start_time'],
+                end_time=s['end_time'],
+                shift_type=s['shift_type'],
+                location=s.get('location'),
+                location_group=s.get('location_group'),
+                team_category=s.get('team_category') or '',
                 status='scheduled'
             )
-            shifts_to_create.append(shift)
-        
-        # Bulk create for efficiency
-        Shift.objects.bulk_create(shifts_to_create, batch_size=500)
-        
-        print(f"   ✓ Saved {len(shifts_to_create)} shifts")
-        return len(shifts_to_create)
-    
-    def _summary_message(self, weekly_shifts, total_shifts):
-        """Generate summary message"""
-        lines = [
-            f"Scheduling complete!",
-            f"",
-            f"Model week: {weekly_shifts} shifts",
-            f"Total semester: {total_shifts} shifts",
+            for s in all_shifts
         ]
         
-        if self.conflicts:
-            lines.append(f"")
-            lines.append(f"⚠️ {len(self.conflicts)} issues found:")
-            for c in self.conflicts[:5]:
-                lines.append(f"  • {c['type']}: {c.get('day', '')} {c.get('time', '')} @ {c.get('location', '')}")
-            if len(self.conflicts) > 5:
-                lines.append(f"  ... and {len(self.conflicts) - 5} more")
+        Shift.objects.bulk_create(shift_objects, batch_size=500)
+        print(f"  Saved {len(shift_objects)} shifts")
         
-        return "\n".join(lines)
+        return len(shift_objects)
     
-    # =========================================================================
-    # HELPERS
-    # =========================================================================
-    
-    def _times_overlap(self, start1, end1, start2, end2):
-        """Check if two time ranges overlap"""
-        return not (end1 <= start2 or start1 >= end2)
-    
-    def _duration_hours(self, start_time, end_time):
-        """Calculate duration in hours"""
-        start = datetime.combine(dt_date.today(), start_time)
-        end = datetime.combine(dt_date.today(), end_time)
-        return (end - start).total_seconds() / 3600
-    
-    def _generate_hourly_slots(self, start_time, end_time):
-        """Generate 1-hour time slots"""
-        slots = []
-        current_hour = start_time.hour
-        end_hour = end_time.hour
-        
-        while current_hour < end_hour:
-            slot_start = time(hour=current_hour, minute=0)
-            slot_end = time(hour=current_hour + 1, minute=0)
-            slots.append((slot_start, slot_end))
-            current_hour += 1
-        
-        return slots
+    def _error_result(self, message):
+        """Return error result dict."""
+        return {
+            'success': False,
+            'shifts_created': 0,
+            'weekly_shifts': 0,
+            'conflicts': [{'type': 'error', 'day': 'N/A', 'time': 'N/A', 'location': message}],
+            'message': message
+        }

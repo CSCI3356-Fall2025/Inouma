@@ -19,7 +19,8 @@ urlpatterns = [
     path('sign-up/', AuthCreateNewUserView.as_view(), name='auth-create-user'),
     path('sign-in/', AuthLoginExistingUserView.as_view(), name='auth-login-user'),
 
-    path('login/', AuthGoogleOAuthStartView.as_view(), name='login'),
+    path('login/', AuthGoogleOAuthStartView.as_view(), name='login'),  # Google OAuth
+    path('login/email/', login_view, name='login-email'),  # Email/password login for test users
     path('logout/', logout_view, name='logout'),
     
     path('google/callback/', AuthGoogleOAuthCallbackView.as_view(), name='auth-google-callback'),
@@ -37,4 +38,7 @@ urlpatterns = [
     # APIs
     path('api/training-reservations/', TrainingReservationView.as_view(), name='training_reservations'),
     path("api/trainers/<uuid:trainer_id>/availability/", TrainerAvailabilityView.as_view(), name="trainer_availability",),
+
+    # About Page
+    path('about/', views.about_hatchery, name='about_hatchery'),
 ]

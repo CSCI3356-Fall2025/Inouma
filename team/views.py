@@ -15,6 +15,16 @@ def is_staff_user(user):
     """Check if user is staff"""
     return user.is_staff or user.is_superuser
 
+def is_team_member(user):
+    """Check if user is a team member, trainer, team lead, or staff"""
+    if user.is_staff or user.is_superuser:
+        return True
+    if user.is_trainer or user.is_team_lead:
+        return True
+    if hasattr(user, 'role') and user.role == 'Team Member':
+        return True
+    return False
+
 
 @login_required
 @user_passes_test(is_staff_user)
@@ -740,3 +750,90 @@ def api_update_member(request, member_id):
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)})
     
+
+
+@login_required
+@user_passes_test(is_team_member)
+def team_dashboard(request):
+    """
+    Team member dashboard - renders trainerDashboard.html
+    Accessible to team members, trainers, team leads, and staff.
+    """
+    from scheduling.models import Semester, Shift, Unavailability
+    
+    context = {}
+    
+    # Get active semester
+    try:
+        active_semester = Semester.objects.filter(is_active=True).first()
+        context['active_semester'] = active_semester
+    except:
+        context['active_semester'] = None
+    
+    # Get upcoming shifts
+    try:
+        today = date.today()
+        upcoming_shifts = Shift.objects.filter(
+            user=request.user,
+            date__gte=today,
+            status__in=['scheduled', 'published']
+        ).order_by('date', 'start_time')[:5]
+        context['upcoming_shifts'] = list(upcoming_shifts)
+    except Exception as e:
+        print(f"Error loading shifts: {e}")
+        context['upcoming_shifts'] = []
+    
+    # Get unavailability blocks
+    try:
+        if context.get('active_semester'):
+            unavailability_blocks = Unavailability.objects.filter(
+                user=request.user,
+                semester=context['active_semester']
+            ).order_by('day_of_week', 'start_time')
+            context['unavailability_blocks'] = list(unavailability_blocks)
+        else:
+            context['unavailability_blocks'] = []
+    except Exception as e:
+        print(f"Error loading unavailability: {e}")
+        context['unavailability_blocks'] = []
+    
+    return render(request, 'trainerDashboard.html', context)
+
+
+
+@login_required
+@user_passes_test(is_team_member)
+def my_training_sessions(request):
+    """
+    View for trainers to see their upcoming and past training sessions.
+    """
+    from reservations.models import TrainingSession
+    
+    today = date.today()
+    
+    # Get upcoming sessions
+    try:
+        upcoming_sessions = TrainingSession.objects.filter(
+            trainer=request.user,
+            date__gte=today
+        ).select_related('training').order_by('date', 'start_time')
+    except:
+        upcoming_sessions = []
+    
+    # Get past sessions (last 30 days)
+    try:
+        past_cutoff = today - timedelta(days=30)
+        past_sessions = TrainingSession.objects.filter(
+            trainer=request.user,
+            date__lt=today,
+            date__gte=past_cutoff
+        ).select_related('training').order_by('-date', '-start_time')
+    except:
+        past_sessions = []
+    
+    context = {
+        'upcoming_sessions': upcoming_sessions,
+        'past_sessions': past_sessions,
+    }
+    
+    return render(request, 'team/my_training_sessions.html', context)
