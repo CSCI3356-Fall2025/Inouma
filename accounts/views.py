@@ -218,7 +218,7 @@ class AuthGoogleOAuthCallbackView(APIView):
         client_secret = config('GOOGLE_CLIENT_SECRET', default=None)
         # Redirect URI must match the one registered exactly
         redirect_uri = config(
-            'GOOGLE_REDIRECT_URI', default='http://localhost:8000/auth/oauth2callback')
+            'GOOGLE_REDIRECT_URI', default='https://inouma.onrender.com/auth/oauth2callback')
 
         data = {
             'code': code,
