@@ -1,103 +1,69 @@
-# Inouma — Authentication tidy-up
+# Inouma
 
-What I changed
+A Django web app for **The Hatchery**, Boston College's student makerspace. Users browse machines, complete required trainings, and reserve equipment; staff manage machines, trainings, reservations, and semester-long team schedules. Built as a team project for CSCI3356 (Software Engineering), Fall 2025.
 
-- Root/landing behavior
+**Live site:** https://inouma.onrender.com
 
-  - Root URL (`/`) now redirects to the HTML login page at `/auth/login/` (named `auth-login-page`).
-  - The original `landing.html` is left in place but the app no longer serves it at `/` by default.
+## Directory Structure
 
-- Browser session login flow
-
-  - Added a simple form-based login view (`accounts.views.login_view`) and a logout view (`accounts.views.logout_view`).
-  - Login form template: `templates/accounts/login.html`.
-  - After successful login, users are redirected to `/home` (view name `machine_directory`).
-
-- Protected pages
-
-  - `machine_directory` and `my_reservations` are now decorated with `@login_required` so they require an authenticated session.
-  - `staff_dashboard` remains protected with `@staff_member_required` as before.
-
-- Authentication backend
-
-  - Added `accounts.backends.model_backend.EmailBackend` to authenticate users by email/password for the custom `User` model.
-  - Left the default `django.contrib.auth.backends.ModelBackend` in place so admin access still works.
-
-- Firebase / DRF changes
-
-  - `accounts.firebase_auth.firebase_authentication.FirebaseAuthentication` now lazy-imports `firebase_admin` inside `authenticate()` to avoid import-time dependency failures.
-  - `Inouma/settings.py` now reads Firebase keys using `python-decouple` (`env_config`) and uses logging for warnings (so the development autoreloader doesn't print duplicate messages).
-  - REST framework still uses the Firebase authentication class for API endpoints. The browser login uses Django session auth and does not depend on Firebase.
-
-- Minor additions
-  - Added `accounts/backends/model_backend.py` with `EmailBackend`.
-
-How to run (development)
-
-1. Create and activate your virtualenv (you already have a `.venv` in the project root):
-
-```bash
-cd /Users/charlestang06/Desktop/Inouma
-source .venv/bin/activate
+```
+├── Inouma/          # Settings, root URLs, dashboards
+├── accounts/        # User model, profiles, Google OAuth + email/password login
+├── machines/        # Machines, categories, trainings
+├── locations/       # Locations, floorplans, capacity
+├── reservations/    # Reservations, waitlists, training sessions, maintenance
+├── scheduling/      # Semesters, shift requirements, weekly auto-scheduler
+├── social/          # Project feed, friends, badges, leaderboard
+├── team/            # Team directory and dashboard
+├── templates/       # HTML templates, organized by app
+├── static/          # CSS, JS, images
+├── testing/         # Demo/test data generation scripts
+├── manage.py
+├── requirements.txt
+└── db.sqlite3       # Local development database
 ```
 
-2. Install dependencies (if not already installed):
+## Where to Find Code
+
+Each app owns one slice of the system — models in `models.py`, routes in `urls.py`, logic in `views.py`, and matching templates under `templates/<app>/`. The two files worth reading first are `reservations/services.py` (all booking validation) and `scheduling/weekly_scheduler.py` (builds a model week of shifts and replicates it across the semester).
+
+## User Roles
+
+Set by `User.ROLE_CHOICES` in `accounts/models.py`:
+
+- **User** / **Collaborator** — browse machines, book trainings, track certification progress, reserve machines they're certified on, report broken machines, post projects to the social feed
+- **Team Member** — the above, plus shift schedules and availability requests. Flags `is_trainer` (runs training sessions) and `is_team_lead` (leads a machine category) layer on top
+- **Staff** — manage machines, trainings, and locations; track maintenance and blackouts; configure semesters, run the auto-scheduler, and publish schedules
+
+Django's built-in `is_staff` gates the admin site separately.
+
+## How to Run the Code
 
 ```bash
+python3 -m venv env_site
+source env_site/bin/activate
 pip install -r requirements.txt
-```
-
-3. If you use Firebase/pyrebase features, provide Firebase credentials via a `.env` file next to `manage.py` or export the env vars in your shell:
-
-```text
-# .env (example)
-SECRET_KEY=your-secret
-DEBUG=True
-FIREBASE_API_KEY=...
-FIREBASE_AUTH_DOMAIN=...
-FIREBASE_DATABASE_URL=...
-FIREBASE_STORAGE_BUCKET=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=http://localhost:8000/auth/oauth2callback
-```
-
-4. Run migrations and start the server:
-
-```bash
-python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
 ```
 
-5. Visit `http://localhost:8000/` — it will redirect to `/auth/login/`. Use an existing user account or create a user via the API endpoint `/auth/sign-up/` (this endpoint still calls Pyrebase to create Firebase user if configured).
+Requires a `.env` next to `manage.py` with `SECRET_KEY` and `DEBUG`. Firebase (`FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_DATABASE_URL`, `FIREBASE_STORAGE_BUCKET`) and Google OAuth (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`) keys are optional locally — without them, those features are skipped and you sign in with email/password.
 
-Notes and guidance
+A fresh clone starts with an empty database, so run `bash testing/setup_demo.sh` to populate it — 52 users, machines, trainings, certifications, and sessions. Log in at `/auth/login/email/` as `test1@gmail.com` (no certifications) or `test2@gmail.com` (Level 1 certifications), password `testpass123`. Reset with `testing/cleanup_all_test_data.py`.
 
-- Two authentication flows exist now:
+## Non-Standard Libraries & APIs
 
-  - Browser/session authentication (form at `/auth/login/`) — uses Django `authenticate()` and session cookies. This is the default for human users navigating the website.
-  - API/Firebase authentication — DRF endpoints still use the `FirebaseAuthentication` class. That class is now lazy and will raise a clear error if `firebase-admin` is not available.
+- **Django REST Framework** — API endpoints for reservations, trainings, and scheduling
+- **Google OAuth** — sign-in with BC Google accounts
+- **Pyrebase4 / firebase-admin** — Firebase authentication for API clients
+- **python-decouple** — reads secrets from `.env`
+- **WhiteNoise + Gunicorn** — deployed on Render with PostgreSQL; SQLite locally
 
-- If you prefer to rely solely on Django's authentication (no Firebase), you can:
+## Project Team
 
-  - Remove or replace the REST framework `DEFAULT_AUTHENTICATION_CLASSES` in `Inouma/settings.py` with `'rest_framework.authentication.SessionAuthentication'`.
-  - Remove pyrebase/firebase admin dependencies from `requirements.txt`.
-
-- I intentionally did not delete the original API views (signup/login) — they remain available for API-driven flows (mobile clients, etc.).
-
-Files changed / added
-
-- Modified
-
-  - `Inouma/settings.py` — firebase env handling, logging, login redirect settings, auth backends
-  - `Inouma/urls.py` — root redirect to `/auth/login/`
-  - `Inouma/views.py` — added `@login_required` to `machine_directory` and `my_reservations`
-  - `accounts/firebase_auth/firebase_authentication.py` — lazy import
-  - `accounts/views.py` — added `login_view` and `logout_view` (keeps API views intact)
-  - `accounts/urls.py` — added `login/` and `logout/` routes
-
-- Added
-  - `templates/accounts/login.html` — simple login form
-  - `accounts/backends/model_backend.py` — `EmailBackend` implementation
-  - `README.md` (this file)
+Developed by a team of five students in CSCI3356 (Fall 2025): 
+- Hansung (Noah) Kang ([@nk2417](https://github.com/nk2417)), 
+- Omar Tall ([@Mr-Tall](https://github.com/Mr-Tall)), 
+- Lucas Schmidt ([@schmidln](https://github.com/schmidln)), 
+- Brianna Tang ([@briannnnat](https://github.com/briannnnat)), 
+- Samira Isack ([@samiraisac](https://github.com/samiraisac))
