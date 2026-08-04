@@ -61,4 +61,9 @@ A fresh clone starts with an empty database, so run `bash testing/setup_demo.sh`
 
 ## Project Team
 
-Developed by a team of five students in CSCI3356 (Fall 2025): Hansung (Noah) Kang ([@nk2417](https://github.com/nk2417)), Omar Tall ([@Mr-Tall](https://github.com/Mr-Tall)), Lucas Schmidt ([@schmidln](https://github.com/schmidln)), Brianna Tang ([@briannnnat](https://github.com/briannnnat)), Samira Isack ([@samiraisac](https://github.com/samiraisac))
+Developed by a team of five students in CSCI3356 (Fall 2025): 
+Hansung (Noah) Kang ([@nk2417](https://github.com/nk2417)), 
+Omar Tall ([@Mr-Tall](https://github.com/Mr-Tall)), 
+Lucas Schmidt ([@schmidln](https://github.com/schmidln)), 
+Brianna Tang ([@briannnnat](https://github.com/briannnnat)), 
+Samira Isack ([@samiraisac](https://github.com/samiraisac))
